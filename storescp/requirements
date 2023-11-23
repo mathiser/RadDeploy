@@ -1,0 +1,4 @@
+pika
+pynetdicom
+pydicom
+DicomFlowLib @ git+https://github.com/mathiser/DicomFlowLib@main
