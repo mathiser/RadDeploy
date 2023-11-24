@@ -9,8 +9,13 @@ from DicomFlowLib.mq import MQPub
 LOG_FORMAT = '%(levelname)s:%(asctime)s:%(message)s'
 
 class Fingerprinter:
-    def __init__(self, mq_pub: MQPub, fingerprint_directory: str, log_level: int):
-        self.mq = mq_pub
+    def __init__(self,
+                 mq: MQPub,
+                 pub_queue: str,
+                 fingerprint_directory: str,
+                 log_level: int):
+        self.mq = mq
+        self.pub_queue = pub_queue
         self.fingerprints = []
         self.fingerprints_directory = fingerprint_directory
 

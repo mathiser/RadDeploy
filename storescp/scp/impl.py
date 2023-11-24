@@ -17,9 +17,11 @@ class SCP:
                  ae_title: str,
                  hostname: str,
                  port: int,
+                 pub_queue: str,
                  log_level: int = 10,
                  pynetdicom_log_level: str = "standard",
-                 use_compression: bool = False
+                 use_compression: bool = False,
+
                  ):
 
         logging.basicConfig(level=log_level, format=LOG_FORMAT)
@@ -27,6 +29,7 @@ class SCP:
         self.logger = logging.getLogger(__name__)
 
         self.mq = mq
+        self.pub_queue = pub_queue
         self.ae_title = ae_title
         self.hostname = hostname
         self.port = port
@@ -59,7 +62,8 @@ class SCP:
 
         #  Make association obj if it does not exist
         if not pid in self.contexts[assoc_id].keys():
-            self.contexts[assoc_id][pid] = SCPContext()
+            self.contexts[assoc_id][pid] = SCPContext(queue=self.pub_queue,
+                                                      exchange=self.mq.exchange)
 
         filepath = os.path.join(self.contexts[assoc_id][pid].path, pid, sop_class_uid, series_instance_uid, sop_instance_uid + ".dcm")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -74,16 +78,22 @@ class SCP:
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
         self.logger.info(f"Publishing from assoc_id: {assoc_id}")
-        print(self.contexts)
+
         # For each PID send a seperate tar
         for pid, context in self.contexts[assoc_id].items():
             try:
-                file = FileContext()
+                file = FileContext(
+                    queue=self.mq.declare_queue(),
+                    exchange=self.mq.exchange
+                )
                 file.generate_tar_from_path(context.path)
-                file = self.mq.publish_file(file=file)
+
+                context.file_exchange = file.exchange
                 context.file_queue = file.queue
                 context.file_checksum = file.checksum
-                self.mq.publish(context=context)
+                print(context)
+                self.mq.publish_file(file=file, queue_or_routing_key=context.file_queue)
+                self.mq.publish(context=context, queue_or_routing_key=context.queue)
             except Exception as e:
                 raise e
             finally:
