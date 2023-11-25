@@ -1,7 +1,6 @@
 triggers:
   - Modality: CT
-    SeriesDescription: "[*]"
-  - Modality: MR
+    SeriesDescription: "HAt"
 
 flows:
   - container_tag: hello-world

@@ -6,7 +6,7 @@ from DicomFlowLib.contexts import FileContext
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
 
 
-from DicomFlowLib.contexts.scpcontext import SCPContext
+from DicomFlowLib.contexts.scp import SCPContext
 from DicomFlowLib.mq import MQPub
 
 LOG_FORMAT = ('%(levelname)s:%(asctime)s:%(message)s')
@@ -17,7 +17,7 @@ class SCP:
                  ae_title: str,
                  hostname: str,
                  port: int,
-                 pub_queue: str,
+                 pub_routing_key: str,
                  log_level: int = 10,
                  pynetdicom_log_level: str = "standard",
                  use_compression: bool = False,
@@ -29,7 +29,7 @@ class SCP:
         self.logger = logging.getLogger(__name__)
 
         self.mq = mq
-        self.pub_queue = pub_queue
+        self.pub_routing_key = pub_routing_key
         self.ae_title = ae_title
         self.hostname = hostname
         self.port = port
@@ -62,7 +62,7 @@ class SCP:
 
         #  Make association obj if it does not exist
         if not pid in self.contexts[assoc_id].keys():
-            self.contexts[assoc_id][pid] = SCPContext(queue=self.pub_queue,
+            self.contexts[assoc_id][pid] = SCPContext(routing_key=self.pub_routing_key,
                                                       exchange=self.mq.exchange)
 
         filepath = os.path.join(self.contexts[assoc_id][pid].path, pid, sop_class_uid, series_instance_uid, sop_instance_uid + ".dcm")
@@ -93,7 +93,7 @@ class SCP:
                 context.file_checksum = file.checksum
                 print(context)
                 self.mq.publish_file(file=file, queue_or_routing_key=context.file_queue)
-                self.mq.publish(context=context, queue_or_routing_key=context.queue)
+                self.mq.publish(context=context, queue_or_routing_key=context.routing_key)
             except Exception as e:
                 raise e
             finally:

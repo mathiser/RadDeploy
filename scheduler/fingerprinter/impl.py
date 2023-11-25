@@ -1,9 +1,10 @@
 import logging
 import os
-from typing import Dict
-
+from typing import Dict, Set
+import re
+import pydicom
 import yaml
-from DicomFlowLib.contexts import SCPContext
+from DicomFlowLib.contexts import SCPContext, SchedulerContext
 from DicomFlowLib.mq import MQPub
 
 LOG_FORMAT = '%(levelname)s:%(asctime)s:%(message)s'
@@ -22,29 +23,46 @@ class Fingerprinter:
         logging.basicConfig(level=log_level, format=LOG_FORMAT)
         self.logger = logging.getLogger(__name__)
 
-    def fingerprint(self, context: SCPContext):
+    def parse_file_metas(self, context: Dict) -> Dict[str, Set]:
+        ds = {}
+        for file_meta in context["file_metas"]:
+            for elem in pydicom.Dataset.from_json(file_meta):
+                if elem.keyword not in ds.keys():
+                    ds[str(elem.keyword)] = {str(elem.value)}
+                else:
+                    ds[elem.keyword].add(str(elem.value))
+        return ds
+
+    def fingerprint(self, ds: Dict[str, Set], fp: Dict):
+        for trigger in fp["triggers"]:
+            for keyword, regex_pattern in trigger.items():
+                pattern = re.compile(regex_pattern)
+
+                for val in ds[keyword]:
+                    if pattern.search(val):
+                        break
+                else:
+                    return False
+        else:
+            return True
+
+    def run_fingerprinting(self, context: Dict):
         self.reload_fingerprints()
-        print(context)
-    #     matching_series_instances = []
-    #     triggers = [trigger for trigger in list(fp.triggers)]
-    #     series_instances = [series_instance for _, series_instance in assoc.series_instances.items()]
-    #     for trigger in triggers:
-    #         for series_instance in series_instances:
-    #             # Check all "in-patterns"
-    #             if (trigger.sop_class_uid_exact is None or trigger.sop_class_uid_exact == series_instance.sop_class_uid) and \
-    #                (trigger.series_description_pattern is None or trigger.series_description_pattern in series_instance.series_instance_uid) and \
-    #                (trigger.study_description_pattern is None or trigger.study_description_pattern in series_instance.study_description):
-    #                 # Check all "out-patterns"
-    #                 if trigger.exclude_pattern is None or \
-    #                     (series_instance.sop_class_uid is None or trigger.exclude_pattern not in series_instance.sop_class_uid) and \
-    #                     (series_instance.series_instance_uid is None or trigger.exclude_pattern not in series_instance.series_instance_uid) and \
-    #                     (series_instance.study_description is None or trigger.exclude_pattern not in series_instance.study_description):
-    #                     matching_series_instances.append(series_instance)
-    #                     break
-    #         else:
-    #             return None
-    #
-    #     return matching_series_instances
+        ds = self.parse_file_metas(context)
+
+        for fp in self.fingerprints:
+            if self.fingerprint(ds, fp):
+                self.logger.info(f"Matched {ds} to {fp}")
+                scheduler_context = SchedulerContext(
+                    exchange=self.mq.exchange,
+                    queue=self.pub_queue,
+                    scp_context=context,
+                    fingerprint=fp)
+                print(scheduler_context)
+                self.mq.publish(context=scheduler_context,
+                                queue_or_routing_key=self.pub_queue)
+
+
     def reload_fingerprints(self):
         self.fingerprints = []
         for fol, subs, files in os.walk(self.fingerprints_directory):

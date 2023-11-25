@@ -8,7 +8,7 @@ from scheduler.fingerprinter import Fingerprinter
 def main():
     mq_pub = MQPub(**Config["mq_base"], **Config["scheduler"]["mq_pub"])
     fp = Fingerprinter(mq=mq_pub, **Config["scheduler"]["fingerprinter"])
-    mq_sub = MQSub(**Config["mq_base"], **Config["scheduler"]["mq_sub"], work_function=fp.fingerprint)
+    mq_sub = MQSub(**Config["mq_base"], **Config["scheduler"]["mq_sub"], work_function=fp.run_fingerprinting)
     mq_sub.subscribe()
 
 if __name__ == "__main__":
