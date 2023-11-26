@@ -12,7 +12,7 @@ def main():
     mq_sub.subscribe()
 
 if __name__ == "__main__":
-    with open("./fingerprints/test.yaml") as r:
+    with open("../fingerprints/test.yaml") as r:
         y = yaml.safe_load(r)
     print(y)
     main()

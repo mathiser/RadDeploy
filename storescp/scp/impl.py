@@ -91,7 +91,8 @@ class SCP:
                 context.file_exchange = file.exchange
                 context.file_queue = file.queue
                 context.file_checksum = file.checksum
-                print(context)
+
+                self.logger.info(f"Received dicom files. Publishing")
                 self.mq.publish_file(file=file, queue_or_routing_key=context.file_queue)
                 self.mq.publish(context=context, queue_or_routing_key=context.routing_key)
             except Exception as e:

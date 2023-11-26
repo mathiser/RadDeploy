@@ -52,13 +52,14 @@ class Fingerprinter:
 
         for fp in self.fingerprints:
             if self.fingerprint(ds, fp):
-                self.logger.info(f"Matched {ds} to {fp}")
+
                 scheduler_context = SchedulerContext(
                     exchange=self.mq.exchange,
                     queue=self.pub_queue,
                     scp_context=context,
                     fingerprint=fp)
-                print(scheduler_context)
+
+                self.logger.info(f"Scheduling flows on fingerprint {fp}")
                 self.mq.publish(context=scheduler_context,
                                 queue_or_routing_key=self.pub_queue)
 
