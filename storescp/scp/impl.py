@@ -1,40 +1,38 @@
 import logging
-import os
-from typing import Dict
+import traceback
+from queue import Queue
 
-from DicomFlowLib.contexts import FileContext
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
 
-
+from DicomFlowLib.contexts import FileContext, BaseContext
 from DicomFlowLib.contexts.scp import SCPContext
-from DicomFlowLib.mq import MQPub
+from DicomFlowLib.default_config import LOG_FORMAT
 
-LOG_FORMAT = ('%(levelname)s:%(asctime)s:%(message)s')
 
 class SCP:
     def __init__(self,
-                 mq: MQPub,
+                 scheduled_contexts: Queue[BaseContext],
                  ae_title: str,
                  hostname: str,
                  port: int,
+                 pub_exchange: str,
                  pub_routing_key: str,
-                 log_level: int = 10,
-                 pynetdicom_log_level: str = "standard",
-                 use_compression: bool = False,
-
-                 ):
+                 log_level: int,
+                 pynetdicom_log_level: str = "standard"):
 
         logging.basicConfig(level=log_level, format=LOG_FORMAT)
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
         self.logger = logging.getLogger(__name__)
 
-        self.mq = mq
+        self.scheduled_contexts = scheduled_contexts
         self.pub_routing_key = pub_routing_key
+        self.pub_exchange = pub_exchange
+
         self.ae_title = ae_title
         self.hostname = hostname
         self.port = port
+
         self.ae = None
-        self.use_compression = use_compression
 
         self.contexts = {}  # container for SCPContexts
 
@@ -47,30 +45,26 @@ class SCP:
         # Association id unique to this transaction
         assoc_id = event.assoc.native_id
         if not assoc_id in self.contexts.keys():
-            self.contexts[assoc_id]: Dict[str, SCPContext] = {}
-
+            print("Putting context")
+            self.contexts[assoc_id] = SCPContext(routing_key=self.pub_routing_key,
+                                                 exchange=self.pub_exchange,
+                                                 routing_key_as_queue=True,  # Specifies the work queue
+                                                 file_exchange=self.pub_exchange)  # For now use same exchange as mainstream
+            print(self.contexts[assoc_id])
         # Get data set from event
         ds = event.dataset
 
         # Add the File Meta Information
         ds.file_meta = event.file_meta
 
-        pid = ds.PatientID
-        sop_class_uid = ds.SOPClassUID
-        series_instance_uid = ds.SeriesInstanceUID
-        sop_instance_uid = ds.SOPInstanceUID
-
-        #  Make association obj if it does not exist
-        if not pid in self.contexts[assoc_id].keys():
-            self.contexts[assoc_id][pid] = SCPContext(routing_key=self.pub_routing_key,
-                                                      exchange=self.mq.exchange)
-
-        filepath = os.path.join(self.contexts[assoc_id][pid].path, pid, sop_class_uid, series_instance_uid, sop_instance_uid + ".dcm")
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        ds.save_as(filepath, write_like_original=False)
-
         # Add file metas so they can be shipped on
-        self.contexts[assoc_id][pid].add_meta(ds.to_json_dict())
+        self.contexts[assoc_id].add_meta(ds.to_json_dict())
+        #self.scheduled_contexts.put(
+        #    FileContext(
+        #        exchange=self.pub_exchange,
+        #        routing_key=self.contexts[assoc_id].file_routing_key,
+        #        file=ds.to_json_dict(),
+        #    ), block=True)
 
         # Return a 'Success' status
         return 0x0000
@@ -79,26 +73,14 @@ class SCP:
         assoc_id = event.assoc.native_id
         self.logger.info(f"Publishing from assoc_id: {assoc_id}")
 
-        # For each PID send a seperate tar
-        for pid, context in self.contexts[assoc_id].items():
-            try:
-                file = FileContext(
-                    queue=self.mq.declare_queue(),
-                    exchange=self.mq.exchange
-                )
-                file.generate_tar_from_path(context.path)
-
-                context.file_exchange = file.exchange
-                context.file_queue = file.queue
-                context.file_checksum = file.checksum
-
-                self.logger.info(f"Received dicom files. Publishing")
-                self.mq.publish_file(file=file, queue_or_routing_key=context.file_queue)
-                self.mq.publish(context=context, queue_or_routing_key=context.routing_key)
-            except Exception as e:
-                raise e
-            finally:
-                del self.contexts[assoc_id]  # Files are deleted when contexts are destructed
+        try:
+            self.logger.info(f"Received dicom files. Publishing")
+            self.scheduled_contexts.put(self.contexts[assoc_id], block=True)
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+        finally:
+            del self.contexts[assoc_id]  # Files are deleted when contexts are destructed
 
     def run_scp(self, blocking=True):
         handler = [
@@ -120,4 +102,7 @@ class SCP:
             self.logger.error(
                 f'Full error: \r\n{ose} \r\n\r\n Cannot start Association Entity servers')
             raise ose
-
+        except Exception as e:
+            self.logger.error(str(e))
+            self.logger.error(traceback.format_exc())
+            raise e
