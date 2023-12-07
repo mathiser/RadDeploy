@@ -75,6 +75,7 @@ class SCP:
 
         try:
             self.logger.info(f"Received dicom files. Publishing")
+            print(self.contexts[assoc_id])
             self.scheduled_contexts.put(self.contexts[assoc_id], block=True)
         except Exception as e:
             print(traceback.format_exc())

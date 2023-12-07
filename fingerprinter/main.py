@@ -1,25 +1,19 @@
+import queue
 import traceback
 
 import yaml
 
 from DicomFlowLib.default_config import Config
-from DicomFlowLib.mq import MQSub
+from DicomFlowLib.mq import MQSub, MQPub
 from fingerprinting import Fingerprinter
 
 
 def main():
     config = Config["fingerprinting"]["mq_sub"]
-    fp = Fingerprinter(**Config["fingerprinting"]["fingerprinter"])
-    mq = MQSub(**Config["mq_base"], **Config["fingerprinting"]["mq_sub"], work_function=fp.run_fingerprinting)
+    sc = queue.Queue()
+    fp = Fingerprinter(scheduled_contexts=sc, **Config["fingerprinting"]["fingerprinter"])
+    MQSub(**Config["mq_base"], **Config["fingerprinting"]["mq_sub"], work_function=fp.run_fingerprinting).run()  # blocks
 
-    try:
-        mq.run()
-    except Exception as e:
-        print(traceback.format_exc())
-        print(str(e))
-        raise e
-    finally:
-        pass
 
 if __name__ == "__main__":
     with open("../fingerprints/test.yaml") as r:

@@ -1,19 +1,23 @@
+import json
 import logging
 import os
 import re
+import time
 import traceback
+from queue import Queue
 from typing import Dict, Set, List
 
 import pika.channel
 import pydicom
 import yaml
-
-from DicomFlowLib.contexts import Destination, Flow, Node
+import pandas as pd
+from DicomFlowLib.contexts import Destination, Flow, Node, SchedulerContext
 from DicomFlowLib.default_config import LOG_FORMAT
 
 
 class Fingerprinter:
     def __init__(self,
+                 scheduled_contexts: Queue,
                  pub_exchange: str,
                  pub_queue: str,
                  flow_directory: str,
@@ -22,54 +26,51 @@ class Fingerprinter:
         self.pub_queue = pub_queue
         self.flows = []
         self.flow_directory = flow_directory
-
+        self.scheduled_contexts = scheduled_contexts
         logging.basicConfig(level=log_level, format=LOG_FORMAT)
         self.logger = logging.getLogger(__name__)
 
-    def parse_file_metas(self, context: Dict) -> Dict[str, Set]:
-        ds = {}
+    def parse_file_metas(self, context: Dict) -> pd.DataFrame:
+        l = []
+        print(context)
+        time.sleep(30)
         for file_meta in context["file_metas"]:
-            for elem in pydicom.Dataset.from_json(file_meta):
-                if elem.keyword not in ds.keys():
-                    ds[str(elem.keyword)] = {str(elem.value)}
-                else:
-                    ds[elem.keyword].add(str(elem.value))
-        return ds
+            try:
+                elems = {}
+                for elem in pydicom.Dataset.from_json(file_meta):
+                    elems[str(elem.keyword)] = str(elem.value)
+                l.append(elems)
+            except Exception as e:
+                print(e)
 
-    def fingerprint(self, ds: Dict[str, Set], triggers: List):
+        return pd.DataFrame(l)
+
+    def fingerprint(self, ds: pd.DataFrame, triggers: List):
+        match = ds
         for trigger in triggers:
-            print(trigger)
             for keyword, regex_pattern in trigger.items():
-                pattern = re.compile(regex_pattern)
+                match = match[match[keyword].str.contains(regex_pattern, regex=True)]  # Regex match. This is "recursive"
+                                                                                       # matching.
 
-                for val in ds[keyword]:
-                    if pattern.search(val):
-                        break
-                else:
-                    return False
-        else:
-            return True
+        return bool(len(match))
 
     def run_fingerprinting(self, channel: pika.channel.Channel, context: Dict):
-
-        print("!")
-        print(context)
         self.reload_fingerprints()
-        print(self.flows)
+        print(self.pub_exchange, self.pub_queue)
+        ds = self.parse_file_metas(context)
 
-        #ds = self.parse_file_metas(context)
+        for flow in self.flows:
+            if self.fingerprint(ds, flow.triggers):
 
-        #for flow in self.flows:
-            # if self.fingerprint(ds, flow.triggers):
-            #
-            #     scheduler_context = SchedulerContext(
-            #         scp_context=context,
-            #         fingerprint=flow.model_dump())
-            #
-            #     self.logger.info(f"Scheduling flows on fingerprint {flow}")
-            #     self.mq.publish(context=scheduler_context,
-            #                     exchange=self.pub_exchange,
-            #                     queue_or_routing_key=self.pub_queue)
+                pub_context = flow.model_dump()
+                pub_context["file_exchange"] = context["file_exchange"]
+                pub_context["file_routing_key"] = context["file_routing_key"]
+                channel.exchange_declare(self.pub_exchange)
+                channel.queue_declare(self.pub_queue)
+                channel.queue_bind(queue=self.pub_queue, exchange=self.pub_exchange)
+                channel.basic_publish(exchange=self.pub_exchange,
+                                      routing_key=self.pub_queue,
+                                      body=json.dumps(pub_context).encode())
 
     def reload_fingerprints(self):
         self.flows = []
