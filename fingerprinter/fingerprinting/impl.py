@@ -1,49 +1,52 @@
 import json
 import logging
 import os
-import re
-import time
-import traceback
-from queue import Queue
-from typing import Dict, Set, List
+from multiprocessing.pool import ThreadPool
+from typing import Dict, List
 
-import pika.channel
+import pandas as pd
 import pydicom
 import yaml
-import pandas as pd
-from DicomFlowLib.contexts import Destination, Flow, Node, SchedulerContext
+
+from DicomFlowLib.data_structures import contexts
 from DicomFlowLib.default_config import LOG_FORMAT
+from DicomFlowLib.mq.base import MQBase
 
 
 class Fingerprinter:
     def __init__(self,
-                 scheduled_contexts: Queue,
-                 pub_exchange: str,
-                 pub_queue: str,
+                 pub_routing_key: str,
+                 pub_routing_key_as_queue: bool,
                  flow_directory: str,
-                 log_level: int):
+                 log_level: int,
+                 pub_exchange: str = "",
+                 pub_exchange_type: str = "direct"):
+
+        self.pub_routing_key_as_queue = pub_routing_key_as_queue
         self.pub_exchange = pub_exchange
-        self.pub_queue = pub_queue
+        self.pub_exchange_type = pub_exchange_type
+        self.pub_routing_key = pub_routing_key
         self.flows = []
         self.flow_directory = flow_directory
-        self.scheduled_contexts = scheduled_contexts
         logging.basicConfig(level=log_level, format=LOG_FORMAT)
-        self.logger = logging.getLogger(__name__)
+        self.LOGGER = logging.getLogger(__name__)
 
+        self.reload_fingerprints()
+
+        self.pub_exchange_and_queue_declared = False
     def parse_file_metas(self, context: Dict) -> pd.DataFrame:
-        l = []
-        print(context)
-        time.sleep(30)
-        for file_meta in context["file_metas"]:
-            try:
-                elems = {}
-                for elem in pydicom.Dataset.from_json(file_meta):
-                    elems[str(elem.keyword)] = str(elem.value)
-                l.append(elems)
-            except Exception as e:
-                print(e)
+        def parse_meta(file_meta):
+            elems = {}
+            for elem in pydicom.Dataset.from_json(file_meta):
+                elems[str(elem.keyword)] = str(elem.value)
+            return elems
 
-        return pd.DataFrame(l)
+        t = ThreadPool(16)
+        res = t.map(parse_meta, context["file_metas"])
+        t.close()
+        t.join()
+
+        return pd.DataFrame(res)
 
     def fingerprint(self, ds: pd.DataFrame, triggers: List):
         match = ds
@@ -51,27 +54,32 @@ class Fingerprinter:
             for keyword, regex_pattern in trigger.items():
                 match = match[match[keyword].str.contains(regex_pattern, regex=True)]  # Regex match. This is "recursive"
                                                                                        # matching.
-
         return bool(len(match))
 
-    def run_fingerprinting(self, channel: pika.channel.Channel, context: Dict):
+    def run_fingerprinting(self, connection, channel, basic_deliver, properties, body):
         self.reload_fingerprints()
-        print(self.pub_exchange, self.pub_queue)
-        ds = self.parse_file_metas(context)
+        context = json.loads(body)
 
+        mq = MQBase()
+        mq.connect(connection, channel)
+
+        if not self.pub_exchange_and_queue_declared:
+            mq.setup_exchange_callback(self.pub_exchange)
+            mq.setup_queue_callback(exchange=self.pub_exchange,
+                                    routing_key=self.pub_routing_key,
+                                    routing_key_as_queue=self.pub_routing_key_as_queue)
+
+        ds = self.parse_file_metas(context)
         for flow in self.flows:
             if self.fingerprint(ds, flow.triggers):
+                flow_context = flow.copy()
+                flow_context.file_exchange = context["file_exchange"]
+                flow_context.file_queue = context["file_queue"]
 
-                pub_context = flow.model_dump()
-                pub_context["file_exchange"] = context["file_exchange"]
-                pub_context["file_routing_key"] = context["file_routing_key"]
-                channel.exchange_declare(self.pub_exchange)
-                channel.queue_declare(self.pub_queue)
-                channel.queue_bind(queue=self.pub_queue, exchange=self.pub_exchange)
-                channel.basic_publish(exchange=self.pub_exchange,
-                                      routing_key=self.pub_queue,
-                                      body=json.dumps(pub_context).encode())
-
+                mq.basic_publish_callback(exchange=self.pub_exchange,
+                                          routing_key=self.pub_routing_key,
+                                          body=flow_context.model_dump_json().encode())
+                self.LOGGER.info(flow_context.model_dump_json())
     def reload_fingerprints(self):
         self.flows = []
         for fol, subs, files in os.walk(self.flow_directory):
@@ -82,32 +90,30 @@ class Fingerprinter:
                         fp = yaml.safe_load(r)
                     # Validate that correct things are in the fp yaml
                     if self.validate_fingerprint(fp):
-                        print(fp)
-                        destinations = [Destination(**d) for d in fp["destinations"]]
-                        print(destinations)
-                        nodes = [Node(**n) for n in fp["nodes"]]
-                        print(nodes)
-
-                        flow = Flow(
+                        destinations = [contexts.Destination(**d) for d in fp["destinations"]]
+                        model = contexts.Model(**fp["model"])
+                        flow = contexts.FlowContext(
                             destinations=destinations,
-                            nodes=nodes,
+                            model=model,
                             triggers=fp["triggers"])
-                        print(flow)
+
                         self.flows.append(flow)
                 except Exception as e:
-                    self.logger.error(str(e))
-                    print(traceback.format_exc())
+                    self.LOGGER.error(str(e))
                     raise e
+        self.LOGGER.debug("Loaded the following flow definitions:")
+        self.LOGGER.debug(self.flows)
+
     def validate_fingerprint(self, fingerprint: Dict):
         assert "triggers" in fingerprint.keys()
         assert isinstance(fingerprint["triggers"], list)
         assert len(fingerprint["triggers"]) != 0
 
-        assert "nodes" in fingerprint.keys()
-        assert isinstance(fingerprint["nodes"], list)
+        assert "model" in fingerprint.keys()
+        assert isinstance(fingerprint["model"], dict)
 
         assert "destinations" in fingerprint.keys()
-        assert isinstance(fingerprint["destinations"], list)
+        assert isinstance(fingerprint["destinations"], List)
 
         for dest in fingerprint["destinations"]:
             assert "hostname" in dest.keys()

@@ -2,31 +2,27 @@ import logging
 import traceback
 from queue import Queue
 
+from pydantic import BaseModel
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
 
-from DicomFlowLib.contexts import FileContext, BaseContext
-from DicomFlowLib.contexts.scp import SCPContext
+from DicomFlowLib.data_structures.contexts.scp import SCPContext
 from DicomFlowLib.default_config import LOG_FORMAT
 
 
 class SCP:
     def __init__(self,
-                 scheduled_contexts: Queue[BaseContext],
+                 publish_queue: Queue[BaseModel],
                  ae_title: str,
                  hostname: str,
                  port: int,
-                 pub_exchange: str,
-                 pub_routing_key: str,
                  log_level: int,
                  pynetdicom_log_level: str = "standard"):
 
         logging.basicConfig(level=log_level, format=LOG_FORMAT)
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
-        self.logger = logging.getLogger(__name__)
+        self.LOGGER = logging.getLogger(__name__)
 
-        self.scheduled_contexts = scheduled_contexts
-        self.pub_routing_key = pub_routing_key
-        self.pub_exchange = pub_exchange
+        self.publish_queue = publish_queue
 
         self.ae_title = ae_title
         self.hostname = hostname
@@ -45,12 +41,8 @@ class SCP:
         # Association id unique to this transaction
         assoc_id = event.assoc.native_id
         if not assoc_id in self.contexts.keys():
-            print("Putting context")
-            self.contexts[assoc_id] = SCPContext(routing_key=self.pub_routing_key,
-                                                 exchange=self.pub_exchange,
-                                                 routing_key_as_queue=True,  # Specifies the work queue
-                                                 file_exchange=self.pub_exchange)  # For now use same exchange as mainstream
-            print(self.contexts[assoc_id])
+            self.contexts[assoc_id] = SCPContext()
+
         # Get data set from event
         ds = event.dataset
 
@@ -71,12 +63,12 @@ class SCP:
 
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
-        self.logger.info(f"Publishing from assoc_id: {assoc_id}")
+        self.LOGGER.info(f"Publishing from assoc_id: {assoc_id}")
 
         try:
-            self.logger.info(f"Received dicom files. Publishing")
-            print(self.contexts[assoc_id])
-            self.scheduled_contexts.put(self.contexts[assoc_id], block=True)
+            self.LOGGER.info(f"Received dicom files. Publishing")
+            self.LOGGER.debug(self.contexts[assoc_id])
+            self.publish_queue.put(self.contexts[assoc_id], block=True)
         except Exception as e:
             print(traceback.format_exc())
             raise e
@@ -90,7 +82,7 @@ class SCP:
         ]
 
         try:
-            self.logger.info(
+            self.LOGGER.info(
                 f"Starting SCP -- InferenceServerDicomNode: {self.hostname}:{str(self.port)} - {self.ae_title}")
 
             # Create and run
@@ -100,10 +92,10 @@ class SCP:
             self.ae.start_server((self.hostname, self.port), block=blocking, evt_handlers=handler)
 
         except OSError as ose:
-            self.logger.error(
+            self.LOGGER.error(
                 f'Full error: \r\n{ose} \r\n\r\n Cannot start Association Entity servers')
             raise ose
         except Exception as e:
-            self.logger.error(str(e))
-            self.logger.error(traceback.format_exc())
+            self.LOGGER.error(str(e))
+            self.LOGGER.error(traceback.format_exc())
             raise e

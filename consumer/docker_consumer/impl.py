@@ -8,7 +8,7 @@ from io import BytesIO
 import docker
 from docker import types
 
-from DicomFlowLib.contexts import Node
+from DicomFlowLib.data_structures.contexts import Node
 
 
 class DockerConsumer:

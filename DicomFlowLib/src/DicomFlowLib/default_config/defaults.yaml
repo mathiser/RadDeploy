@@ -1,0 +1,36 @@
+storescp:
+  scp:
+    log_level: 20
+    pynetdicom_log_level: none
+    ae_title: STORESCP
+    hostname: localhost
+    port: 10000
+
+
+  mq_pub:
+    publish_interval: 1
+    exchange: STORESCP
+    exchange_type: fanout
+    routing_key: ""
+    routing_key_as_queue: False
+
+fingerprinter:
+  fingerprinting:
+    log_level: 20
+    flow_directory: ./flow_definitions
+    pub_exchange: ""
+    pub_routing_key: SCHEDULED_FLOWS
+    pub_routing_key_as_queue: True
+
+  mq_sub:
+    prefetch_value: 1
+    exchange: STORESCP
+    exchange_type: fanout
+    routing_key: ""
+    routing_key_as_queue: False
+
+
+mq_base:
+  hostname: localhost
+  port: 5672
+  log_level: 20
