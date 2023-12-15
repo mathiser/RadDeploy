@@ -41,11 +41,11 @@ class MQPub(MQBase):
                          routing_key=routing_key,
                          routing_key_as_queue=routing_key_as_queue)
 
-    def publish_message(self, context: BaseModel):
+    def publish_message(self, context):
 
         self._channel.basic_publish(exchange=self.exchange,
                                     routing_key=self.routing_key,
-                                    body=context.model_dump_json())
+                                    body=context.to_json())
 
         self._message_number += 1
         self._deliveries[self._message_number] = True

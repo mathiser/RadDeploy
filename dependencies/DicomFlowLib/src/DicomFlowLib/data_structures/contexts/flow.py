@@ -1,6 +1,7 @@
+from dataclasses import dataclass, field
 from typing import Dict, List
 
-from pydantic import BaseModel
+from dataclass_wizard import JSONWizard
 
 ALLOWED_KWARGS: List = ["image", "command", "environment", "ports",
                         "cpu_period", 'cpu_quota', "cpu_rt_period", "cpu_rt_runtime",
@@ -11,32 +12,32 @@ ALLOWED_KWARGS: List = ["image", "command", "environment", "ports",
                         "memswap_limit", "nano_cpus", "network_disabled",
                         "shm_size", "user"]
 
-class Model(BaseModel):
-    docker_kwargs: Dict
+
+@dataclass
+class Model(JSONWizard):
+    dockerKwargs: Dict
 
     gpu: str | bool
-    input_dir: str
-    output_dir: str
+    inputDir: str | None = None
+    outputDir: str | None = None
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.validate()
 
     def validate(self):
-        assert "image" in self.docker_kwargs.keys()
-        for key in self.docker_kwargs.keys():
+        assert "image" in self.dockerKwargs.keys()
+        for key in self.dockerKwargs.keys():
             assert key in ALLOWED_KWARGS
 
 
-class Destination(BaseModel):
+@dataclass
+class Destination(JSONWizard):
     hostname: str
     port: int = 10000
-    ae_title: str = 'STORESCP'
+    aeTitle: str = 'STORESCP'
 
 
-class FlowContext(BaseModel):
-    triggers: List[Dict[str, str]]
-    destinations: List[Destination] = []
+@dataclass
+class FlowContext(JSONWizard):
     model: Model
-    file_exchange: str | None = None
-    file_queue: str | None = None
+    destinations: List[Destination] = field(default_factory=list)
+    triggers: List[Dict[str, str]] = field(default_factory=list)
+

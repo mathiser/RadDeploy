@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0111,C0103,R0205
-import functools
-import json
 import logging
 import threading
 import traceback
-
-import pika
 
 from DicomFlowLib.default_config import LOG_FORMAT
 from .base import MQBase

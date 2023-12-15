@@ -15,13 +15,6 @@ storescp:
     routing_key_as_queue: False
 
 fingerprinter:
-  fingerprinting:
-    log_level: 20
-    flow_directory: ./flow_definitions
-    pub_exchange: ""
-    pub_routing_key: SCHEDULED_FLOWS
-    pub_routing_key_as_queue: True
-
   mq_sub:
     prefetch_value: 1
     exchange: STORESCP
@@ -29,6 +22,26 @@ fingerprinter:
     routing_key: ""
     routing_key_as_queue: False
 
+
+  fingerprinting:
+    log_level: 20
+    flow_directory: ./flow_definitions
+    pub_exchange: FLOWS
+    pub_exchange_type: direct
+    pub_routing_key: PENDING
+    pub_routing_key_as_queue: True
+
+
+consumer:
+  consumer:
+    log_level: 20
+    gpu: False
+  mq_sub:
+    prefetch_value: 1
+    exchange: FLOWS
+    exchange_type: direct
+    routing_key: PENDING
+    routing_key_as_queue: True
 
 mq_base:
   hostname: localhost
