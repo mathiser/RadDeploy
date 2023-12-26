@@ -1,6 +1,5 @@
-import queue
-
 import yaml
+from python_logging_rabbitmq import RabbitMQHandler
 
 from DicomFlowLib.default_config import Config
 from DicomFlowLib.mq import MQSub
@@ -8,14 +7,16 @@ from fingerprinting import Fingerprinter
 
 
 def main():
-    fp = Fingerprinter(**Config["fingerprinter"]["fingerprinting"])
-    MQSub(**Config["mq_base"],
-          **Config["fingerprinter"]["mq_sub"],
-          work_function=fp.run_fingerprinting).consume()  # blocks
+    logger = RabbitMQHandler(**Config["logger_base"])
+    fp = Fingerprinter(mq_logger=logger, **Config["fingerprinter"]["fingerprinting"])
+
+    mq = MQSub(mq_logger=logger,
+               **Config["mq_base"],
+               **Config["fingerprinter"]["mq_sub"],
+               work_function=fp.mq_entrypoint)
+    mq.start()
+    mq.join()  # blocks
 
 
 if __name__ == "__main__":
-    with open("flow_definitions/test.yaml") as r:
-        y = yaml.safe_load(r)
-    print(y)
     main()

@@ -1,0 +1,2 @@
+docker
+DicomFlowLib @ git+https://github.com/mathiser/DicomFlow.git#subdirectory=DicomFlowLib

@@ -1,3 +1,19 @@
+mq_base:
+  hostname: localhost
+  port: 5672
+  log_level: 20
+
+fs_base:
+  log_level: 20
+  base_dir: /tmp/sometempdir
+
+logger_base:
+  host: localhost
+  port: 5672
+  username: guest
+  password: guest
+  declare_exchange: True
+
 storescp:
   scp:
     log_level: 20
@@ -6,44 +22,47 @@ storescp:
     hostname: localhost
     port: 10000
 
+    mainstream_queue: STORESCP_MAINSTREAM
 
   mq_pub:
     publish_interval: 1
-    exchange: STORESCP
-    exchange_type: fanout
-    routing_key: ""
-    routing_key_as_queue: False
 
 fingerprinter:
   mq_sub:
     prefetch_value: 1
     exchange: STORESCP
-    exchange_type: fanout
-    routing_key: ""
-    routing_key_as_queue: False
-
-
+    exchange_type: direct
+    routing_key: STORESCP_MAINSTREAM
+    routing_key_as_queue: True
   fingerprinting:
     log_level: 20
     flow_directory: ./flow_definitions
     pub_exchange: FLOWS
     pub_exchange_type: direct
-    pub_routing_key: PENDING
+    pub_routing_key: FLOWS_PENDING
     pub_routing_key_as_queue: True
 
-
 consumer:
+  mq_sub:
+    prefetch_value: 1
+    exchange: ""
+    exchange_type: direct
+    routing_key: FLOWS_PENDING
+    routing_key_as_queue: True
   consumer:
     log_level: 20
     gpu: False
+    pub_exchange: ""
+    pub_exchange_type: direct
+    pub_routing_key: FLOWS_FINISHED
+    pub_routing_key_as_queue: True
+
+storescu:
+  storescu:
+    log_level: 20
   mq_sub:
     prefetch_value: 1
-    exchange: FLOWS
+    exchange: ""
     exchange_type: direct
-    routing_key: PENDING
+    routing_key: FLOWS_FINISHED
     routing_key_as_queue: True
-
-mq_base:
-  hostname: localhost
-  port: 5672
-  log_level: 20

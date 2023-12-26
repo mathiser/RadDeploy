@@ -4,19 +4,16 @@ from DicomFlowLib.default_config import Config
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.mq import MQSub
 
-from docker_consumer.impl import DockerConsumer
+from scu import SCU
 
 
 def main():
     logger = RabbitMQHandler(**Config["logger_base"])
-
     fs = FileStorage(**Config["fs_base"])
-    consumer = DockerConsumer(logger=logger, file_storage=fs, **Config["consumer"]["consumer"])
-
-    mq = MQSub(mq_logger=logger,
-               **Config["mq_base"],
-               **Config["consumer"]["mq_sub"],
-               work_function=consumer.mq_entrypoint)
+    scu = SCU(file_storage=fs, mq_logger=logger, **Config["storescu"]["storescu"])
+    mq = MQSub(mq_logger=logger, **Config["mq_base"],
+          **Config["storescu"]["mq_sub"],
+          work_function=scu.mq_entrypoint)
     mq.start()
     mq.join()
 
