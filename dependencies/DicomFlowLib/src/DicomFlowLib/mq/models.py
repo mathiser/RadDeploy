@@ -1,11 +1,9 @@
 from pydantic import BaseModel
 
 
-class PublishContext(BaseModel):
-    body: bytes
+class PubSubQueue(BaseModel):
     routing_key: str
     exchange: str = ""
     exchange_type: str = "direct"
     routing_key_as_queue: str = "SYSTEM"
-    reply_to: str | None = None
-    priority: int = 0
+    x_max_priority: int = 5

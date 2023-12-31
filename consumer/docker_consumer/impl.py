@@ -12,29 +12,26 @@ from python_logging_rabbitmq import RabbitMQHandler
 
 from DicomFlowLib.data_structures.contexts.data_context import FlowContext
 from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.default_config import LOG_FORMAT
 from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.log.logger import CollectiveLogger
 from DicomFlowLib.mq import MQBase
 
 
 class DockerConsumer:
     def __init__(self,
-                 logger: RabbitMQHandler,
+                 logger: CollectiveLogger,
                  file_storage: FileStorage,
                  pub_exchange: str,
                  pub_routing_key: str,
                  pub_routing_key_as_queue: bool,
                  pub_exchange_type: str,
-                 gpu: str | bool = False,
-                 log_level: int = 10):
+                 gpu: str | bool = False,):
+        self.logger = logger
         self.fs = file_storage
         self.pub_exchange_type = pub_exchange_type
         self.pub_routing_key = pub_routing_key
         self.pub_routing_key_as_queue = pub_routing_key_as_queue
         self.pub_exchange = pub_exchange
-        logging.basicConfig(level=log_level, format=LOG_FORMAT)
-        self.LOGGER = logging.getLogger(__name__)
-        self.LOGGER.addHandler(logger)
         self.gpu = gpu
         self.cli = docker.from_env()
 
@@ -42,7 +39,7 @@ class DockerConsumer:
         self.cli.close()
 
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
-        mq = MQBase().connect_like(connection=connection)
+        mq = MQBase(self.logger).connect_like(connection=connection)
 
         context = FlowContext(**json.loads(body.decode()))
 
@@ -58,13 +55,13 @@ class DockerConsumer:
         mq.basic_publish(exchange=self.pub_exchange,
                          routing_key=self.pub_routing_key,
                          body=context.model_dump_json().encode())
-        self.LOGGER.debug(context)
+        self.logger.debug(context)
 
     def exec_model(self,
                    model: Model,
                    input_tar: BytesIO | None = None) -> BytesIO:
         kwargs = model.docker_kwargs
-        self.LOGGER.info(str(kwargs))
+        self.logger.info(str(kwargs))
         # Mount point of input/output to container. These are dummy binds, to make sure the container has /input and /output
         # container.
         kwargs["volumes"] = [
@@ -91,8 +88,8 @@ class DockerConsumer:
 
             container.start()
             container.wait()  # Blocks...
-            self.LOGGER.info("####### CONTAINER LOG ##########")
-            self.LOGGER.info(container.logs().decode())
+            self.logger.info("####### CONTAINER LOG ##########")
+            self.logger.info(container.logs().decode())
 
             if model.output_dir:
                 output, stats = container.get_archive(path=model.output_dir)
@@ -109,17 +106,17 @@ class DockerConsumer:
                 # return output_tar
 
         except Exception as e:
-            self.LOGGER.error(str(traceback.format_exc()))
+            self.logger.error(str(traceback.format_exc()))
             raise e
         finally:
             counter = 0
             while counter < 5:
                 try:
-                    self.LOGGER.info("Attempting to remove %s", container.short_id)
+                    self.logger.info("Attempting to remove %s".format(container.short_id))
                     container.remove()
                     break
                 except:
-                    self.LOGGER.info("Failed to remove %s. Trying again in 5 sec...", container.short_id)
+                    self.logger.info("Failed to remove %s. Trying again in 5 sec...".format(container.short_id))
                     counter += 1
                     time.sleep(5)
 

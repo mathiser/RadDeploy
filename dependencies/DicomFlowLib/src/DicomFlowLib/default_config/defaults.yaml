@@ -1,31 +1,26 @@
 mq_base:
   hostname: localhost
   port: 5672
-  log_level: 20
 
 fs_base:
-  log_level: 20
   base_dir: /tmp/sometempdir
 
-logger_base:
-  host: localhost
-  port: 5672
-  username: guest
-  password: guest
-  declare_exchange: True
 
 storescp:
   scp:
-    log_level: 20
     pynetdicom_log_level: none
     ae_title: STORESCP
     hostname: localhost
     port: 10000
 
-    mainstream_queue: STORESCP_MAINSTREAM
+    pub_routing_key: STORESCP_MAINSTREAM
 
   mq_pub:
     publish_interval: 1
+
+  logger:
+    name: storescp
+    log_level: 20
 
 fingerprinter:
   mq_sub:
@@ -35,12 +30,14 @@ fingerprinter:
     routing_key: STORESCP_MAINSTREAM
     routing_key_as_queue: True
   fingerprinting:
-    log_level: 20
     flow_directory: ./flow_definitions
     pub_exchange: FLOWS
     pub_exchange_type: direct
     pub_routing_key: FLOWS_PENDING
     pub_routing_key_as_queue: True
+  logger:
+    name: fingerprinter
+    log_level: 20
 
 consumer:
   mq_sub:
@@ -50,19 +47,22 @@ consumer:
     routing_key: FLOWS_PENDING
     routing_key_as_queue: True
   consumer:
-    log_level: 20
     gpu: False
     pub_exchange: ""
     pub_exchange_type: direct
     pub_routing_key: FLOWS_FINISHED
     pub_routing_key_as_queue: True
+  logger:
+    name: consumer
+    log_level: 20
 
 storescu:
-  storescu:
-    log_level: 20
   mq_sub:
     prefetch_value: 1
     exchange: ""
     exchange_type: direct
     routing_key: FLOWS_FINISHED
     routing_key_as_queue: True
+  logger:
+    name: storescu
+    log_level: 20

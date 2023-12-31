@@ -1,24 +1,17 @@
-import logging
 import queue
 import traceback
 from queue import Queue
 
-from pydantic import BaseModel
-from python_logging_rabbitmq import RabbitMQHandler
-
-from DicomFlowLib.default_config import LOG_FORMAT
 from .base import MQBase
+from ..data_structures.contexts import PublishContext
+from ..log.logger import CollectiveLogger
 
 
 class MQPub(MQBase):
-    def __init__(self, hostname: str, port: int, log_level: int,
-                 publish_interval: int, publish_queue: Queue, logger: RabbitMQHandler):
-
-        super().__init__(logger, hostname, port, log_level)
-
-        logging.basicConfig(level=log_level, format=LOG_FORMAT)
-        self.LOGGER = logging.getLogger(__name__)
-        self.LOGGER.addHandler(logger)
+    def     __init__(self, hostname: str, port: int,
+                    publish_interval: int, publish_queue: Queue,
+                    logger: CollectiveLogger):
+        super().__init__(logger, hostname, port)
 
         self.publish_interval = publish_interval
         self.publish_queue = publish_queue
@@ -30,8 +23,7 @@ class MQPub(MQBase):
 
         self.connect()
 
-
-    def publish_message(self, context):
+    def publish_message(self, context: PublishContext):
         self.setup_exchange(exchange=context.exchange,
                             exchange_type=context.exchange_type)
 
@@ -39,13 +31,15 @@ class MQPub(MQBase):
                                   routing_key=context.routing_key,
                                   routing_key_as_queue=context.routing_key_as_queue)
 
-        self._channel.basic_publish(exchange=context.exchange,
-                                    routing_key=context.routing_key,
-                                    body=context.body)
+        self.basic_publish(exchange=context.exchange,
+                           routing_key=context.routing_key,
+                           body=context.body,
+                           reply_to=context.reply_to,
+                           priority=context.priority)
 
         self._message_number += 1
         self._deliveries[self._message_number] = True
-        self.LOGGER.info('Published message # %i', self._message_number)
+        self.logger.info('Published message # %i'.format(self._message_number))
 
     def run(self):
         while not self._stopping:
@@ -54,28 +48,27 @@ class MQPub(MQBase):
             self._nacked = 0
             self._message_number = 0
 
-            self.LOGGER.info('Made connection')
+            self.logger.info('Made connection')
             self.connect()
 
-            # self.LOGGER.info('Enabling delivery confirmations')
+            # self.logger.info('Enabling delivery confirmations')
             # self.enable_delivery_confirmations()
 
-            self.LOGGER.info('Starting publishing')
+            self.logger.info('Starting publishing')
             while not self._stopping:
                 try:
-                    context = self.publish_queue.get(timeout=30)
+                    context = self.publish_queue.get(timeout=5)
                     self.publish_message(context=context)
                 except queue.Empty:
-                    self._connection.process_data_events()
-
+                    self.process_event_data()
                 except KeyboardInterrupt:
                     self.stop()
                 except Exception as e:
-                    self.LOGGER.error(str(e))
-                    self.LOGGER.error(traceback.format_exc())
+                    self.logger.error(str(e))
+                    self.logger.error(traceback.format_exc())
                     raise e
 
-        self.LOGGER.info('Stopped')
+        self.logger.info('Stopped')
 
     def enable_delivery_confirmations(self):
         """Send the Confirm.Select RPC method to RabbitMQ to enable delivery
@@ -88,8 +81,8 @@ class MQPub(MQBase):
         is confirming or rejecting.
 
         """
-        self.LOGGER.info('Issuing Confirm.Select RPC command')
-        self._channel.confirm_delivery(self.on_delivery_confirmation)
+        self.logger.info('Issuing Confirm.Select RPC command')
+        self._channel.confirm_delivery(ack_nack_callback=self.on_delivery_confirmation)
 
     def on_delivery_confirmation(self, method_frame):
         """Invoked by pika when RabbitMQ responds to a Basic.Publish RPC
@@ -108,8 +101,8 @@ class MQPub(MQBase):
         ack_multiple = method_frame.method.multiple
         delivery_tag = method_frame.method.delivery_tag
 
-        self.LOGGER.info('Received %s for delivery tag: %i (multiple: %s)',
-                         confirmation_type, delivery_tag, ack_multiple)
+        self.logger.info('Received %s for delivery tag: %i (multiple: %s)'.format(
+                         confirmation_type, delivery_tag, ack_multiple))
 
         if confirmation_type == 'ack':
             self._acked += 1
@@ -128,7 +121,7 @@ class MQPub(MQBase):
         entries and decide to attempt re-delivery
         """
 
-        self.LOGGER.info(
+        self.logger.info(
             'Published %i messages, %i have yet to be confirmed, '
-            '%i were acked and %i were nacked', self._message_number,
-            len(self._deliveries), self._acked, self._nacked)
+            '%i were acked and %i were nacked'.format(self._message_number,
+            len(self._deliveries), self._acked, self._nacked))

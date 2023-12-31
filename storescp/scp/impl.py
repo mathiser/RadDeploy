@@ -8,11 +8,10 @@ from queue import Queue
 from typing import Dict
 
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
-from python_logging_rabbitmq import RabbitMQHandler
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
-from DicomFlowLib.default_config import LOG_FORMAT
 from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.log.logger import CollectiveLogger
 
 
 class AssocContext:
@@ -56,20 +55,23 @@ class SCP:
                  ae_title: str,
                  hostname: str,
                  port: int,
-                 log_level: int,
-                 mainstream_queue: str,
-                 mq_logger: RabbitMQHandler | None = None,
+                 pub_routing_key: str,
+                 logger: CollectiveLogger,
+                 pub_exchange: str = "",
+                 pub_routing_key_as_queue: str = "SYSTEM",
+                 pub_exchange_type: str = "direct",
                  pynetdicom_log_level: str = "standard"):
         self.fs = file_storage
         self.ae = None
 
-        self.mainstream_queue = mainstream_queue
+        self.pub_routing_key = pub_routing_key
+        self.pub_routing_key_as_queue = pub_routing_key_as_queue
+        self.pub_exchange = pub_exchange
+        self.pub_exchange_type = pub_exchange_type
 
-        logging.basicConfig(level=log_level, format=LOG_FORMAT)
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
-        self.LOGGER = logging.getLogger(__name__)
-        if mq_logger:
-            self.LOGGER.addHandler(mq_logger)
+
+        self.logger = logger
 
         self.publish_queue = publish_queue
         self.ae_title = ae_title
@@ -113,9 +115,12 @@ class SCP:
         return 0x0000
 
     def publish_main_context(self, assoc_id):
-        self.LOGGER.info(f"Queueing {assoc_id} up to be published")
+        self.logger.debug(f"Queueing {assoc_id} up to be published")
         publish_context = PublishContext(
-            routing_key=self.mainstream_queue,
+            routing_key=self.pub_routing_key,
+            routing_key_as_queue=self.pub_routing_key_as_queue,
+            exchange=self.pub_exchange,
+            exchange_type=self.pub_exchange_type,
             body=self.assoc[assoc_id].context.model_dump_json().encode()
         )
         self.publish_queue.put(publish_context, block=True)
@@ -126,20 +131,23 @@ class SCP:
 
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
-        self.LOGGER.info(f"Publishing from assoc_id: {assoc_id}")
+        self.logger.info(f"Publishing from assoc_id: {assoc_id}")
         uid = self.publish_file_context(assoc_id=assoc_id)
         try:
             self.assoc[assoc_id].context.input_file_uid = uid
             self.publish_main_context(assoc_id=assoc_id)
         except Exception as e:
-            self.LOGGER.error(str(e))
+            self.logger.error(str(e))
         finally:
             self.assoc[assoc_id].purge()
             del self.assoc[assoc_id]
     def handle_echo(self, event):
         return 0x0000
 
-    def run_scp(self, blocking=True):
+    def stop(self):
+        self.ae.shutdown()
+
+    def start(self, blocking=True):
         handler = [
             (evt.EVT_C_ECHO, self.handle_echo),
             (evt.EVT_ESTABLISHED, self.handle_established),
@@ -148,7 +156,7 @@ class SCP:
         ]
 
         try:
-            self.LOGGER.info(
+            self.logger.info(
                 f"Starting SCP -- InferenceServerDicomNode: {self.hostname}:{str(self.port)} - {self.ae_title}")
 
             # Create and run
@@ -158,10 +166,10 @@ class SCP:
             self.ae.start_server((self.hostname, self.port), block=blocking, evt_handlers=handler)
 
         except OSError as ose:
-            self.LOGGER.error(
+            self.logger.error(
                 f'Full error: \r\n{ose} \r\n\r\n Cannot start Association Entity servers')
             raise ose
         except Exception as e:
-            self.LOGGER.error(str(e))
-            self.LOGGER.error(traceback.format_exc())
+            self.logger.error(str(e))
+            self.logger.error(traceback.format_exc())
             raise e
