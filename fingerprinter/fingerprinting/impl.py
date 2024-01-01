@@ -31,8 +31,11 @@ class Fingerprinter:
         self.flow_directory = flow_directory
 
         self.reload_fingerprints()
+        self.uid = None
 
     def parse_file_metas(self, file_metas: List) -> pd.DataFrame:
+        self.logger.info(f"PARSING FILE METAS", uid=self.uid, finished=False)
+
         def parse_meta(file_meta):
             elems = {}
             for elem in pydicom.Dataset.from_json(file_meta):
@@ -43,22 +46,29 @@ class Fingerprinter:
         res = t.map(parse_meta, file_metas)
         t.close()
         t.join()
-
+        self.logger.info(f"PARSING FILE METAS", uid=self.uid, finished=True)
         return pd.DataFrame(res)
 
     def fingerprint(self, ds: pd.DataFrame, triggers: List):
+        self.logger.info(f"RUNNING FINGERPRINTING", uid=self.uid, finished=False)
         match = ds
         for trigger in triggers:
             for keyword, regex_pattern in trigger.items():
                 match = match[
                     match[keyword].str.contains(regex_pattern, regex=True)]  # Regex match. This is "recursive"
                 # matching.
+        is_match = bool(len(match))
+        if is_match:
+            self.logger.info(f"FOUND MATCH", uid=self.uid, finished=True)
+
+        self.logger.info(f"RUNNING FINGERPRINTING", uid=self.uid, finished=True)
         return bool(len(match))
 
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
         self.reload_fingerprints()
 
         context = FlowContext(**json.loads(body.decode()))
+        self.uid = context.uid
         mq = MQBase(self.logger)
         mq.connect_with(connection, channel)
 
@@ -70,11 +80,14 @@ class Fingerprinter:
         for flow in self.flows:
             if self.fingerprint(ds, flow.triggers):
                 context.flow = flow.copy()
+                self.logger.info(f"PUB TO QUEUE: {self.pub_routing_key}", uid=self.uid, finished=False)
                 mq.basic_publish_callback(exchange=self.pub_exchange,
                                           routing_key=self.pub_routing_key,
                                           body=context.model_dump_json().encode(),
                                           priority=context.flow.priority)
+                self.logger.info(f"PUB TO QUEUE: {self.pub_routing_key}", uid=self.uid, finished=True)
 
+        self.uid = None
     def reload_fingerprints(self):
         self.flows = []
         for fol, subs, files in os.walk(self.flow_directory):

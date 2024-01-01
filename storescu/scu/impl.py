@@ -26,18 +26,22 @@ class SCU:
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
         context = FlowContext(**json.loads(body.decode()))
         uid = context.uid
-        self.logger.debug("Starting SCU", uid=uid, finished=False)
+        self.logger.info("SCU", uid=uid, finished=False)
 
-        self.logger.debug("Extracting file(s)", uid=uid, finished=False)
+        self.logger.info("EXTRACTING FILE(S)", uid=uid, finished=False)
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_tar = self.fs.get(context.output_file_uid)
             with tarfile.TarFile.open(fileobj=output_tar, mode="r:*") as tf:
                 tf.extractall(tmp_dir)
 
-            self.logger.debug("Extracting file(s)", uid=uid, finished=True)
+            self.logger.info("EXTRACTING FILE(S)", uid=uid, finished=True)
 
             for dest in context.flow.destinations:
+                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=uid, finished=False)
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
+                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=uid, finished=True)
+
+        self.logger.info("SCU", uid=uid, finished=True)
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:
         ae = AE()
@@ -47,7 +51,6 @@ class SCU:
         if assoc.is_established:
             # Use the C-STORE service to send the dataset
             # returns the response status as a pydicom Dataset
-            self.logger.info(f'Posting {dicom_dir} to {destination.ae_title} on: {destination.host}:{destination.port}')
             for fol, subs, files in os.walk(dicom_dir):
                 for file in files:
                     p = os.path.join(fol, file)

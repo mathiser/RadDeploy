@@ -88,8 +88,9 @@ class SCP:
         # Association id unique to this transaction
         # Set up all the things
         assoc_id = event.assoc.native_id
+        self.logger.debug(f"Handle established with association id: {assoc_id}", finished=True)
         self.assoc[assoc_id] = AssocContext()
-
+        self.logger.info(f"STORESCP RECEIVED", uid=self.assoc[assoc_id].context.uid, finished=True)
         return 0x0000
 
     def handle_store(self, event):
@@ -115,7 +116,6 @@ class SCP:
         return 0x0000
 
     def publish_main_context(self, assoc_id):
-        self.logger.debug(f"Queueing {assoc_id} up to be published")
         publish_context = PublishContext(
             routing_key=self.pub_routing_key,
             routing_key_as_queue=self.pub_routing_key_as_queue,
@@ -131,17 +131,23 @@ class SCP:
 
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
-        self.logger.info(f"Publishing from assoc_id: {assoc_id}")
+        self.logger.debug(f"Handle released with association id: {assoc_id}", finished=False)
+        self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=self.assoc[assoc_id].context.uid, finished=False)
         uid = self.publish_file_context(assoc_id=assoc_id)
+        self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=self.assoc[assoc_id].context.uid, finished=True)
         try:
+            self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=self.assoc[assoc_id].context.uid, finished=False)
             self.assoc[assoc_id].context.input_file_uid = uid
             self.publish_main_context(assoc_id=assoc_id)
+            self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=self.assoc[assoc_id].context.uid, finished=True)
+            self.logger.debug(f"Handle released with association id: {assoc_id}", finished=False)
         except Exception as e:
             self.logger.error(str(e))
         finally:
             self.assoc[assoc_id].purge()
             del self.assoc[assoc_id]
     def handle_echo(self, event):
+        self.logger.info(f"Replying to ECHO", finished=True)
         return 0x0000
 
     def stop(self):
@@ -156,20 +162,19 @@ class SCP:
         ]
 
         try:
-            self.logger.info(
-                f"Starting SCP -- InferenceServerDicomNode: {self.hostname}:{str(self.port)} - {self.ae_title}")
+            self.logger.debug(f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}", finished=False)
 
             # Create and run
             self.ae = AE(ae_title=self.ae_title)
             self.ae.supported_contexts = StoragePresentationContexts
             self.ae.maximum_pdu_size = 0
             self.ae.start_server((self.hostname, self.port), block=blocking, evt_handlers=handler)
-
+            self.logger.debug(
+                f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}",
+                finished=False)
         except OSError as ose:
-            self.logger.error(
-                f'Full error: \r\n{ose} \r\n\r\n Cannot start Association Entity servers')
+            self.logger.error(f'Cannot start Association Entity servers')
             raise ose
         except Exception as e:
             self.logger.error(str(e))
-            self.logger.error(traceback.format_exc())
             raise e

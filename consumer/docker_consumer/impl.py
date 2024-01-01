@@ -42,26 +42,35 @@ class DockerConsumer:
         mq = MQBase(self.logger).connect_like(connection=connection)
 
         context = FlowContext(**json.loads(body.decode()))
-
+        self.logger.info(f"PROCESSING", uid=context.uid, finished=False)
         input_tar = self.fs.get(context.input_file_uid)
-        output_tar = self.exec_model(context.flow.model, input_tar)
+        output_tar = self.exec_model(context, input_tar)
 
+        self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=False)
         context.output_file_uid = self.fs.put(output_tar)
+        self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=True)
 
+        self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=False)
         mq.setup_exchange(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
         mq.setup_queue_and_bind(exchange=self.pub_exchange,
                                 routing_key=self.pub_routing_key,
                                 routing_key_as_queue=self.pub_routing_key_as_queue)
+
         mq.basic_publish(exchange=self.pub_exchange,
                          routing_key=self.pub_routing_key,
                          body=context.model_dump_json().encode())
-        self.logger.debug(context)
+        self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=True)
+
+        self.logger.info(f"PROCESSING", uid=context.uid, finished=True)
 
     def exec_model(self,
-                   model: Model,
-                   input_tar: BytesIO | None = None) -> BytesIO:
+                   context: FlowContext,
+                   input_tar: BytesIO) -> BytesIO:
+
+        model = context.flow.model
+        self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid, finished=False)
+
         kwargs = model.docker_kwargs
-        self.logger.info(str(kwargs))
         # Mount point of input/output to container. These are dummy binds, to make sure the container has /input and /output
         # container.
         kwargs["volumes"] = [
@@ -99,6 +108,8 @@ class DockerConsumer:
                 for chunk in output:
                     output_tar.write(chunk)
                 output_tar.seek(0)
+                self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid,
+                                 finished=True)
                 return output_tar
                 # # Remove one dir level
                 # # output_tar = self.postprocess_output_tar(tarf=output_tar)
@@ -112,52 +123,17 @@ class DockerConsumer:
             counter = 0
             while counter < 5:
                 try:
-                    self.logger.info("Attempting to remove %s".format(container.short_id))
+                    self.logger.debug(f"Attempting to remove container {container.short_id}",
+                                      uid=context.uid,
+                                      finished=False)
                     container.remove()
+                    self.logger.debug(f"Attempting to remove container {container.short_id}",
+                                      uid=context.uid,
+                                      finished=True)
                     break
                 except:
-                    self.logger.info("Failed to remove %s. Trying again in 5 sec...".format(container.short_id))
+                    self.logger.debug(f"Failed to remove {container.short_id}. Trying again in 5 sec...",
+                                      uid=context.uid,
+                                      finished=True)
                     counter += 1
                     time.sleep(5)
-
-    # def postprocess_output_tar(self, tarf: BytesIO):
-    #     """
-    #     Removes one layer from the output_tar - i.e. the /output/
-    #     If dump_logs==True, container logs are dumped to container.log
-    #     """
-    #     container_tar_obj = tarfile.TarFile.open(fileobj=tarf, mode="r|*")
-    #
-    #     # Unwrap container tar to temp dir
-    #     with tempfile.TemporaryDirectory() as tmpd:
-    #         container_tar_obj.extractall(tmpd)
-    #         container_tar_obj.close()
-    #
-    #         # Make a new temp tar.gz
-    #         new_tar_file = BytesIO()
-    #         new_tar_obj = tarfile.TarFile.open(fileobj=new_tar_file, mode="w")
-    #
-    #         # Walk directory from output to strip it away
-    #         for fol, subs, files in os.walk(os.path.join(tmpd, "output")):
-    #             for file in files:
-    #                 new_tar_obj.add(os.path.join(fol, file), arcname=file)
-    #
-    #     new_tar_obj.close()  # Now safe to close tar obj
-    #     new_tar_file.seek(0)  # Reset pointer
-    #     return new_tar_file  # Ready to ship directly to DB
-
-
-if __name__ == "__main__":
-    model = Model(dockerKwargs={"image": "busybox",
-                                "command": "cp -r /input/* /output/"})
-    try:
-        input_tar = BytesIO()
-        tf = tarfile.TarFile.open(fileobj=input_tar, mode="w")
-        tf.add(".")
-        tf.close()
-        input_tar.seek(0)
-
-        consumer = DockerConsumer()
-        output_tar = consumer.exec_model(model=model, input_tar=input_tar)
-    finally:
-        input_tar.close()
-        output_tar.close()

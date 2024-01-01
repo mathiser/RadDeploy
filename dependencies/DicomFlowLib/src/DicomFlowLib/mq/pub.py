@@ -48,7 +48,7 @@ class MQPub(MQBase):
             self._nacked = 0
             self._message_number = 0
 
-            self.logger.info('Made connection')
+            self.logger.debug('Made connection')
             self.connect()
 
             # self.logger.info('Enabling delivery confirmations')
@@ -81,7 +81,7 @@ class MQPub(MQBase):
         is confirming or rejecting.
 
         """
-        self.logger.info('Issuing Confirm.Select RPC command')
+
         self._channel.confirm_delivery(ack_nack_callback=self.on_delivery_confirmation)
 
     def on_delivery_confirmation(self, method_frame):
@@ -101,7 +101,7 @@ class MQPub(MQBase):
         ack_multiple = method_frame.method.multiple
         delivery_tag = method_frame.method.delivery_tag
 
-        self.logger.info('Received %s for delivery tag: %i (multiple: %s)'.format(
+        self.logger.info('Received {} for delivery tag: {} (multiple: {})'.format(
                          confirmation_type, delivery_tag, ack_multiple))
 
         if confirmation_type == 'ack':
@@ -122,6 +122,6 @@ class MQPub(MQBase):
         """
 
         self.logger.info(
-            'Published %i messages, %i have yet to be confirmed, '
-            '%i were acked and %i were nacked'.format(self._message_number,
+            'Published {} messages, {} have yet to be confirmed, '
+            '{} were acked and {} were nacked'.format(self._message_number,
             len(self._deliveries), self._acked, self._nacked))

@@ -25,7 +25,7 @@ class MQBase(threading.Thread):
         self._declared_queues = set()
 
     def connect_like(self, connection: pika.connection.Connection):
-        self.logger.info('Connecting to %s:%s'.format(self._hostname, self._port))
+        self.logger.info('Connecting to {}:{}'.format(self._hostname, self._port))
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=connection._impl.params.host, port=connection._impl.params.port)
         )
@@ -47,7 +47,7 @@ class MQBase(threading.Thread):
 
     def connect(self):
         assert self._hostname and self._port
-        self.logger.info('Connecting to %s:%s'.format(self._hostname, self._port))
+        self.logger.info('Connecting to {}:{}'.format(self._hostname, self._port))
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=self._hostname, port=self._port))
         self._channel = self._connection.channel()
 
@@ -90,7 +90,7 @@ class MQBase(threading.Thread):
 
     def setup_exchange(self, exchange: str, exchange_type: str = "direct"):
         if exchange in self._declared_exchanges:
-            self.logger.debug('Exchange %s type %s already exist'.format(exchange, exchange_type))
+            self.logger.debug('Exchange {} type %s already exist'.format(exchange, exchange_type))
         else:
             self.logger.info('Declaring exchange %s type %s'.format(exchange, exchange_type))
             self._channel.exchange_declare(exchange=exchange,
@@ -163,7 +163,7 @@ class MQBase(threading.Thread):
 
     def basic_publish(self, exchange: str, routing_key: str, body: bytes, priority: int = 0,
                       reply_to: str | None = None):
-        self.logger.info(f"Publishing with routing_key: {routing_key} on exchange: {exchange}")
+        self.logger.info(f"Publishing with routing_key: {routing_key} on exchange: {exchange}", finished=False)
 
         self._channel.basic_publish(
             exchange=exchange,
@@ -174,6 +174,7 @@ class MQBase(threading.Thread):
                 priority=priority
             )
         )
+        self.logger.info(f"Publishing with routing_key: {routing_key} on exchange: {exchange}", finished=True)
 
     def delete_queue_callback(self, queue: str, if_empty: bool = False):
         cb = functools.partial(self.delete_queue,

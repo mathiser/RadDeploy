@@ -77,7 +77,7 @@ class MQSub(MQBase):
         self._channel.start_consuming()
 
     def on_message(self, _unused_channel, basic_deliver, properties, body):
-        self.logger.info('Received message # %s from %s'.format(basic_deliver.delivery_tag, properties.app_id))
+        self.logger.debug('Received message # {} from {}'.format(basic_deliver.delivery_tag, properties.app_id))
 
         t = threading.Thread(target=self.work_function_wrapper,
                              args=(self._connection, self._channel, basic_deliver, properties, body))
@@ -86,13 +86,13 @@ class MQSub(MQBase):
 
     def work_function_wrapper(self, connection, channel, basic_deliver, properties, body):
         try:
-            self.logger.info('Starting work function of message # %s'.format(basic_deliver.delivery_tag))
+            self.logger.debug('Starting work function of message # {}'.format(basic_deliver.delivery_tag))
             self.work_function(connection, channel, basic_deliver, properties, body)
-            self.logger.info('Finishing work function of message # %s'.format(basic_deliver.delivery_tag))
+            self.logger.debug('Finishing work function of message # {}'.format(basic_deliver.delivery_tag))
         except Exception as e:
             self.logger.error(str(e))
             self.logger.error(str(traceback.format_exc()))
             # raise e
         finally:
-            self.logger.info('Acknowledging message %s'.format(basic_deliver.delivery_tag))
+            self.logger.debug('Acknowledging message {}'.format(basic_deliver.delivery_tag))
             self.acknowledge_message_callback(basic_deliver.delivery_tag)
