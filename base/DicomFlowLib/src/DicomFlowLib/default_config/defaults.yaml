@@ -1,0 +1,73 @@
+
+storescp:
+  scp:
+    ae_title: "STORESCP"
+    hostname: 0.0.0.0
+    port: 10000
+    pub_routing_key: "STORESCP_MAINSTREAM"
+    pub_exchange: ""
+    pub_routing_key_as_queue: True
+    pub_exchange_type: "direct"
+    pynetdicom_log_level: "standard"
+  mq_pub:
+    rabbit_hostname: "dicom_flow_rabbit"
+    rabbit_port: 5672
+
+fingerprinter:
+  mq_sub:
+    sub_prefetch_value: 1
+    sub_exchange: ""
+    sub_exchange_type: "direct"
+    sub_routing_key: "STORESCP_MAINSTREAM"
+    sub_routing_key_as_queue: True
+    rabbit_hostname: "dicom_flow_rabbit"
+    rabbit_port: 5672
+
+  fingerprinter:
+    flow_directory: /opt/DicomFlow/flows
+    pub_exchange: ""
+    pub_exchange_type: direct
+    pub_routing_key: "FLOWS_PENDING"
+    pub_routing_key_as_queue: True
+
+consumer:
+  mq_sub:
+    rabbit_hostname: "dicom_flow_rabbit"
+    rabbit_port: 5672
+    sub_routing_key: "FLOWS_PENDING"
+    sub_routing_key_as_queue: True
+    sub_prefetch_value: 1
+    sub_exchange: ""
+    sub_exchange_type: "direct"
+
+  consumer:
+    pub_exchange: ""
+    pub_routing_key: "FLOWS_FINISHED"
+    pub_routing_key_as_queue: True
+    pub_exchange_type: "direct"
+    gpu: False
+
+
+
+storescu:
+  mq_sub:
+    sub_prefetch_value: 1
+    sub_exchange: ""
+    sub_exchange_type: "direct"
+    sub_routing_key: "FLOWS_FINISHED"
+    sub_routing_key_as_queue: True
+    rabbit_hostname: "dicom_flow_rabbit"
+    rabbit_port: 5672
+
+logger:
+  log_dir: "/opt/DicomFlow/logs"
+  log_level: 20
+  log_format: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+  rabbit_host: "dicom_flow_rabbit"
+  rabbit_port: 5672
+  rabbit_username: "guest"
+  rabbit_password: "guest"
+
+file_storage:
+  base_dir: "/opt/DicomFlow/files"
+

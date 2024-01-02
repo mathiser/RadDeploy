@@ -1,4 +1,8 @@
+import os.path
 import queue
+
+import yaml
+from pydantic.v1.utils import deep_update
 
 from DicomFlowLib.default_config import Config
 from DicomFlowLib.fs.file_storage import FileStorage
@@ -6,15 +10,19 @@ from DicomFlowLib.log.logger import CollectiveLogger
 from DicomFlowLib.mq import MQPub
 from scp import SCP
 
-
 class Main:
-    def __init__(self, config=Config):
+    def __init__(self, config):
         self.running = True
         self.publish_queue = queue.Queue()
-        self.logger = CollectiveLogger(**config["storescp"]["logger"])
-        self.fs = FileStorage(logger=self.logger, **config["fs_base"])
-        self.scp = SCP(logger=self.logger, file_storage=self.fs, publish_queue=self.publish_queue, **config["storescp"]["scp"])
-        self.mq = MQPub(logger=self.logger, **config["mq_base"], publish_queue=self.publish_queue, **config["storescp"]["mq_pub"])
+        self.logger = CollectiveLogger(**config["logger"])
+        self.fs = FileStorage(logger=self.logger, **config["file_storage"])
+        self.scp = SCP(logger=self.logger,
+                       file_storage=self.fs,
+                       publish_queue=self.publish_queue,
+                       **config["scp"])
+        self.mq = MQPub(logger=self.logger,
+                        publish_queue=self.publish_queue,
+                        **config["mq_pub"])
 
     def start(self):
         self.logger.debug("Starting")
@@ -43,5 +51,16 @@ class Main:
 
 
 if __name__ == "__main__":
-    m = Main()
+    config = Config["storescp"]
+    config["logger"] = Config["logger"]
+    config["logger"]["name"] = "storescp"
+
+    config["file_storage"] = Config["file_storage"]
+
+    if os.path.isfile("config.yaml"):
+        with open("config.yaml", "r") as r:
+            user_config = yaml.safe_load(r)
+        config = deep_update(config, user_config)
+
+    m = Main(config=config)
     m.start()

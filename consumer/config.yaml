@@ -1,0 +1,5 @@
+logger:
+  log_dir: "/tmp/logs"
+
+file_storage:
+  base_dir: "/tmp/files"

@@ -57,10 +57,10 @@ class SCP:
                  port: int,
                  pub_routing_key: str,
                  logger: CollectiveLogger,
-                 pub_exchange: str = "",
-                 pub_routing_key_as_queue: str = "SYSTEM",
-                 pub_exchange_type: str = "direct",
-                 pynetdicom_log_level: str = "standard"):
+                 pub_exchange: str,
+                 pub_routing_key_as_queue: bool,
+                 pub_exchange_type: str,
+                 pynetdicom_log_level: str):
         self.fs = file_storage
         self.ae = None
 
