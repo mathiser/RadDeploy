@@ -2,6 +2,7 @@ import logging
 import os
 import queue
 import threading
+import time
 
 from python_logging_rabbitmq import RabbitMQHandler
 
@@ -12,10 +13,10 @@ class CollectiveLogger(threading.Thread):
                  log_dir: str,
                  log_level: int,
                  log_format: str,
-                 rabbit_host: str,
-                 rabbit_port: int,
-                 rabbit_username: str,
-                 rabbit_password: str):
+                 rabbit_hostname: str | None = None,
+                 rabbit_port: int | None = None,
+                 rabbit_username: str | None = None,
+                 rabbit_password: str | None = None):
         super().__init__()
         self.stopping = False
         self.logger = logging.getLogger(name=name)
@@ -38,8 +39,8 @@ class CollectiveLogger(threading.Thread):
         self.logger.addHandler(self.file_handler)
 
         self.mq_handler = None
-        if rabbit_host and rabbit_port:
-            self.mq_handler = RabbitMQHandler(host=rabbit_host,
+        if rabbit_hostname and rabbit_port and rabbit_username and rabbit_password:
+            self.mq_handler = RabbitMQHandler(host=rabbit_hostname,
                                               port=rabbit_port,
                                               username=rabbit_username,
                                               password=rabbit_password,
@@ -57,22 +58,20 @@ class CollectiveLogger(threading.Thread):
 
     def run(self):
         while not self.stopping:
-            timer = 0
-            inteval = 10
-            while timer <= (self.mq_handler.connection_params["heartbeat"] / 2):
+            time_zero = time.time()
+            interval = 10
+            while time.time() - time_zero < (self.mq_handler.connection_params["heartbeat"] / 2):
                 try:
-                    timer += inteval
-                    log_obj = self.queue.get(timeout=inteval)
+                    log_obj = self.queue.get(timeout=interval)
                     log_obj = self.process_log_call(log_obj)
                     self.logger.log(**log_obj)
                 except queue.Empty:
                     if not self.stopping:
                         if self.mq_handler:
                             self.mq_handler.connection.process_data_events()
-
                 except KeyboardInterrupt:
                     self.stopping = True
-            if self.mq_handler:
+            if not self.stopping and self.mq_handler:
                 self.mq_handler.connection.process_data_events()
 
     def stop(self):

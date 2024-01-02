@@ -1,4 +1,5 @@
 import queue
+import time
 import traceback
 from queue import Queue
 
@@ -56,19 +57,25 @@ class MQPub(MQBase):
 
             self.logger.info('Starting publishing')
             while not self._stopping:
-                try:
-                    context = self.publish_queue.get(timeout=self.heartbeat/2)
-                    self.publish_message(context=context)
-                except queue.Empty:
-                    if not self._stopping and self._connection:
-                        self.process_event_data()
-                except KeyboardInterrupt:
-                    if not self._stopping:
-                        self.stop()
-                except Exception as e:
-                    self.logger.error(str(e))
-                    self.logger.error(traceback.format_exc())
-                    raise e
+                time_zero = time.time()
+                interval = 10
+                while time.time() - time_zero < (self.heartbeat / 2):
+                    try:
+                        context = self.publish_queue.get(timeout=interval)
+                        self.publish_message(context=context)
+                    except queue.Empty:
+                        if not self._stopping and self._connection:
+                            self.process_event_data()
+                    except KeyboardInterrupt:
+                        if not self._stopping:
+                            self.stop()
+                    except Exception as e:
+                        self.logger.error(str(e))
+                        self.logger.error(traceback.format_exc())
+                        raise e
+
+                if not self._stopping and self._connection:
+                    self.process_event_data()
 
         self.logger.info('Stopped')
 

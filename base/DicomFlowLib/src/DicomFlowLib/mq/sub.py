@@ -87,6 +87,12 @@ class MQSub(MQBase):
         t = threading.Thread(target=self.work_function_wrapper,
                              args=(self._connection, self._channel, basic_deliver, properties, body))
         t.start()
+        while True:
+            t.join(self.heartbeat/2)
+            if t.is_alive():
+                self.process_event_data()
+            else:
+                break
         self._threads.append(t)
 
     def work_function_wrapper(self, connection, channel, basic_deliver, properties, body):

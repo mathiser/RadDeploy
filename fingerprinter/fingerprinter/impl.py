@@ -18,9 +18,9 @@ class Fingerprinter:
                  pub_routing_key: str,
                  pub_routing_key_as_queue: bool,
                  logger: CollectiveLogger,
-                 flow_directory: str = "/opt/DicomFlow/flows",
-                 pub_exchange: str = "",
-                 pub_exchange_type: str = "direct"):
+                 flow_directory: str,
+                 pub_exchange: str,
+                 pub_exchange_type: str):
         self.logger = logger
 
         self.pub_routing_key_as_queue = pub_routing_key_as_queue
@@ -69,8 +69,7 @@ class Fingerprinter:
 
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.uid
-        mq = MQBase(self.logger)
-        mq.connect_with(connection, channel)
+        mq = MQBase(self.logger).connect_with(connection, channel)
 
         mq.setup_exchange_callback(self.pub_exchange)
         mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,

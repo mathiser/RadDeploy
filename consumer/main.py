@@ -51,10 +51,6 @@ class Main:
 
 if __name__ == "__main__":
     config = Config["consumer"]
-    config["logger"] = Config["logger"]
-    config["logger"]["name"] = "consumer"
-
-    config["file_storage"] = Config["file_storage"]
 
     if os.path.isfile("config.yaml"):
         with open("config.yaml", "r") as r:
