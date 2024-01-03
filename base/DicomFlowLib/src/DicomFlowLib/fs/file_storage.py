@@ -19,7 +19,7 @@ class FileStorage:
         uid = str(uuid.uuid4())
         self.logger.debug(f"Putting file on uid: {uid}", finished=False)
 
-        p = os.path.join(self.base_dir, uid)
+        p = os.path.join(self.base_dir, uid + ".tar.gz")
         with open(p, "wb") as writer:
             self.logger.debug(f"Writing file with uid: {uid} to path: {p}", finished=False)
             writer.write(file.read())
@@ -29,11 +29,11 @@ class FileStorage:
         return uid
 
     def get(self, uid):
-        self.logger.debug(f"Serving file with uid: {uid}" , finished=False)
+        self.logger.debug(f"Serving file with uid: {uid}", finished=False)
 
-        p = os.path.join(self.base_dir, uid)
+        p = os.path.join(self.base_dir, uid + ".tar.gz")
         if not os.path.exists(p):
-            self.logger.error(f"File with uid: {uid} not found", finished=True)
+            self.logger.error(f"File with path: {p} not found", finished=True)
         else:
             self.logger.debug(f"Serving file with uid: {uid}", finished=True)
             return open(p, "rb")
@@ -41,9 +41,9 @@ class FileStorage:
     def delete(self, uid):
         self.logger.debug(f"Deleting file with uid: {uid}", finished=False)
 
-        p = os.path.join(self.base_dir, uid)
+        p = os.path.join(self.base_dir, uid + ".tar.gz")
         if not os.path.exists(p):
-            self.logger.error(f"File with uid: {uid} not found", finished=True)
+            self.logger.error(f"File with path: {p} not found", finished=True)
         else:
             shutil.rmtree(p)
             self.logger.debug(f"Deleting file with uid: {uid}", finished=True)

@@ -19,6 +19,8 @@ class Model(BaseModel):
     input_dir: str | None = None
     output_dir: str | None = None
 
+    pull_before_exec: bool = True
+
     def validate_docker_kwargs(self):
         assert "image" in self.docker_kwargs.keys()
         for key in self.docker_kwargs.keys():

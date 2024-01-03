@@ -2,3 +2,4 @@
 **/__pycache__/**
 fingerprinter/flows
 **/logs/**
+**/config/config.yaml

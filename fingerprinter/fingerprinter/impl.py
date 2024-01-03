@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 from multiprocessing.pool import ThreadPool
 from typing import List
 
@@ -30,7 +31,6 @@ class Fingerprinter:
         self.flows = []
         self.flow_directory = flow_directory
 
-        self.reload_fingerprints()
         self.uid = None
 
     def parse_file_metas(self, file_metas: List) -> pd.DataFrame:
@@ -65,7 +65,6 @@ class Fingerprinter:
         return bool(len(match))
 
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
-        self.reload_fingerprints()
 
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.uid
@@ -76,8 +75,11 @@ class Fingerprinter:
                                          routing_key=self.pub_routing_key,
                                          routing_key_as_queue=self.pub_routing_key_as_queue)
         ds = self.parse_file_metas(context.file_metas)
-        for flow in self.flows:
+
+        for flow in self.parse_fingerprints():
             if self.fingerprint(ds, flow.triggers):
+                self.logger.info(f"MATCHING FLOW", uid=self.uid, finished=True)
+
                 context.flow = flow.copy()
                 self.logger.info(f"PUB TO QUEUE: {self.pub_routing_key}", uid=self.uid, finished=False)
                 mq.basic_publish_callback(exchange=self.pub_exchange,
@@ -85,21 +87,21 @@ class Fingerprinter:
                                           body=context.model_dump_json().encode(),
                                           priority=context.flow.priority)
                 self.logger.info(f"PUB TO QUEUE: {self.pub_routing_key}", uid=self.uid, finished=True)
+            else:
+                self.logger.info(f"NOT MATCHING FLOW", uid=self.uid, finished=True)
 
         self.uid = None
-    def reload_fingerprints(self):
-        self.flows = []
+    def parse_fingerprints(self):
         for fol, subs, files in os.walk(self.flow_directory):
             for file in files:
                 fp_path = os.path.join(fol, file)
                 try:
                     with open(fp_path) as r:
                         fp = yaml.safe_load(r)
-                        flow = Flow(**fp)
-                        self.flows.append(flow)
-
+                        yield Flow(**fp)
+                        #flows.append(flow)
                 except Exception as e:
+                    self.logger.error(f"Error when parsing flow definition: {fp_path} - skipping")
                     self.logger.error(str(e))
-                    raise e
-        self.logger.debug("Loaded the following flow definitions:")
-        self.logger.debug(self.flows)
+                    self.logger.error(traceback.format_exc())
+

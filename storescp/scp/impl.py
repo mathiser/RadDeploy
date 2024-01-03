@@ -90,7 +90,7 @@ class SCP:
         assoc_id = event.assoc.native_id
         self.logger.debug(f"Handle established with association id: {assoc_id}", finished=True)
         self.assoc[assoc_id] = AssocContext()
-        self.logger.info(f"STORESCP RECEIVED", uid=self.assoc[assoc_id].context.uid, finished=True)
+        self.logger.info(f"RECEIVING", uid=self.assoc[assoc_id].context.uid, finished=False)
         return 0x0000
 
     def handle_store(self, event):
@@ -131,6 +131,8 @@ class SCP:
 
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
+        self.logger.info(f"RECEIVING", uid=self.assoc[assoc_id].context.uid, finished=True)
+
         self.logger.debug(f"Handle released with association id: {assoc_id}", finished=False)
         self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=self.assoc[assoc_id].context.uid, finished=False)
         uid = self.publish_file_context(assoc_id=assoc_id)

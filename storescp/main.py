@@ -53,8 +53,9 @@ class Main:
 if __name__ == "__main__":
     config = Config["storescp"]
 
-    if os.path.isfile("config.yaml"):
-        with open("config.yaml", "r") as r:
+    user_config_path = "config/config.yaml"
+    if os.path.isfile(user_config_path):
+        with open(user_config_path, "r") as r:
             user_config = yaml.safe_load(r)
         config = deep_update(config, user_config)
 

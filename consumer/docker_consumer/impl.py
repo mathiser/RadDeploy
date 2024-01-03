@@ -67,6 +67,9 @@ class DockerConsumer:
                    input_tar: BytesIO) -> BytesIO:
 
         model = context.flow.model
+        if model.pull_before_exec:
+            self.cli.images.pull(*model.docker_kwargs["image"].split(":"))
+
         self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid, finished=False)
 
         kwargs = model.docker_kwargs
