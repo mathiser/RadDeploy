@@ -31,6 +31,10 @@ storescp:
     port: 10000
     pub_routing_key: "STORESCP_MAINSTREAM"
     pynetdicom_log_level: "standard"
+    file_subdir:
+      - "PatientID"
+      - "SOPClassUID"
+      - "SeriesInstanceUID"
     <<: *default_pub
 
   mq_pub:

@@ -1,5 +1,6 @@
 import os
 import shutil
+import tempfile
 import uuid
 from io import BytesIO
 
@@ -26,6 +27,7 @@ class FileStorage:
             self.logger.debug(f"Writing file with uid: {uid} to path: {p}", finished=True)
 
         self.logger.debug(f"Putting file on uid: {uid}", finished=True)
+        file.close()
         return uid
 
     def get(self, uid):
