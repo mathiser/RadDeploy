@@ -1,0 +1,54 @@
+version: "3"
+
+services:
+  dicom_flow_rabbit:
+    restart: always
+    image: rabbitmq:3-management
+    network_mode: host
+    volumes:
+        - ./rabbit/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
+
+  storescp:
+    restart: always
+    depends_on:
+      - dicom_flow_rabbit
+    image: mathiser/dicom_flow-storescp:latest
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /tmp/dicom_flow_files:/opt/DicomFlow/files
+  fingerprinter:
+    restart: always
+    network_mode: host
+    depends_on:
+      - dicom_flow_rabbit
+    image: mathiser/dicom_flow-fingerprinter:latest
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /home/mathis/repos/DicomFlow/fingerprinter/flows:/opt/DicomFlow/flows
+  consumer:
+    restart: always
+    network_mode: host
+    depends_on:
+      - dicom_flow_rabbit
+    image: mathiser/dicom_flow-consumer:latest
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /tmp/dicom_flow_files:/opt/DicomFlow/files
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  storescu:
+    restart: always
+    network_mode: host
+    depends_on:
+      - dicom_flow_rabbit
+    image: mathiser/dicom_flow-storescu:latest
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /tmp/dicom_flow_files:/opt/DicomFlow/files
+
+

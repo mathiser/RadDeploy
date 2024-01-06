@@ -1,11 +1,11 @@
-import logging
 import os
+import os
+import shutil
 import tarfile
 import tempfile
-import traceback
 from io import BytesIO
 from queue import Queue
-from typing import Dict
+from typing import Dict, List
 
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
 
@@ -17,36 +17,14 @@ from DicomFlowLib.log.logger import CollectiveLogger
 class AssocContext:
     def __init__(self):
         self.context = FlowContext()
-        self.file = BytesIO()
-        self.tar = tarfile.TarFile.open(fileobj=self.file, mode="w:gz")
+        self.path = tempfile.mkdtemp()
 
-    def get_tar(self):
-        return self.tar
-
-    def get_file(self):
-        self.file.seek(0)
-        return self.file
-
-    def get_file_size(self):
+    def __del__(self):
         try:
-            self.file.seek(0, 2)
-            return self.file.tell()
-        finally:
-            self.file.seek(0)
+            shutil.rmtree(self.path)
+        except:
+            pass
 
-    def add_file_to_tar(self, path, file):
-        info = tarfile.TarInfo(path)
-        file.seek(0, 2)  # Move to end
-        info.size = file.tell()
-        file.seek(0)  # Reset pointer before read
-        self.tar.addfile(info, file)
-        file.close()
-
-    def purge(self):
-        if self.tar.open:
-            self.tar.close()
-        if not self.file.closed:
-            self.file.close()
 
 class SCP:
     def __init__(self,
@@ -57,10 +35,11 @@ class SCP:
                  port: int,
                  pub_routing_key: str,
                  logger: CollectiveLogger,
-                 pub_exchange: str = "",
-                 pub_routing_key_as_queue: str = "SYSTEM",
-                 pub_exchange_type: str = "direct",
-                 pynetdicom_log_level: str = "standard"):
+                 pub_exchange: str,
+                 pub_routing_key_as_queue: bool,
+                 pub_exchange_type: str,
+                 pynetdicom_log_level: str,
+                 file_subdir: List | None):
         self.fs = file_storage
         self.ae = None
 
@@ -68,7 +47,7 @@ class SCP:
         self.pub_routing_key_as_queue = pub_routing_key_as_queue
         self.pub_exchange = pub_exchange
         self.pub_exchange_type = pub_exchange_type
-
+        self.file_subdir = file_subdir
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
 
         self.logger = logger
@@ -90,12 +69,13 @@ class SCP:
         assoc_id = event.assoc.native_id
         self.logger.debug(f"Handle established with association id: {assoc_id}", finished=True)
         self.assoc[assoc_id] = AssocContext()
-        self.logger.info(f"STORESCP RECEIVED", uid=self.assoc[assoc_id].context.uid, finished=True)
+        self.logger.info(f"RECEIVING", uid=self.assoc[assoc_id].context.uid, finished=False)
         return 0x0000
 
     def handle_store(self, event):
         """Handle EVT_C_STORE events."""
         assoc_id = event.assoc.native_id
+        assoc_context = self.assoc[assoc_id]
 
         # Get data set from event
         ds = event.dataset
@@ -104,48 +84,59 @@ class SCP:
         ds.file_meta = event.file_meta
 
         # Add file metas so they can be shipped on
-        self.assoc[assoc_id].context.add_meta(ds.to_json_dict())
+        assoc_context.context.add_meta(ds.to_json_dict())
 
-        # Save dcm file to tar
-        path_in_tar = os.path.join("/", ds.PatientID, ds.SOPClassUID, ds.SeriesInstanceUID, ds.SOPInstanceUID + ".dcm")
-        with tempfile.TemporaryFile() as file:
-            ds.save_as(file, write_like_original=True)
-            self.assoc[assoc_id].add_file_to_tar(path=path_in_tar, file=file)
+        if self.file_subdir:
+            prefix = [ds.get(tag, tag) for tag in self.file_subdir]
+            self.logger.debug(f"File subdir {prefix}")
+            path_in_tar = os.path.join(assoc_context.path, *prefix, ds.SOPInstanceUID + ".dcm")
+        else:
+            path_in_tar = os.path.join(assoc_context.path, ds.SOPInstanceUID + ".dcm")
+
+        self.logger.debug(f"Writing dicom to path {path_in_tar}")
+        ds.save_as(path_in_tar, write_like_original=False)
 
         # Return a 'Success' status
         return 0x0000
 
-    def publish_main_context(self, assoc_id):
+    def publish_main_context(self, assoc_context):
         publish_context = PublishContext(
             routing_key=self.pub_routing_key,
             routing_key_as_queue=self.pub_routing_key_as_queue,
             exchange=self.pub_exchange,
             exchange_type=self.pub_exchange_type,
-            body=self.assoc[assoc_id].context.model_dump_json().encode()
+            body=assoc_context.context.model_dump_json().encode()
         )
         self.publish_queue.put(publish_context, block=True)
 
-    def publish_file_context(self, assoc_id):
-        self.assoc[assoc_id].get_tar().close()
-        return self.fs.put(self.assoc[assoc_id].get_file())
+    def publish_file_context(self, assoc_context):
+        ntf = BytesIO()
+        with tarfile.TarFile.open(fileobj=ntf, mode="w:gz") as tf:
+            tf.add(assoc_context.path, arcname=assoc_context.path.replace(assoc_context.path, ""))
+        ntf.seek(0)
+        return self.fs.put(ntf)
 
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
+        assoc_context = self.assoc[assoc_id]
+        uid = assoc_context.context.uid
+        self.logger.info(f"RECEIVING", uid=uid, finished=True)
+
         self.logger.debug(f"Handle released with association id: {assoc_id}", finished=False)
-        self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=self.assoc[assoc_id].context.uid, finished=False)
-        uid = self.publish_file_context(assoc_id=assoc_id)
-        self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=self.assoc[assoc_id].context.uid, finished=True)
+        self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=uid, finished=False)
+        uid = self.publish_file_context(assoc_context=assoc_context)
+        self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=uid, finished=True)
         try:
-            self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=self.assoc[assoc_id].context.uid, finished=False)
+            self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=False)
             self.assoc[assoc_id].context.input_file_uid = uid
-            self.publish_main_context(assoc_id=assoc_id)
-            self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=self.assoc[assoc_id].context.uid, finished=True)
+            self.publish_main_context(assoc_context=assoc_context)
+            self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=True)
             self.logger.debug(f"Handle released with association id: {assoc_id}", finished=False)
         except Exception as e:
             self.logger.error(str(e))
         finally:
-            self.assoc[assoc_id].purge()
             del self.assoc[assoc_id]
+
     def handle_echo(self, event):
         self.logger.info(f"Replying to ECHO", finished=True)
         return 0x0000

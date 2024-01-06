@@ -1,0 +1,3 @@
+flows/*
+!flows/example.yaml
+config.yaml

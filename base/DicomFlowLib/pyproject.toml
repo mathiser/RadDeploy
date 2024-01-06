@@ -1,0 +1,25 @@
+[project]
+    name = "DicomFlowLib"
+    version = "0.1"
+    authors = [
+        { name = "Mathis Rasmussen", email = "mathis.rasmussen@rm.dk"},
+    ]
+    requires-python = ">=3.12"
+    dependencies = [
+        "pika",
+        "pydantic",
+        "python_logging_rabbitmq",
+        "pyyaml"
+    ]
+    classifiers = []
+    keywords = []
+
+[project.urls]
+    homepage = "https://github.com/Aarhus-RadOnc-AI/DicomFlow"
+    repository = "https://github.com/Aarhus-RadOnc-AI/DicomFlow"
+
+[build-system]
+    requires = [
+        "setuptools @ git+https://github.com/pypa/setuptools.git@main",
+    ]
+

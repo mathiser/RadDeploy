@@ -1,6 +1,4 @@
 import json
-import logging
-import tarfile
 import tempfile
 import time
 import traceback
@@ -8,10 +6,8 @@ from io import BytesIO
 
 import docker
 from docker import types
-from python_logging_rabbitmq import RabbitMQHandler
 
 from DicomFlowLib.data_structures.contexts.data_context import FlowContext
-from DicomFlowLib.data_structures.flow import Model
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log.logger import CollectiveLogger
 from DicomFlowLib.mq import MQBase
@@ -25,7 +21,7 @@ class DockerConsumer:
                  pub_routing_key: str,
                  pub_routing_key_as_queue: bool,
                  pub_exchange_type: str,
-                 gpu: str | bool = False,):
+                 gpu: str | bool):
         self.logger = logger
         self.fs = file_storage
         self.pub_exchange_type = pub_exchange_type
@@ -39,11 +35,14 @@ class DockerConsumer:
         self.cli.close()
 
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
-        mq = MQBase(self.logger).connect_like(connection=connection)
+        mq = MQBase(self.logger).connect_with(connection=connection, channel=channel)
 
         context = FlowContext(**json.loads(body.decode()))
+
         self.logger.info(f"PROCESSING", uid=context.uid, finished=False)
+
         input_tar = self.fs.get(context.input_file_uid)
+
         output_tar = self.exec_model(context, input_tar)
 
         self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=False)
@@ -51,12 +50,12 @@ class DockerConsumer:
         self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=True)
 
         self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=False)
-        mq.setup_exchange(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
-        mq.setup_queue_and_bind(exchange=self.pub_exchange,
+        mq.setup_exchange_callback(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
+        mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
                                 routing_key=self.pub_routing_key,
                                 routing_key_as_queue=self.pub_routing_key_as_queue)
 
-        mq.basic_publish(exchange=self.pub_exchange,
+        mq.basic_publish_callback(exchange=self.pub_exchange,
                          routing_key=self.pub_routing_key,
                          body=context.model_dump_json().encode())
         self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=True)
@@ -68,6 +67,9 @@ class DockerConsumer:
                    input_tar: BytesIO) -> BytesIO:
 
         model = context.flow.model
+        if model.pull_before_exec:
+            self.cli.images.pull(*model.docker_kwargs["image"].split(":"))
+
         self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid, finished=False)
 
         kwargs = model.docker_kwargs
@@ -80,6 +82,7 @@ class DockerConsumer:
 
         # Allow GPU usage. If int, use as count, if str use as uuid
         if self.gpu:
+            kwargs["ipc_mode"] = "host"
             if isinstance(self.gpu, str):
                 kwargs["device_requests"] = [types.DeviceRequest(device_ids=[self.gpu], capabilities=[['gpu']])]
             else:
