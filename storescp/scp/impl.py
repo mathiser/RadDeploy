@@ -94,7 +94,7 @@ class SCP:
             path_in_tar = os.path.join(assoc_context.path, ds.SOPInstanceUID + ".dcm")
 
         self.logger.debug(f"Writing dicom to path {path_in_tar}")
-        ds.save_as(path_in_tar, write_like_original=True)
+        ds.save_as(path_in_tar, write_like_original=False)
 
         # Return a 'Success' status
         return 0x0000
@@ -112,7 +112,7 @@ class SCP:
     def publish_file_context(self, assoc_context):
         ntf = BytesIO()
         with tarfile.TarFile.open(fileobj=ntf, mode="w:gz") as tf:
-            tf.add(assoc_context.path, arcname=assoc_context.path)
+            tf.add(assoc_context.path, arcname=assoc_context.path.replace(assoc_context.path, ""))
         ntf.seek(0)
         return self.fs.put(ntf)
 

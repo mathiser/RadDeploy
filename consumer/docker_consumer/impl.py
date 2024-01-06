@@ -21,7 +21,7 @@ class DockerConsumer:
                  pub_routing_key: str,
                  pub_routing_key_as_queue: bool,
                  pub_exchange_type: str,
-                 gpu: str | bool = False,):
+                 gpu: str | bool):
         self.logger = logger
         self.fs = file_storage
         self.pub_exchange_type = pub_exchange_type
@@ -82,6 +82,7 @@ class DockerConsumer:
 
         # Allow GPU usage. If int, use as count, if str use as uuid
         if self.gpu:
+            kwargs["ipc_mode"] = "host"
             if isinstance(self.gpu, str):
                 kwargs["device_requests"] = [types.DeviceRequest(device_ids=[self.gpu], capabilities=[['gpu']])]
             else:
