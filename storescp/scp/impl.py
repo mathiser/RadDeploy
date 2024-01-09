@@ -20,17 +20,12 @@ class AssocContext:
         self.file = BytesIO()
         self.tar = tarfile.TarFile.open(fileobj=self.file, mode="w")
 
-        #self.path = tempfile.mkdtemp()
-
     def __del__(self):
         try:
             self.tar.close()
-        except:
-            pass
         finally:
             if not self.file.closed:
                 self.file.close()
-            #shutil.rmtree(self.path)
 
     def add_file_to_tar(self, path, file):
         file.seek(0, 2)
@@ -53,7 +48,7 @@ class SCP:
                  pub_routing_key_as_queue: bool,
                  pub_exchange_type: str,
                  pynetdicom_log_level: str,
-                 file_subdir: List | None):
+                 tar_subdir: str):
         self.fs = file_storage
         self.ae = None
 
@@ -61,7 +56,7 @@ class SCP:
         self.pub_routing_key_as_queue = pub_routing_key_as_queue
         self.pub_exchange = pub_exchange
         self.pub_exchange_type = pub_exchange_type
-        self.file_subdir = file_subdir
+        self.tar_subdir = tar_subdir.split()
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
 
         self.logger = logger
@@ -104,8 +99,8 @@ class SCP:
         # Add file metas so they can be shipped on
         assoc_context.context.add_meta(ds.to_json_dict())
 
-        if self.file_subdir:
-            prefix = [ds.get(key=tag, default=tag) for tag in self.file_subdir]
+        if self.tar_subdir:
+            prefix = [ds.get(key=tag, default=tag) for tag in self.tar_subdir]
             self.logger.debug(f"File subdir {prefix}")
             path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
         else:

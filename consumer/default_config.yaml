@@ -1,0 +1,28 @@
+# RabbitMQ
+RABBIT_HOSTNAME: "localhost"
+RABBIT_PORT: 5672
+RABBIT_USERNAME: "guest"
+RABBIT_PASSWORD: "guest"
+
+# Logging
+LOG_NAME: "CONSUMER"
+LOG_DIR: "/opt/DicomFlow/logs"
+LOG_LEVEL: 20
+LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+
+# File Storage
+FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
+
+# CONSUMER
+SUB_ROUTING_KEY: "FINGERPRINTER_FINISHED"
+SUB_EXCHANGE: ""
+SUB_ROUTING_KEY_AS_QUEUE: True
+SUB_EXCHANGE_TYPE: "direct"
+SUB_PREFETCH_COUNT: 1
+
+PUB_ROUTING_KEY: "CONSUMER_FINISHED"
+PUB_EXCHANGE: ""
+PUB_ROUTING_KEY_AS_QUEUE: True
+PUB_EXCHANGE_TYPE: "direct"
+
+GPU: False
