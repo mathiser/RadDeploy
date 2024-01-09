@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import tarfile
 import tempfile
@@ -7,7 +6,6 @@ import tempfile
 import pydicom
 from pydicom.errors import InvalidDicomError
 from pynetdicom import AE, StoragePresentationContexts
-from python_logging_rabbitmq import RabbitMQHandler
 
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Destination
@@ -63,12 +61,10 @@ class SCU:
                             self.logger.debug('C-STORE request status: 0x{0:04x}'.format(status.Status))
                         else:
                             self.logger.info('Connection timed out, was aborted or received invalid response')
-
                     except InvalidDicomError as e:
-                        self.logger.error(str(e))
+                        self.logger.error(str(e), uid=p)
                     except Exception as e:
-                        self.logger.error(str(e))
-                        raise e
+                        self.logger.error(str(e), uid=p)
 
             # Release the association
             assoc.release()

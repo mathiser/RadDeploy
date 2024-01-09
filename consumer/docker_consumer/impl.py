@@ -120,7 +120,7 @@ class DockerConsumer:
                 # return output_tar
 
         except Exception as e:
-            self.logger.error(str(traceback.format_exc()))
+            self.logger.error(e)
             raise e
         finally:
             counter = 0

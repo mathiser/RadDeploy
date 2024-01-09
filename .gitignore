@@ -3,3 +3,4 @@
 fingerprinter/flows
 **/logs/**
 **/config/config.yaml
+docker-compose.yaml

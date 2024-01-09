@@ -51,18 +51,20 @@ class Fingerprinter:
 
     def fingerprint(self, ds: pd.DataFrame, triggers: List):
         self.logger.info(f"RUNNING FINGERPRINTING", uid=self.uid, finished=False)
-        match = ds
         for trigger in triggers:
+            match = ds
             for keyword, regex_pattern in trigger.items():
                 match = match[
                     match[keyword].str.contains(regex_pattern, regex=True)]  # Regex match. This is "recursive"
-                # matching.
-        is_match = bool(len(match))
-        if is_match:
-            self.logger.info(f"FOUND MATCH", uid=self.uid, finished=True)
 
-        self.logger.info(f"RUNNING FINGERPRINTING", uid=self.uid, finished=True)
-        return bool(len(match))
+            if not bool(len(match)):
+                self.logger.info(f"FOUND NOT MATCH", uid=self.uid, finished=True)
+                return False
+
+        else:
+            self.logger.info(f"FOUND MATCH", uid=self.uid, finished=True)
+            self.logger.info(f"RUNNING FINGERPRINTING", uid=self.uid, finished=True)
+            return True
 
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
 
@@ -80,7 +82,7 @@ class Fingerprinter:
             if self.fingerprint(ds, flow.triggers):
                 self.logger.info(f"MATCHING FLOW", uid=self.uid, finished=True)
 
-                context.flow = flow.copy()
+                context.flow = flow.model_copy()
                 self.logger.info(f"PUB TO QUEUE: {self.pub_routing_key}", uid=self.uid, finished=False)
                 mq.basic_publish_callback(exchange=self.pub_exchange,
                                           routing_key=self.pub_routing_key,

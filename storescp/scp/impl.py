@@ -17,13 +17,27 @@ from DicomFlowLib.log.logger import CollectiveLogger
 class AssocContext:
     def __init__(self):
         self.context = FlowContext()
-        self.path = tempfile.mkdtemp()
+        self.file = BytesIO()
+        self.tar = tarfile.TarFile.open(fileobj=self.file, mode="w")
+
+        #self.path = tempfile.mkdtemp()
 
     def __del__(self):
         try:
-            shutil.rmtree(self.path)
+            self.tar.close()
         except:
             pass
+        finally:
+            if not self.file.closed:
+                self.file.close()
+            #shutil.rmtree(self.path)
+
+    def add_file_to_tar(self, path, file):
+        file.seek(0, 2)
+        info = tarfile.TarInfo(name=path)
+        info.size = file.tell()
+        file.seek(0)
+        self.tar.addfile(info, file)
 
 
 class SCP:
@@ -67,15 +81,19 @@ class SCP:
         # Association id unique to this transaction
         # Set up all the things
         assoc_id = event.assoc.native_id
-        self.logger.debug(f"Handle established with association id: {assoc_id}", finished=True)
+        self.logger.debug(f"HANDLE_ESTABLISHED", uid=assoc_id, finished=False)
         self.assoc[assoc_id] = AssocContext()
-        self.logger.info(f"RECEIVING", uid=self.assoc[assoc_id].context.uid, finished=False)
+        print(self.assoc[assoc_id].__dict__)
+        self.logger.debug(f"HANDLE_ESTABLISHED", uid=assoc_id, finished=True)
+
         return 0x0000
 
     def handle_store(self, event):
+
         """Handle EVT_C_STORE events."""
         assoc_id = event.assoc.native_id
         assoc_context = self.assoc[assoc_id]
+        self.logger.debug(f"HANDLE_STORE", uid=assoc_context.context.uid, finished=False)
 
         # Get data set from event
         ds = event.dataset
@@ -87,14 +105,22 @@ class SCP:
         assoc_context.context.add_meta(ds.to_json_dict())
 
         if self.file_subdir:
-            prefix = [ds.get(tag, tag) for tag in self.file_subdir]
+            prefix = [ds.get(key=tag, default=tag) for tag in self.file_subdir]
             self.logger.debug(f"File subdir {prefix}")
-            path_in_tar = os.path.join(assoc_context.path, *prefix, ds.SOPInstanceUID + ".dcm")
+            path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
         else:
-            path_in_tar = os.path.join(assoc_context.path, ds.SOPInstanceUID + ".dcm")
-
-        self.logger.debug(f"Writing dicom to path {path_in_tar}")
-        ds.save_as(path_in_tar, write_like_original=False)
+            path_in_tar = os.path.join("/", ds.SOPInstanceUID + ".dcm")
+        print(ds.SOPInstanceUID)
+        self.logger.info(f"Writing dicom to path {path_in_tar}")
+        #os.makedirs(os.path.dirname(path_in_tar), exist_ok=True)
+        try:
+            with tempfile.TemporaryFile() as tf:
+                ds.save_as(tf, write_like_original=False)
+                assoc_context.add_file_to_tar(path_in_tar, tf)  ## does not need to seek(0)
+        except Exception as e:
+            print(e)
+            raise e
+        self.logger.debug(f"HANDLE_STORE", uid=assoc_context.context.uid, finished=True)
 
         # Return a 'Success' status
         return 0x0000
@@ -110,19 +136,16 @@ class SCP:
         self.publish_queue.put(publish_context, block=True)
 
     def publish_file_context(self, assoc_context):
-        ntf = BytesIO()
-        with tarfile.TarFile.open(fileobj=ntf, mode="w:gz") as tf:
-            tf.add(assoc_context.path, arcname=assoc_context.path.replace(assoc_context.path, ""))
-        ntf.seek(0)
-        return self.fs.put(ntf)
+        assoc_context.tar.close()
+        assoc_context.file.seek(0)
+        return self.fs.put(assoc_context.file)
 
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
         assoc_context = self.assoc[assoc_id]
         uid = assoc_context.context.uid
-        self.logger.info(f"RECEIVING", uid=uid, finished=True)
+        self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=False)
 
-        self.logger.debug(f"Handle released with association id: {assoc_id}", finished=False)
         self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=uid, finished=False)
         uid = self.publish_file_context(assoc_context=assoc_context)
         self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=uid, finished=True)
@@ -131,9 +154,10 @@ class SCP:
             self.assoc[assoc_id].context.input_file_uid = uid
             self.publish_main_context(assoc_context=assoc_context)
             self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=True)
-            self.logger.debug(f"Handle released with association id: {assoc_id}", finished=False)
+            self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=True)
         except Exception as e:
             self.logger.error(str(e))
+            raise e
         finally:
             del self.assoc[assoc_id]
 
