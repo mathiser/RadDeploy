@@ -21,14 +21,17 @@ class DockerConsumer:
                  pub_routing_key: str,
                  pub_routing_key_as_queue: bool,
                  pub_exchange_type: str,
-                 gpu: str | bool):
+                 gpus: str | None):
         self.logger = logger
         self.fs = file_storage
         self.pub_exchange_type = pub_exchange_type
         self.pub_routing_key = pub_routing_key
         self.pub_routing_key_as_queue = pub_routing_key_as_queue
         self.pub_exchange = pub_exchange
-        self.gpu = gpu
+        if gpus:
+            self.gpus = gpus.split()
+        else:
+            self.gpus = gpus
         self.cli = docker.from_env()
 
     def __del__(self):
@@ -52,12 +55,12 @@ class DockerConsumer:
         self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=False)
         mq.setup_exchange_callback(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
         mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
-                                routing_key=self.pub_routing_key,
-                                routing_key_as_queue=self.pub_routing_key_as_queue)
+                                         routing_key=self.pub_routing_key,
+                                         routing_key_as_queue=self.pub_routing_key_as_queue)
 
         mq.basic_publish_callback(exchange=self.pub_exchange,
-                         routing_key=self.pub_routing_key,
-                         body=context.model_dump_json().encode())
+                                  routing_key=self.pub_routing_key,
+                                  body=context.model_dump_json().encode())
         self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=True)
 
         self.logger.info(f"PROCESSING", uid=context.uid, finished=True)
@@ -81,12 +84,9 @@ class DockerConsumer:
         ]
 
         # Allow GPU usage. If int, use as count, if str use as uuid
-        if self.gpu:
+        if self.gpus:
             kwargs["ipc_mode"] = "host"
-            if isinstance(self.gpu, str):
-                kwargs["device_requests"] = [types.DeviceRequest(device_ids=[self.gpu], capabilities=[['gpu']])]
-            else:
-                kwargs["device_requests"] = [types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+            kwargs["device_requests"] = [types.DeviceRequest(device_ids=self.gpus, capabilities=[['gpu']])]
 
         try:
             # Create container
@@ -95,8 +95,8 @@ class DockerConsumer:
             container.reload()
 
             if model.input_dir:
-                 # Add the input tar to provided input
-                 container.put_archive(model.input_dir, input_tar)
+                # Add the input tar to provided input
+                container.put_archive(model.input_dir, input_tar)
 
             container.start()
             container.wait()  # Blocks...

@@ -48,7 +48,7 @@ class SCP:
                  pub_routing_key_as_queue: bool,
                  pub_exchange_type: str,
                  pynetdicom_log_level: str,
-                 tar_subdir: str):
+                 tar_subdir: str | None):
         self.fs = file_storage
         self.ae = None
 
@@ -56,7 +56,11 @@ class SCP:
         self.pub_routing_key_as_queue = pub_routing_key_as_queue
         self.pub_exchange = pub_exchange
         self.pub_exchange_type = pub_exchange_type
-        self.tar_subdir = tar_subdir.split()
+        if tar_subdir:
+            self.tar_subdir = tar_subdir.split()
+        else:
+            self.tar_subdir = tar_subdir
+
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
 
         self.logger = logger
@@ -105,9 +109,9 @@ class SCP:
             path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
         else:
             path_in_tar = os.path.join("/", ds.SOPInstanceUID + ".dcm")
-        print(ds.SOPInstanceUID)
-        self.logger.info(f"Writing dicom to path {path_in_tar}")
-        #os.makedirs(os.path.dirname(path_in_tar), exist_ok=True)
+
+        self.logger.debug(f"Writing dicom to path {path_in_tar}")
+
         try:
             with tempfile.TemporaryFile() as tf:
                 ds.save_as(tf, write_like_original=False)

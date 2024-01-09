@@ -28,8 +28,7 @@ class Main:
                                        pub_routing_key=config["PUB_ROUTING_KEY"],
                                        pub_exchange_type=config["PUB_EXCHANGE_TYPE"],
                                        pub_routing_key_as_queue=bool(config["PUB_ROUTING_KEY_AS_QUEUE"]),
-                                       gpu=bool(config["GPU"])
-                                       )
+                                       gpus=config["GPUS"])
 
         self.mq = MQSub(logger=self.logger,
                         work_function=self.consumer.mq_entrypoint,
