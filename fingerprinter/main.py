@@ -2,14 +2,13 @@ import os
 
 import yaml
 
-from DicomFlowLib.default_config import Config
 from DicomFlowLib.log.logger import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from fingerprinter import Fingerprinter
 
 
 class Main:
-    def __init__(self, config=Config):
+    def __init__(self, config):
         self.running = True
 
         self.logger = CollectiveLogger(name=config["LOG_NAME"],

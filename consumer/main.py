@@ -1,9 +1,7 @@
 import os
 
 import yaml
-from pydantic.v1.utils import deep_update
 
-from DicomFlowLib.default_config import Config
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log.logger import CollectiveLogger
 from DicomFlowLib.mq import MQSub
