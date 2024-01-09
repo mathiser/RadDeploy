@@ -71,8 +71,11 @@ class DockerConsumer:
 
         model = context.flow.model
         if model.pull_before_exec:
-            self.cli.images.pull(*model.docker_kwargs["image"].split(":"))
-
+            try:
+                self.cli.images.pull(*model.docker_kwargs["image"].split(":"))
+            except Exception as e:
+                self.logger.error("Could not pull container - does it exist on docker hub?")
+                raise e
         self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid, finished=False)
 
         kwargs = model.docker_kwargs
