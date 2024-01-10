@@ -1,4 +1,5 @@
 import os
+import signal
 
 import yaml
 
@@ -9,6 +10,8 @@ from fingerprinter import Fingerprinter
 
 class Main:
     def __init__(self, config):
+        signal.signal(signal.SIGTERM, self.stop)
+
         self.running = True
 
         self.logger = CollectiveLogger(name=config["LOG_NAME"],

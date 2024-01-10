@@ -1,4 +1,5 @@
 import os
+import signal
 
 import yaml
 
@@ -10,6 +11,8 @@ from docker_consumer.impl import DockerConsumer
 
 class Main:
     def __init__(self, config):
+        signal.signal(signal.SIGTERM, self.stop)
+
         self.running = None
         self.logger = CollectiveLogger(name=config["LOG_NAME"],
                                        log_level=int(config["LOG_LEVEL"]),

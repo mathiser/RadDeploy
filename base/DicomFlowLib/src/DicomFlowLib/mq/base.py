@@ -27,6 +27,7 @@ class MQBase(threading.Thread):
         self._declared_exchanges = {""}
         self._declared_queues = set()
 
+
     def __del__(self):
         if self.close_conn_on_exit:
             self.stop()

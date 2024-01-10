@@ -1,5 +1,6 @@
 import os.path
 import queue
+import signal
 from typing import Dict
 
 import yaml
@@ -12,6 +13,7 @@ from scp import SCP
 
 class Main:
     def __init__(self, config: Dict):
+        signal.signal(signal.SIGTERM, self.stop)
         self.running = None
         self.publish_queue = queue.Queue()
         self.logger = CollectiveLogger(name=config["LOG_NAME"],
