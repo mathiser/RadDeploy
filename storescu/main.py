@@ -24,7 +24,11 @@ class Main:
                               base_dir=config["FILE_STORAGE_BASE_DIR"])
         
         self.scu = SCU(file_storage=self.fs,
-                       logger=self.logger)
+                       logger=self.logger,
+                       pub_exchange=config["PUB_EXCHANGE"],
+                       pub_routing_key=config["PUB_ROUTING_KEY"],
+                       pub_exchange_type=config["PUB_EXCHANGE_TYPE"],
+                       pub_routing_key_as_queue=config["PUB_ROUTING_KEY_AS_QUEUE"])
         
         self.mq = MQSub(logger=self.logger,
                         sub_exchange=config["SUB_EXCHANGE"],

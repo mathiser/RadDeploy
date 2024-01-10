@@ -22,6 +22,7 @@ class DockerConsumer:
                  pub_routing_key_as_queue: bool,
                  pub_exchange_type: str,
                  gpus: str | None):
+        self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
         self.pub_exchange_type = pub_exchange_type
@@ -36,9 +37,20 @@ class DockerConsumer:
 
     def __del__(self):
         self.cli.close()
+    def maybe_declare_exchange_and_queue(self, mq):
+        if not self.pub_declared:
+            mq.setup_exchange_callback(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
+            if self.pub_routing_key_as_queue:
+                mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
+                                                 routing_key=self.pub_routing_key,
+                                                 routing_key_as_queue=self.pub_routing_key_as_queue)
+            self.pub_declared = True
+            return True
+        else:
+            return False
 
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
-        mq = MQBase(self.logger).connect_with(connection=connection, channel=channel)
+        mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
 
         context = FlowContext(**json.loads(body.decode()))
 
@@ -53,16 +65,14 @@ class DockerConsumer:
         self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=True)
 
         self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=False)
-        mq.setup_exchange_callback(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
-        mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
-                                         routing_key=self.pub_routing_key,
-                                         routing_key_as_queue=self.pub_routing_key_as_queue)
+
+        self.maybe_declare_exchange_and_queue(mq)
 
         mq.basic_publish_callback(exchange=self.pub_exchange,
                                   routing_key=self.pub_routing_key,
                                   body=context.model_dump_json().encode())
-        self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=True)
 
+        self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=True)
         self.logger.info(f"PROCESSING", uid=context.uid, finished=True)
 
     def exec_model(self,

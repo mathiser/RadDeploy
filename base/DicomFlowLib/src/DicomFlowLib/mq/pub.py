@@ -14,7 +14,10 @@ class MQPub(MQBase):
                      rabbit_port: int,
                      publish_queue: Queue,
                      logger: CollectiveLogger):
-        super().__init__(logger, rabbit_hostname, rabbit_port)
+        super().__init__(logger=logger,
+                         close_conn_on_exit=True,
+                         rabbit_hostname=rabbit_hostname,
+                         rabbit_port=rabbit_port)
 
         self.publish_queue = publish_queue
 
@@ -23,13 +26,17 @@ class MQPub(MQBase):
         self._nacked = 0
         self._message_number = 0
 
+    def __del__(self):
+        self.stop()
+
     def publish_message(self, context: PublishContext):
         self.setup_exchange(exchange=context.exchange,
                             exchange_type=context.exchange_type)
 
-        self.setup_queue_and_bind(exchange=context.exchange,
-                                  routing_key=context.routing_key,
-                                  routing_key_as_queue=context.routing_key_as_queue)
+        if context.routing_key_as_queue:
+            self.setup_queue_and_bind(exchange=context.exchange,
+                                      routing_key=context.routing_key,
+                                      routing_key_as_queue=context.routing_key_as_queue)
 
         self.basic_publish(exchange=context.exchange,
                            routing_key=context.routing_key,
@@ -59,7 +66,7 @@ class MQPub(MQBase):
             while not self._stopping:
                 time_zero = time.time()
                 interval = 10
-                while time.time() - time_zero < (self.heartbeat / 2):
+                while time.time() - time_zero < (self.heartbeat / 4):
                     try:
                         context = self.publish_queue.get(timeout=interval)
                         self.publish_message(context=context)

@@ -60,7 +60,7 @@ class CollectiveLogger(threading.Thread):
         while not self.stopping:
             time_zero = time.time()
             interval = 10
-            while time.time() - time_zero < (self.mq_handler.connection_params["heartbeat"] / 2):
+            while time.time() - time_zero < (self.mq_handler.connection_params["heartbeat"] / 4):
                 try:
                     log_obj = self.queue.get(timeout=interval)
                     log_obj = self.process_log_call(log_obj)

@@ -11,19 +11,43 @@ from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log.logger import CollectiveLogger
+from DicomFlowLib.mq import MQBase
 
 
 class SCU:
     def __init__(self,
                  file_storage: FileStorage,
-                 logger: CollectiveLogger):
+                 logger: CollectiveLogger,
+                 pub_exchange: str,
+                 pub_routing_key: str,
+                 pub_routing_key_as_queue: bool,
+                 pub_exchange_type: str):
                  
         self.logger = logger
         self.fs = file_storage
-        
+        self.pub_exchange_type = pub_exchange_type
+        self.pub_routing_key = pub_routing_key
+        self.pub_routing_key_as_queue = pub_routing_key_as_queue
+        self.pub_exchange = pub_exchange
+        self.pub_declared = False
+
+    def maybe_declare_exchange_and_queue(self, mq):
+        if not self.pub_declared:
+            mq.setup_exchange_callback(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
+            if self.pub_routing_key_as_queue:
+                mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
+                                                 routing_key=self.pub_routing_key,
+                                                 routing_key_as_queue=self.pub_routing_key_as_queue)
+            self.pub_declared = True
+            return True
+        else:
+            return False
+
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
+
         context = FlowContext(**json.loads(body.decode()))
         uid = context.uid
+
         self.logger.info("SCU", uid=uid, finished=False)
 
         self.logger.info("EXTRACTING FILE(S)", uid=uid, finished=False)
@@ -39,6 +63,11 @@ class SCU:
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=uid, finished=True)
 
+        mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
+        self.maybe_declare_exchange_and_queue(mq)
+        mq.basic_publish_callback(exchange=self.pub_exchange,
+                                  routing_key=self.pub_routing_key,
+                                  body=context.model_dump_json().encode())
         self.logger.info("SCU", uid=uid, finished=True)
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:

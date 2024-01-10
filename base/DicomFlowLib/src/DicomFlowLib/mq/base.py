@@ -10,6 +10,7 @@ from DicomFlowLib.log.logger import CollectiveLogger
 class MQBase(threading.Thread):
     def __init__(self,
                  logger: CollectiveLogger,
+                 close_conn_on_exit: bool = False,
                  rabbit_hostname: str | None = None,
                  rabbit_port: int | None = None):
         super().__init__()
@@ -21,11 +22,19 @@ class MQBase(threading.Thread):
 
         self._stopping = False
 
+        self.close_conn_on_exit = close_conn_on_exit
+
         self._declared_exchanges = {""}
         self._declared_queues = set()
+
+    def __del__(self):
+        if self.close_conn_on_exit:
+            self.stop()
+
     @property
     def heartbeat(self):
         return self._connection._impl.params.heartbeat
+
     def connect_like(self, connection: pika.connection.Connection):
         self.logger.info('Connecting to {}:{}'.format(self._hostname, self._port))
         self._connection = pika.BlockingConnection(
@@ -66,6 +75,12 @@ class MQBase(threading.Thread):
         """
         self.logger.debug('Stopping')
         self._stopping = True
+        if self._channel:
+            if self._channel.is_open:
+                for q in self._declared_queues:
+                    if q.startswith("amq.gen"):
+                        self.delete_queue(queue=q)
+
         self.close_channel()
         self.close_connection()
 
@@ -86,11 +101,11 @@ class MQBase(threading.Thread):
                 self.logger.info('Closing connection')
                 self._connection.close()
 
-    def setup_exchange_callback(self, exchange: str, exchange_type: str = "direct"):
+    def setup_exchange_callback(self, exchange: str, exchange_type: str):
         cb = functools.partial(self.setup_exchange, exchange=exchange, exchange_type=exchange_type)
         self._connection.add_callback_threadsafe(cb)
 
-    def setup_exchange(self, exchange: str, exchange_type: str = "direct"):
+    def setup_exchange(self, exchange: str, exchange_type: str):
         if exchange in self._declared_exchanges:
             self.logger.debug('Exchange {} type {} already exist'.format(exchange, exchange_type))
         else:

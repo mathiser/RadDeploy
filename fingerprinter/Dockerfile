@@ -8,4 +8,4 @@ RUN mkdir -p $FLOWS_DIR
 
 COPY . ./
 
-CMD ["bash", "-c", "python3 main.py"]
+ENTRYPOINT ["/usr/local/bin/python3", "main.py"]

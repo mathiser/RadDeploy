@@ -28,6 +28,7 @@ class Fingerprinter:
         self.pub_exchange = pub_exchange
         self.pub_exchange_type = pub_exchange_type
         self.pub_routing_key = pub_routing_key
+        self.pub_declared = False
         self.flows = []
         self.flow_directory = flow_directory
 
@@ -66,16 +67,26 @@ class Fingerprinter:
             self.logger.info(f"RUNNING FINGERPRINTING", uid=self.uid, finished=True)
             return True
 
+    def maybe_declare_exchange_and_queue(self, mq):
+        if not self.pub_declared:
+            mq.setup_exchange_callback(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
+            if self.pub_routing_key_as_queue:
+                mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
+                                                 routing_key=self.pub_routing_key,
+                                                 routing_key_as_queue=self.pub_routing_key_as_queue)
+            self.pub_declared = True
+            return True
+        else:
+            return False
+
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
 
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.uid
-        mq = MQBase(self.logger).connect_with(connection, channel)
+        mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
 
-        mq.setup_exchange_callback(self.pub_exchange)
-        mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
-                                         routing_key=self.pub_routing_key,
-                                         routing_key_as_queue=self.pub_routing_key_as_queue)
+        self.maybe_declare_exchange_and_queue(mq)
+
         ds = self.parse_file_metas(context.file_metas)
 
         for flow in self.parse_fingerprints():
@@ -93,6 +104,7 @@ class Fingerprinter:
                 self.logger.info(f"NOT MATCHING FLOW", uid=self.uid, finished=True)
 
         self.uid = None
+
     def parse_fingerprints(self):
         for fol, subs, files in os.walk(self.flow_directory):
             for file in files:
@@ -101,9 +113,8 @@ class Fingerprinter:
                     with open(fp_path) as r:
                         fp = yaml.safe_load(r)
                         yield Flow(**fp)
-                        #flows.append(flow)
+                        # flows.append(flow)
                 except Exception as e:
                     self.logger.error(f"Error when parsing flow definition: {fp_path} - skipping")
                     self.logger.error(str(e))
                     self.logger.error(traceback.format_exc())
-

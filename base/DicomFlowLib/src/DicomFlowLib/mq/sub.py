@@ -41,7 +41,10 @@ class MQSub(MQBase):
         :param str amqp_url: The AMQP url to connect with
 
         """
-        super().__init__(logger, rabbit_hostname, rabbit_port)
+        super().__init__(logger=logger,
+                         close_conn_on_exit=True,
+                         rabbit_hostname=rabbit_hostname,
+                         rabbit_port=rabbit_port)
 
         self.logger = logger
 
@@ -60,6 +63,7 @@ class MQSub(MQBase):
 
         self._thread_lock = threading.Lock()
         self._threads = []
+
 
     def run(self):
         # Set Connection and channel
@@ -88,7 +92,7 @@ class MQSub(MQBase):
                              args=(self._connection, self._channel, basic_deliver, properties, body))
         t.start()
         while True:
-            t.join(self.heartbeat/2)
+            t.join(self.heartbeat/4)
             if t.is_alive():
                 self.process_event_data()
             else:
@@ -105,5 +109,5 @@ class MQSub(MQBase):
             self.logger.error(str(traceback.format_exc()))
             # raise e
         finally:
-            self.logger.debug('Acknowledging message {}'.format(basic_deliver.delivery_tag))
+            self.logger.info('Acknowledging message {}'.format(basic_deliver.delivery_tag))
             self.acknowledge_message_callback(basic_deliver.delivery_tag)
