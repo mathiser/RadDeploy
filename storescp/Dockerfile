@@ -5,4 +5,6 @@ RUN pip install -r /requirements
 
 COPY . ./
 
+WORKDIR /opt/DicomFlow/src/
+
 ENTRYPOINT ["/usr/local/bin/python3", "main.py"]

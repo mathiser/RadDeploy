@@ -1,8 +1,7 @@
 import os
 import signal
 
-import yaml
-
+from DicomFlowLib.conf import load_configs
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from fingerprinter import Fingerprinter
@@ -60,12 +59,7 @@ class Main:
 
 
 if __name__ == "__main__":
-    with open("default_config.yaml", "r") as r:
-        config = yaml.safe_load(r)
-
-    for k, v in config.items():
-        if k in os.environ.keys():
-            config[k] = os.environ.get(k)
+    config = load_configs(os.environ["CONF_DIR"])
 
     m = Main(config=config)
     m.start()

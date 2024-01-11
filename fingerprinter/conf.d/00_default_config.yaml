@@ -11,7 +11,7 @@ LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 
 # FINGERPRINTER
-FLOW_DIRECTORY: "/opt/DicomFlow/flows"
+FLOW_DIRECTORY: "/opt/DicomFlow/flow.d"
 
 SUB_ROUTING_KEY: ""
 SUB_EXCHANGE: "STORESCP_FINISHED"

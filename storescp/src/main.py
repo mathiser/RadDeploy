@@ -1,19 +1,22 @@
-import os
+import os.path
+import queue
 import signal
+from typing import Dict
 
 import yaml
 
-from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.conf import load_configs
+from DicomFlowLib.fs.file_storage import FileStorage
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQSub
-from docker_consumer.impl import DockerConsumer
+from DicomFlowLib.mq import MQPub
+from scp import SCP
 
 
 class Main:
-    def __init__(self, config):
+    def __init__(self, config: Dict):
         signal.signal(signal.SIGTERM, self.stop)
-
         self.running = None
+        self.publish_queue = queue.Queue()
         self.logger = CollectiveLogger(name=config["LOG_NAME"],
                                        log_level=int(config["LOG_LEVEL"]),
                                        log_format=config["LOG_FORMAT"],
@@ -25,27 +28,27 @@ class Main:
 
         self.fs = FileStorage(logger=self.logger,
                               base_dir=config["FILE_STORAGE_BASE_DIR"])
-        self.consumer = DockerConsumer(logger=self.logger,
-                                       file_storage=self.fs,
-                                       pub_exchange=config["PUB_EXCHANGE"],
-                                       pub_routing_key=config["PUB_ROUTING_KEY"],
-                                       pub_exchange_type=config["PUB_EXCHANGE_TYPE"],
-                                       pub_routing_key_as_queue=bool(config["PUB_ROUTING_KEY_AS_QUEUE"]),
-                                       gpus=config["GPUS"])
-
-        self.mq = MQSub(logger=self.logger,
-                        work_function=self.consumer.mq_entrypoint,
-                        rabbit_hostname=config["RABBIT_HOSTNAME"],
+        self.scp = SCP(logger=self.logger,
+                       file_storage=self.fs,
+                       publish_queue=self.publish_queue,
+                       port=int(config["AE_PORT"]),
+                       hostname=config["AE_HOSTNAME"],
+                       tar_subdir=config["TAR_SUBDIR"],
+                       pub_exchange=config["PUB_EXCHANGE"],
+                       pub_routing_key=config["PUB_ROUTING_KEY"],
+                       pub_exchange_type=config["PUB_EXCHANGE_TYPE"],
+                       ae_title=config["AE_TITLE"],
+                       pub_routing_key_as_queue=config["PUB_ROUTING_KEY_AS_QUEUE"],
+                       pynetdicom_log_level=config["PYNETDICOM_LOG_LEVEL"])
+        self.mq = MQPub(logger=self.logger,
+                        publish_queue=self.publish_queue,
                         rabbit_port=int(config["RABBIT_PORT"]),
-                        sub_exchange=config["SUB_EXCHANGE"],
-                        sub_routing_key=config["SUB_ROUTING_KEY"],
-                        sub_exchange_type=config["SUB_EXCHANGE_TYPE"],
-                        sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_routing_key_as_queue=bool(config["SUB_ROUTING_KEY_AS_QUEUE"]) )
+                        rabbit_hostname=config["RABBIT_HOSTNAME"])
 
     def start(self):
         self.running = True
-
+        self.logger.debug("Starting")
+        self.scp.start(blocking=False)
         self.logger.start()
         self.mq.start()
         while self.running:
@@ -61,19 +64,16 @@ class Main:
     def stop(self):
         self.running = False
         self.mq.stop()
+        self.scp.stop()
         self.logger.stop()
 
         self.mq.join()
         self.logger.join()
 
 
-if __name__ == "__main__":
-    with open("default_config.yaml", "r") as r:
-        config = yaml.safe_load(r)
 
-    for k, v in config.items():
-        if k in os.environ.keys():
-            config[k] = os.environ.get(k)
+if __name__ == "__main__":
+    config = load_configs(os.environ["CONF_DIR"])
 
     m = Main(config=config)
     m.start()
