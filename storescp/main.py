@@ -6,7 +6,7 @@ from typing import Dict
 import yaml
 
 from DicomFlowLib.fs.file_storage import FileStorage
-from DicomFlowLib.log.logger import CollectiveLogger
+from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQPub
 from scp import SCP
 

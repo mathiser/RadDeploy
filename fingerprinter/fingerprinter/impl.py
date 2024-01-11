@@ -10,7 +10,7 @@ import yaml
 
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Flow
-from DicomFlowLib.log.logger import CollectiveLogger
+from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQBase
 
 

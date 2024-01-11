@@ -4,7 +4,7 @@ import signal
 import yaml
 
 from DicomFlowLib.fs import FileStorage
-from DicomFlowLib.log.logger import CollectiveLogger
+from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from scu import SCU
 

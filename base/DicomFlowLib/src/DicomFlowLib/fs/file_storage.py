@@ -4,8 +4,7 @@ import tempfile
 import uuid
 from io import BytesIO
 
-from DicomFlowLib.log.logger import CollectiveLogger
-
+from DicomFlowLib.log import CollectiveLogger
 
 class FileStorage:
     def __init__(self,

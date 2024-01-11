@@ -4,10 +4,8 @@ import logging
 import threading
 import traceback
 
-from python_logging_rabbitmq import RabbitMQHandler
-
 from .base import MQBase
-from ..log.logger import CollectiveLogger
+from DicomFlowLib.log import CollectiveLogger
 
 
 class MQSub(MQBase):

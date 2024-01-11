@@ -13,8 +13,7 @@ from pynetdicom import AE, evt, StoragePresentationContexts, _config
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorage
-from DicomFlowLib.log.logger import CollectiveLogger
-
+from DicomFlowLib.log import CollectiveLogger
 
 class AssocContext:
     def __init__(self):

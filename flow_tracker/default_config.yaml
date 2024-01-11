@@ -1,0 +1,15 @@
+# RabbitMQ
+RABBIT_HOSTNAME: "localhost"
+RABBIT_PORT: 5672
+RABBIT_USERNAME: "guest"
+RABBIT_PASSWORD: "guest"
+
+# Logging
+LOG_NAME: "STORESCU"
+LOG_DIR: "/opt/DicomFlow/logs"
+LOG_LEVEL: 20
+LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+
+# FlowTracker
+SUB_EXCHANGES: STORESCP_FINISHED FINGERPRINTER_FINISHED CONSUMER_FINISHED STORESCU_FINISHED
+SUB_PREFETCH_COUNT: 10
