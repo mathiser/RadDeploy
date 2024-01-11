@@ -3,10 +3,11 @@ from typing import List, Dict, Any
 
 from pydantic import BaseModel
 
-from DicomFlowLib.data_structures.flow import Flow
+from DicomFlowLib.data_structures.flow import Flow, Destination
 
 
 class FlowContext(BaseModel):
+    sender: Destination | None = None
     uid: str | None = None
     file_metas: List = []
     flow: Flow | None = None

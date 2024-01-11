@@ -3,6 +3,7 @@ import os
 import shutil
 import tarfile
 import tempfile
+import traceback
 from io import BytesIO
 from queue import Queue
 from typing import Dict, List
@@ -10,15 +11,17 @@ from typing import Dict, List
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
+from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log.logger import CollectiveLogger
 
 
 class AssocContext:
     def __init__(self):
-        self.context = FlowContext()
         self.file = BytesIO()
         self.tar = tarfile.TarFile.open(fileobj=self.file, mode="w")
+
+        self.flow_context = FlowContext()
 
     def __del__(self):
         try:
@@ -81,8 +84,15 @@ class SCP:
         # Set up all the things
         assoc_id = event.assoc.native_id
         self.logger.debug(f"HANDLE_ESTABLISHED", uid=assoc_id, finished=False)
-        self.assoc[assoc_id] = AssocContext()
-        print(self.assoc[assoc_id].__dict__)
+
+        ac = AssocContext()
+
+        # Unwrap sender info
+        ac.flow_context.sender = Destination(host=event.assoc.requestor.address,
+                                             port=event.assoc.requestor.port,
+                                             ae_title=event.assoc.requestor._ae_title)
+        # Add to assocs dict
+        self.assoc[assoc_id] = ac
         self.logger.debug(f"HANDLE_ESTABLISHED", uid=assoc_id, finished=True)
 
         return 0x0000
@@ -92,7 +102,7 @@ class SCP:
         """Handle EVT_C_STORE events."""
         assoc_id = event.assoc.native_id
         assoc_context = self.assoc[assoc_id]
-        self.logger.debug(f"HANDLE_STORE", uid=assoc_context.context.uid, finished=False)
+        self.logger.debug(f"HANDLE_STORE", uid=assoc_context.flow_context.uid, finished=False)
 
         # Get data set from event
         ds = event.dataset
@@ -101,7 +111,7 @@ class SCP:
         ds.file_meta = event.file_meta
 
         # Add file metas so they can be shipped on
-        assoc_context.context.add_meta(ds.to_json_dict())
+        assoc_context.flow_context.add_meta(ds.to_json_dict())
 
         if self.tar_subdir:
             prefix = [ds.get(key=tag, default=tag) for tag in self.tar_subdir]
@@ -119,7 +129,7 @@ class SCP:
         except Exception as e:
             print(e)
             raise e
-        self.logger.debug(f"HANDLE_STORE", uid=assoc_context.context.uid, finished=True)
+        self.logger.debug(f"HANDLE_STORE", uid=assoc_context.flow_context.uid, finished=True)
 
         # Return a 'Success' status
         return 0x0000
@@ -130,7 +140,7 @@ class SCP:
             routing_key_as_queue=self.pub_routing_key_as_queue,
             exchange=self.pub_exchange,
             exchange_type=self.pub_exchange_type,
-            body=assoc_context.context.model_dump_json().encode()
+            body=assoc_context.flow_context.model_dump_json().encode()
         )
         self.publish_queue.put(publish_context, block=True)
 
@@ -142,7 +152,7 @@ class SCP:
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
         assoc_context = self.assoc[assoc_id]
-        uid = assoc_context.context.uid
+        uid = assoc_context.flow_context.uid
         self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=False)
 
         self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=uid, finished=False)
@@ -150,7 +160,7 @@ class SCP:
         self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=uid, finished=True)
         try:
             self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=False)
-            self.assoc[assoc_id].context.input_file_uid = uid
+            self.assoc[assoc_id].flow_context.input_file_uid = uid
             self.publish_main_context(assoc_context=assoc_context)
             self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=True)
             self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=True)
@@ -176,7 +186,9 @@ class SCP:
         ]
 
         try:
-            self.logger.debug(f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}", finished=False)
+            self.logger.debug(
+                f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}",
+                finished=False)
 
             # Create and run
             self.ae = AE(ae_title=self.ae_title)
