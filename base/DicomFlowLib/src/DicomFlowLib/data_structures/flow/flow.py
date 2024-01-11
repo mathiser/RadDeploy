@@ -12,3 +12,4 @@ class Flow(BaseModel):
     destinations: List[Destination] = []
     triggers: List[Dict[str, str]] = []
     priority: int = 0
+    return_to_sender: bool = False

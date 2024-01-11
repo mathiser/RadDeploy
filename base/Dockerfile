@@ -11,7 +11,7 @@ ENV SRC_DIR="/opt/DicomFlow/src"
 ENV DEPENDENCIES_DIR="/opt/DicomFlow/dependencies"
 RUN mkdir -p  $LOG_DIR $FILES_DIR $SRC_DIR $DEPENDENCIES_DIR
 
-COPY ./DicomFlowLib $DEPENDENCIES_DIR/DicomFlowLib
-RUN pip install -e $DEPENDENCIES_DIR/DicomFlowLib
+ADD ./DicomFlowLib $DEPENDENCIES_DIR/DicomFlowLib
+RUN pip install $DEPENDENCIES_DIR/DicomFlowLib
 
 WORKDIR $SRC_DIR
