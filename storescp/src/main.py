@@ -6,6 +6,7 @@ from typing import Dict
 import yaml
 
 from DicomFlowLib.conf import load_configs
+from DicomFlowLib.data_structures.contexts.pub_context import PubModel
 from DicomFlowLib.fs.file_storage import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQPub
@@ -34,11 +35,8 @@ class Main:
                        port=int(config["AE_PORT"]),
                        hostname=config["AE_HOSTNAME"],
                        tar_subdir=config["TAR_SUBDIR"],
-                       pub_exchange=config["PUB_EXCHANGE"],
-                       pub_routing_key=config["PUB_ROUTING_KEY"],
-                       pub_exchange_type=config["PUB_EXCHANGE_TYPE"],
+                       pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                        ae_title=config["AE_TITLE"],
-                       pub_routing_key_as_queue=config["PUB_ROUTING_KEY_AS_QUEUE"],
                        pynetdicom_log_level=config["PYNETDICOM_LOG_LEVEL"])
         self.mq = MQPub(logger=self.logger,
                         publish_queue=self.publish_queue,

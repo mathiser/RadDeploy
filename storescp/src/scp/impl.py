@@ -1,19 +1,18 @@
 import os
-import os
-import shutil
 import tarfile
 import tempfile
-import traceback
 from io import BytesIO
 from queue import Queue
 from typing import Dict, List
 
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
+from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext, PubModel
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
+from DicomFlowLib.mq import MQSubEntrypoint
+
 
 class AssocContext:
     def __init__(self):
@@ -37,32 +36,17 @@ class AssocContext:
         self.tar.addfile(info, file)
 
 
-class SCP:
-    def __init__(self,
-                 publish_queue: Queue,
-                 file_storage: FileStorage,
-                 ae_title: str,
-                 hostname: str,
-                 port: int,
-                 pub_routing_key: str,
-                 logger: CollectiveLogger,
-                 pub_exchange: str,
-                 pub_routing_key_as_queue: bool,
-                 pub_exchange_type: str,
-                 pynetdicom_log_level: str,
+class SCP(MQSubEntrypoint):
+    def __init__(self, publish_queue: Queue, file_storage: FileStorage, ae_title: str, hostname: str, port: int,
+                 logger: CollectiveLogger, pub_models: List[PubModel], pynetdicom_log_level: str,
                  tar_subdir: List[str]):
+        super().__init__(logger, pub_models)
         self.fs = file_storage
         self.ae = None
 
-        self.pub_routing_key = pub_routing_key
-        self.pub_routing_key_as_queue = pub_routing_key_as_queue
-        self.pub_exchange = pub_exchange
-        self.pub_exchange_type = pub_exchange_type
         self.tar_subdir = tar_subdir
 
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
-
-        self.logger = logger
 
         self.publish_queue = publish_queue
         self.ae_title = ae_title
@@ -128,14 +112,13 @@ class SCP:
         return 0x0000
 
     def publish_main_context(self, assoc_context):
-        publish_context = PublishContext(
-            routing_key=self.pub_routing_key,
-            routing_key_as_queue=self.pub_routing_key_as_queue,
-            exchange=self.pub_exchange,
-            exchange_type=self.pub_exchange_type,
-            body=assoc_context.flow_context.model_dump_json().encode()
-        )
-        self.publish_queue.put(publish_context, block=True)
+        for pub_model in self.pub_models:
+            publish_context = PublishContext(
+                routing_key=pub_model.routing_key_success,
+                exchange=pub_model.exchange,
+                body=assoc_context.flow_context.model_dump_json().encode()
+            )
+            self.publish_queue.put(publish_context, block=True)
 
     def publish_file_context(self, assoc_context):
         assoc_context.tar.close()

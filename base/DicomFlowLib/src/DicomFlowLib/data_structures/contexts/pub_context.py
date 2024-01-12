@@ -1,16 +1,18 @@
-from typing import Any
-
 from pydantic import BaseModel
 
-
-class PubSubBase(BaseModel):
-    routing_key: str
+class Base(BaseModel):
     exchange: str
-    exchange_type: str
-    routing_key_as_queue: bool
+    exchange_type: str = "topic"
 
+class PubModel(Base):
+    routing_key_success: str = "SUCCESS"
+    routing_key_fail: str = "FAIL"
 
-class PublishContext(PubSubBase):
+class SubModel(Base):
+    routing_key: str
+
+class PublishContext(PubModel):
     body: bytes
+    routing_key: str
     reply_to: str | None = None
     priority: int = 0

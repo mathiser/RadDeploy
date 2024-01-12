@@ -1,35 +1,32 @@
 import json
 import tempfile
 import time
-import traceback
 from io import BytesIO
+from typing import List
 
 import docker
 from docker import types
 
+from DicomFlowLib.data_structures.contexts import PubModel
 from DicomFlowLib.data_structures.contexts.data_context import FlowContext
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQBase
+from DicomFlowLib.mq import MQBase, MQSubEntrypoint
 
 
-class DockerConsumer:
+class DockerConsumer(MQSubEntrypoint):
     def __init__(self,
                  logger: CollectiveLogger,
                  file_storage: FileStorage,
-                 pub_exchange: str,
-                 pub_routing_key: str,
-                 pub_routing_key_as_queue: bool,
-                 pub_exchange_type: str,
-                 gpus: str | None):
+                 pub_models: List[PubModel],
+                 gpus: str | List | None):
+        super().__init__(logger, pub_models)
         self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
-        self.pub_exchange_type = pub_exchange_type
-        self.pub_routing_key = pub_routing_key
-        self.pub_routing_key_as_queue = pub_routing_key_as_queue
-        self.pub_exchange = pub_exchange
-        if gpus:
+        self.pub_models = pub_models
+
+        if gpus and isinstance(gpus, str):
             self.gpus = gpus.split()
         else:
             self.gpus = gpus
@@ -37,17 +34,6 @@ class DockerConsumer:
 
     def __del__(self):
         self.cli.close()
-    def maybe_declare_exchange_and_queue(self, mq):
-        if not self.pub_declared:
-            mq.setup_exchange_callback(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
-            if self.pub_routing_key_as_queue:
-                mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
-                                                 routing_key=self.pub_routing_key,
-                                                 routing_key_as_queue=self.pub_routing_key_as_queue)
-            self.pub_declared = True
-            return True
-        else:
-            return False
 
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
         mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
@@ -64,15 +50,8 @@ class DockerConsumer:
         context.output_file_uid = self.fs.put(output_tar)
         self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=True)
 
-        self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=False)
+        self.publish(mq, context)
 
-        self.maybe_declare_exchange_and_queue(mq)
-
-        mq.basic_publish_callback(exchange=self.pub_exchange,
-                                  routing_key=self.pub_routing_key,
-                                  body=context.model_dump_json().encode())
-
-        self.logger.info(f"PUBLISHING RESULT", uid=context.uid, finished=True)
         self.logger.info(f"PROCESSING", uid=context.uid, finished=True)
 
     def exec_model(self,

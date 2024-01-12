@@ -14,15 +14,17 @@ LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)
 FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
 
 # CONSUMER
-SUB_ROUTING_KEY: "FINGERPRINTER_FINISHED"
-SUB_EXCHANGE: "FINGERPRINTER_FINISHED"
-SUB_ROUTING_KEY_AS_QUEUE: True
-SUB_EXCHANGE_TYPE: "fanout"
+SUB_QUEUE_NAME: "FINGERPRINTER.SUCCESS"
 SUB_PREFETCH_COUNT: 1
+SUB_MODELS:
+  - exchange: "fingerprinter"
+    exchange_type: "topic"
+    routing_key: "success"
 
-PUB_ROUTING_KEY: ""
-PUB_EXCHANGE: "CONSUMER_FINISHED"
-PUB_ROUTING_KEY_AS_QUEUE: False
-PUB_EXCHANGE_TYPE: "fanout"
+PUB_MODELS:
+  - exchange: "consumer"
+    exchange_type: "topic"
+    routing_key_success: "success"
+    routing_key_fail: "fail"
 
 GPUS:

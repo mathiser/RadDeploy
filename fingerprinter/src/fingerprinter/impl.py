@@ -8,26 +8,16 @@ import pandas as pd
 import pydicom
 import yaml
 
-from DicomFlowLib.data_structures.contexts import FlowContext
+from DicomFlowLib.data_structures.contexts import FlowContext, PubModel
 from DicomFlowLib.data_structures.flow import Flow
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQBase
+from DicomFlowLib.mq import MQBase, MQSubEntrypoint
 
 
-class Fingerprinter:
-    def __init__(self,
-                 pub_routing_key: str,
-                 pub_routing_key_as_queue: bool,
-                 logger: CollectiveLogger,
-                 flow_directory: str,
-                 pub_exchange: str,
-                 pub_exchange_type: str):
-        self.logger = logger
+class Fingerprinter(MQSubEntrypoint):
+    def __init__(self, pub_models: List[PubModel], logger: CollectiveLogger, flow_directory: str):
+        super().__init__(logger, pub_models)
 
-        self.pub_routing_key_as_queue = pub_routing_key_as_queue
-        self.pub_exchange = pub_exchange
-        self.pub_exchange_type = pub_exchange_type
-        self.pub_routing_key = pub_routing_key
         self.pub_declared = False
         self.flows = []
         self.flow_directory = flow_directory
@@ -67,39 +57,19 @@ class Fingerprinter:
             self.logger.info(f"RUNNING FINGERPRINTING", uid=self.uid, finished=True)
             return True
 
-    def maybe_declare_exchange_and_queue(self, mq):
-        if not self.pub_declared:
-            mq.setup_exchange_callback(exchange=self.pub_exchange, exchange_type=self.pub_exchange_type)
-            if self.pub_routing_key_as_queue:
-                mq.setup_queue_and_bind_callback(exchange=self.pub_exchange,
-                                                 routing_key=self.pub_routing_key,
-                                                 routing_key_as_queue=self.pub_routing_key_as_queue)
-            self.pub_declared = True
-            return True
-        else:
-            return False
-
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
 
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.uid
         mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
 
-        self.maybe_declare_exchange_and_queue(mq)
-
         ds = self.parse_file_metas(context.file_metas)
 
         for flow in self.parse_fingerprints():
             if self.fingerprint(ds, flow.triggers):
                 self.logger.info(f"MATCHING FLOW", uid=self.uid, finished=True)
-
                 context.flow = flow.model_copy()
-                self.logger.info(f"PUB TO QUEUE: {self.pub_routing_key}", uid=self.uid, finished=False)
-                mq.basic_publish_callback(exchange=self.pub_exchange,
-                                          routing_key=self.pub_routing_key,
-                                          body=context.model_dump_json().encode(),
-                                          priority=context.flow.priority)
-                self.logger.info(f"PUB TO QUEUE: {self.pub_routing_key}", uid=self.uid, finished=True)
+                self.publish(mq, context)
             else:
                 self.logger.info(f"NOT MATCHING FLOW", uid=self.uid, finished=True)
 
@@ -113,7 +83,6 @@ class Fingerprinter:
                     with open(fp_path) as r:
                         fp = yaml.safe_load(r)
                         yield Flow(**fp)
-                        # flow.d.append(flow)
                 except Exception as e:
                     self.logger.error(f"Error when parsing flow definition: {fp_path} - skipping")
                     self.logger.error(str(e))

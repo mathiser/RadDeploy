@@ -4,6 +4,7 @@ import signal
 import yaml
 
 from DicomFlowLib.conf import load_configs
+from DicomFlowLib.data_structures.contexts import PubModel, SubModel
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
@@ -28,20 +29,16 @@ class Main:
         
         self.scu = SCU(file_storage=self.fs,
                        logger=self.logger,
-                       pub_exchange=config["PUB_EXCHANGE"],
-                       pub_routing_key=config["PUB_ROUTING_KEY"],
-                       pub_exchange_type=config["PUB_EXCHANGE_TYPE"],
-                       pub_routing_key_as_queue=config["PUB_ROUTING_KEY_AS_QUEUE"])
-        
+                       pub_models=[PubModel(**d) for d in config["PUB_MODELS"]])
+
         self.mq = MQSub(logger=self.logger,
-                        sub_exchange=config["SUB_EXCHANGE"],
-                        sub_routing_key=config["SUB_ROUTING_KEY"],
-                        sub_exchange_type=config["SUB_EXCHANGE_TYPE"],
+                        sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_routing_key_as_queue=bool(config["SUB_ROUTING_KEY_AS_QUEUE"]),
                         work_function=self.scu.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
-                        rabbit_port=int(config["RABBIT_PORT"]))
+                        rabbit_port=int(config["RABBIT_PORT"]),
+                        sub_queue_name=config["SUB_QUEUE_NAME"])
+
     def start(self):
         self.logger.debug("Starting SCU", finished=False)
         self.running = True
