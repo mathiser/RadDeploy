@@ -9,7 +9,7 @@ from docker import types
 
 from DicomFlowLib.data_structures.contexts.data_context import FlowContext
 from DicomFlowLib.fs import FileStorage
-from DicomFlowLib.log.logger import CollectiveLogger
+from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQBase
 
 

@@ -13,8 +13,7 @@ from pynetdicom import AE, evt, StoragePresentationContexts, _config
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorage
-from DicomFlowLib.log.logger import CollectiveLogger
-
+from DicomFlowLib.log import CollectiveLogger
 
 class AssocContext:
     def __init__(self):
@@ -51,7 +50,7 @@ class SCP:
                  pub_routing_key_as_queue: bool,
                  pub_exchange_type: str,
                  pynetdicom_log_level: str,
-                 tar_subdir: str | None):
+                 tar_subdir: List[str]):
         self.fs = file_storage
         self.ae = None
 
@@ -59,10 +58,7 @@ class SCP:
         self.pub_routing_key_as_queue = pub_routing_key_as_queue
         self.pub_exchange = pub_exchange
         self.pub_exchange_type = pub_exchange_type
-        if tar_subdir:
-            self.tar_subdir = tar_subdir.split()
-        else:
-            self.tar_subdir = tar_subdir
+        self.tar_subdir = tar_subdir
 
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
 
@@ -113,12 +109,9 @@ class SCP:
         # Add file metas so they can be shipped on
         assoc_context.flow_context.add_meta(ds.to_json_dict())
 
-        if self.tar_subdir:
-            prefix = [ds.get(key=tag, default=tag) for tag in self.tar_subdir]
-            self.logger.debug(f"File subdir {prefix}")
-            path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
-        else:
-            path_in_tar = os.path.join("/", ds.SOPInstanceUID + ".dcm")
+        prefix = [ds.get(key=tag, default=tag) for tag in self.tar_subdir]
+        self.logger.debug(f"File subdir {prefix}")
+        path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
 
         self.logger.debug(f"Writing dicom to path {path_in_tar}")
 

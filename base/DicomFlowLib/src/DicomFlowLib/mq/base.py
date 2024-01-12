@@ -4,8 +4,7 @@ import threading
 import pika
 from pika import channel, connection
 
-from DicomFlowLib.log.logger import CollectiveLogger
-
+from DicomFlowLib.log import CollectiveLogger
 
 class MQBase(threading.Thread):
     def __init__(self,

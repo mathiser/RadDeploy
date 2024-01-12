@@ -10,7 +10,7 @@ from pynetdicom import AE, StoragePresentationContexts
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorage
-from DicomFlowLib.log.logger import CollectiveLogger
+from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQBase
 
 

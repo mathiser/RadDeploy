@@ -5,7 +5,7 @@ from queue import Queue
 
 from .base import MQBase
 from ..data_structures.contexts import PublishContext
-from ..log.logger import CollectiveLogger
+from DicomFlowLib.log import CollectiveLogger
 
 
 class MQPub(MQBase):

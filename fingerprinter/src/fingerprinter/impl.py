@@ -10,7 +10,7 @@ import yaml
 
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Flow
-from DicomFlowLib.log.logger import CollectiveLogger
+from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQBase
 
 
@@ -113,7 +113,7 @@ class Fingerprinter:
                     with open(fp_path) as r:
                         fp = yaml.safe_load(r)
                         yield Flow(**fp)
-                        # flows.append(flow)
+                        # flow.d.append(flow)
                 except Exception as e:
                     self.logger.error(f"Error when parsing flow definition: {fp_path} - skipping")
                     self.logger.error(str(e))

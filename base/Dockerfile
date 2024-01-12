@@ -1,17 +1,14 @@
 FROM python:3.12-slim
 LABEL authors="Mathis Ersted Rasmussen"
 
-RUN apt-get update &&\
-    apt-get install -y git  &&\
-    rm -rf /var/cache/apt
-
+ENV APP_DIR="/opt/DicomFlow/"
 ENV LOG_DIR="/opt/DicomFlow/logs"
+ENV CONF_DIR="/opt/DicomFlow/conf.d"
 ENV FILES_DIR="/opt/DicomFlow/files"
-ENV SRC_DIR="/opt/DicomFlow/src"
 ENV DEPENDENCIES_DIR="/opt/DicomFlow/dependencies"
-RUN mkdir -p  $LOG_DIR $FILES_DIR $SRC_DIR $DEPENDENCIES_DIR
+RUN mkdir -p  $LOG_DIR $FILES_DIR $DEPENDENCIES_DIR
 
 ADD ./DicomFlowLib $DEPENDENCIES_DIR/DicomFlowLib
 RUN pip install $DEPENDENCIES_DIR/DicomFlowLib
 
-WORKDIR $SRC_DIR
+WORKDIR $APP_DIR
