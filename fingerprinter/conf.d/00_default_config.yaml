@@ -10,13 +10,21 @@ LOG_DIR: "/opt/DicomFlow/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 
+# File Storage
+FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
+
 # FINGERPRINTER
 FLOW_DIRECTORY: "/opt/DicomFlow/flow.d"
 
-SUB_QUEUE_NAME: ""
+SUB_QUEUE_KWARGS:
+  queue: ""
+  passive: False
+  durable: False
+  exclusive: False
+  auto_delete: True
 SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
-  - exchange: "scorescp"
+  - exchange: "storescp"
     exchange_type: "topic"
     routing_key: "success"
 

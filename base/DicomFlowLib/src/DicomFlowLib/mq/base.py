@@ -118,8 +118,15 @@ class MQBase(threading.Thread):
         cb = functools.partial(self.setup_queue, queue=queue)
         self._connection.add_callback_threadsafe(cb)
 
-    def setup_queue(self, queue: str):
-        queue = self._channel.queue_declare(queue=queue, arguments={"x-max-priority": 5}).method.queue
+    def setup_queue(self,
+                    queue: str,
+                    passive: bool = False,
+                    durable: bool = False,
+                    exclusive: bool = False,
+                    auto_delete: bool = False,  ):
+        queue = self._channel.queue_declare(queue=queue,passive=passive, durable=durable,
+                                            exclusive=exclusive, auto_delete=auto_delete,
+                                            arguments={"x-max-priority": 5}).method.queue
         self._declared_queues.add(queue)
         return queue
 

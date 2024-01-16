@@ -5,8 +5,8 @@ class Base(BaseModel):
     exchange_type: str = "topic"
 
 class PubModel(Base):
-    routing_key_success: str = "SUCCESS"
-    routing_key_fail: str = "FAIL"
+    routing_key_success: str = "success"
+    routing_key_fail: str = "fail"
 
 class SubModel(Base):
     routing_key: str

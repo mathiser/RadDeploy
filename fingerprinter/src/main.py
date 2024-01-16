@@ -3,6 +3,7 @@ import signal
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.data_structures.contexts.pub_context import SubModel, PubModel
+from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from fingerprinter import Fingerprinter
@@ -22,8 +23,11 @@ class Main:
                                        rabbit_port=int(config["RABBIT_PORT"]),
                                        rabbit_password=config["RABBIT_PASSWORD"],
                                        rabbit_username=config["RABBIT_USERNAME"])
+        self.fs = FileStorage(logger=self.logger,
+                              base_dir=config["FILE_STORAGE_BASE_DIR"])
 
         self.fp = Fingerprinter(logger=self.logger,
+                                file_storage=self.fs,
                                 pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                                 flow_directory=config["FLOW_DIRECTORY"])
 
@@ -33,7 +37,7 @@ class Main:
                         rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_name=config["SUB_QUEUE_NAME"])
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
 
     def start(self):
         self.logger.start()

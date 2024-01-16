@@ -18,12 +18,14 @@ class DockerConsumer(MQSubEntrypoint):
     def __init__(self,
                  logger: CollectiveLogger,
                  file_storage: FileStorage,
+                 static_storage: FileStorage,
                  pub_models: List[PubModel],
                  gpus: str | List | None):
         super().__init__(logger, pub_models)
         self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
+        self.ss = static_storage
         self.pub_models = pub_models
 
         if gpus and isinstance(gpus, str):
@@ -75,6 +77,11 @@ class DockerConsumer(MQSubEntrypoint):
             f"{tempfile.mkdtemp()}:{model.output_dir}:rw"
         ]
 
+        # Mount static_uid to static_folder if they are set
+        # if model.static_uid and model.static_dir:
+        #     print(f"{self.ss.get_file_path(model.static_uid)}:{model.static_dir}")
+        #     kwargs["volumes"].append(f"{self.ss.get_file_path(model.static_uid)}:{model.static_dir}:ro")
+        # print(kwargs["volumes"])
         # Allow GPU usage. If int, use as count, if str use as uuid
         if self.gpus:
             kwargs["ipc_mode"] = "host"
@@ -106,10 +113,7 @@ class DockerConsumer(MQSubEntrypoint):
                 self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid,
                                  finished=True)
                 return output_tar
-                # # Remove one dir level
-                # # output_tar = self.postprocess_output_tar(tarf=output_tar)
-                #
-                # return output_tar
+
 
         except Exception as e:
             self.logger.error(e)

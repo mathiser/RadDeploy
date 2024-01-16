@@ -16,7 +16,8 @@ class FlowContext(BaseModel):
 
     def __init__(self, **data: Any):
         super().__init__(**data)
-        self.uid = str(uuid.uuid4())
+        if not self.uid:
+            self.uid = str(uuid.uuid4())
 
     def add_meta(self, meta: Dict):
         if "7FE00010" in meta.keys():

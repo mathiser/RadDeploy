@@ -1,14 +1,12 @@
 import os
 import signal
 
-import yaml
-from pydantic.v1.utils import deep_update
-
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts import SubModel, PubModel
+from DicomFlowLib.data_structures.contexts import SubModel
+from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
-from flow_tracker import FlowTracker
+from janitor import Janitor
 
 
 class Main:
@@ -23,10 +21,12 @@ class Main:
                                        rabbit_port=int(config["RABBIT_PORT"]),
                                        rabbit_password=config["RABBIT_PASSWORD"],
                                        rabbit_username=config["RABBIT_USERNAME"])
+        self.fs = FileStorage(logger=self.logger,
+                              base_dir=config["FILE_STORAGE_BASE_DIR"])
 
-        self.ft = FlowTracker(logger=self.logger,
-                              sub_queue_name=config["SUB_QUEUE_NAME"],
-                              pub_models=[PubModel(**d) for d in config["PUB_MODELS"]])
+        self.ft = Janitor(file_storage=self.fs,
+                          logger=self.logger,
+                          database_path=config["DATABASE_PATH"])
 
         self.mq = MQSub(logger=self.logger,
                         work_function=self.ft.mq_entrypoint,
@@ -34,19 +34,19 @@ class Main:
                         rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_name=config["SUB_QUEUE_NAME"])
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
 
     def start(self):
         self.logger.debug("Starting FlowTracker", finished=False)
         self.running = True
         self.logger.start()
-        self.ft.start()
+        self.mq.start()
         self.logger.debug("Starting FlowTracker", finished=True)
 
         while self.running:
             try:
-                self.ft.join(timeout=5)
-                if self.ft.is_alive():
+                self.mq.join(timeout=5)
+                if self.mq.is_alive():
                     pass
                 else:
                     self.stop()

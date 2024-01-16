@@ -27,8 +27,14 @@ class Main:
 
         self.fs = FileStorage(logger=self.logger,
                               base_dir=config["FILE_STORAGE_BASE_DIR"])
+
+        self.ss = FileStorage(logger=self.logger,
+                              base_dir=config["STATIC_STORAGE_BASE_DIR"],
+                              suffix="")
+
         self.consumer = DockerConsumer(logger=self.logger,
                                        file_storage=self.fs,
+                                       static_storage=self.ss,
                                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                                        gpus=config["GPUS"])
 
@@ -38,7 +44,7 @@ class Main:
                         rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_name=config["SUB_QUEUE_NAME"])
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
     def start(self):
         self.running = True
 

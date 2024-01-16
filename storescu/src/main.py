@@ -37,7 +37,7 @@ class Main:
                         work_function=self.scu.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
-                        sub_queue_name=config["SUB_QUEUE_NAME"])
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
 
     def start(self):
         self.logger.debug("Starting SCU", finished=False)

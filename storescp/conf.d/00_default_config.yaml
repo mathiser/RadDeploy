@@ -20,7 +20,7 @@ AE_PORT: 10000
 PYNETDICOM_LOG_LEVEL: "standard"
 TAR_SUBDIR: []
 PUB_MODELS:
-  - exchange: "scorescp"
+  - exchange: "storescp"
     exchange_type: "topic"
     routing_key_success: "success"
     routing_key_fail: "fail"

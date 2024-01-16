@@ -4,3 +4,4 @@ fingerprinter/flow.d
 **/logs/**
 **/config/config.yaml
 docker-compose.yaml
+mounts

@@ -10,18 +10,19 @@ import yaml
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PubModel
 from DicomFlowLib.data_structures.flow import Flow
+from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQBase, MQSubEntrypoint
 
 
 class Fingerprinter(MQSubEntrypoint):
-    def __init__(self, pub_models: List[PubModel], logger: CollectiveLogger, flow_directory: str):
+    def __init__(self, pub_models: List[PubModel], file_storage: FileStorage, logger: CollectiveLogger, flow_directory: str):
         super().__init__(logger, pub_models)
 
         self.pub_declared = False
         self.flows = []
         self.flow_directory = flow_directory
-
+        self.fs = file_storage
         self.uid = None
 
     def parse_file_metas(self, file_metas: List) -> pd.DataFrame:
@@ -69,7 +70,13 @@ class Fingerprinter(MQSubEntrypoint):
             if self.fingerprint(ds, flow.triggers):
                 self.logger.info(f"MATCHING FLOW", uid=self.uid, finished=True)
                 context.flow = flow.model_copy()
+
+                # Provide a link to the input file
+                context.input_file_uid = self.fs.clone(context.input_file_uid)
+
+                # Publish the
                 self.publish(mq, context)
+
             else:
                 self.logger.info(f"NOT MATCHING FLOW", uid=self.uid, finished=True)
 

@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0111,C0103,R0205
-import logging
 import threading
 import traceback
-from typing import List
+from typing import List, Dict
 
-from .base import MQBase
 from DicomFlowLib.log import CollectiveLogger
+from .base import MQBase
 from ..data_structures.contexts.pub_context import SubModel
 
 
@@ -31,7 +30,7 @@ class MQSub(MQBase):
                  work_function: callable,
                  sub_prefetch_value: int,
                  logger: CollectiveLogger,
-                 sub_queue_name: str,
+                 sub_queue_kwargs: Dict,
                  ):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
@@ -54,17 +53,17 @@ class MQSub(MQBase):
 
         self.work_function = work_function
         self.sub_prefetch_value = sub_prefetch_value
-        self.queue = None
         self._thread_lock = threading.Lock()
         self._threads = []
 
         self.sub_bases = sub_models
-        self.sub_queue_name = sub_queue_name
+        self.sub_queue_kwargs = sub_queue_kwargs
+        self.queue = None
 
     def run(self):
         # Set Connection and channel
         self.connect()
-        self.queue = self.setup_queue(self.sub_queue_name)
+        self.queue = self.setup_queue(**self.sub_queue_kwargs)
 
         # Declare exchange
         for sub in self.sub_bases:

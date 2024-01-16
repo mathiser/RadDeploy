@@ -6,10 +6,14 @@ from DicomFlowLib.mq import MQBase
 
 
 class MQSubEntrypoint:
-    def __init__(self, logger: CollectiveLogger, pub_models: List[PubModel]):
+    def __init__(self, logger: CollectiveLogger, pub_models: List[PubModel] | None = None):
         self.pub_declared = False
         self.logger = logger
-        self.pub_models = pub_models
+
+        if not pub_models:
+            self.pub_models = []
+        else:
+            self.pub_models = pub_models
 
     def _maybe_declare_exchange_and_queue(self, mq):
         if not self.pub_declared:

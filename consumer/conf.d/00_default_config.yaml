@@ -13,8 +13,18 @@ LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)
 # File Storage
 FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
 
+# Static Storage
+STATIC_STORAGE_BASE_DIR: "/opt/DicomFlow/static"
+
+
 # CONSUMER
-SUB_QUEUE_NAME: "FINGERPRINTER.SUCCESS"
+SUB_QUEUE_KWARGS:
+  queue: "FINGERPRINTER.SUCCESS"
+  passive: False
+  durable: False
+  exclusive: False
+  auto_delete: False
+
 SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
   - exchange: "fingerprinter"
