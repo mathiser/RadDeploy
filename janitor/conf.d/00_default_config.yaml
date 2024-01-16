@@ -5,7 +5,7 @@ RABBIT_USERNAME: "guest"
 RABBIT_PASSWORD: "guest"
 
 # Logging
-LOG_NAME: "CONSUMER"
+LOG_NAME: "JANITOR"
 LOG_DIR: "/opt/DicomFlow/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
@@ -13,27 +13,27 @@ LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)
 # File Storage
 FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
 
-# Static Storage
-STATIC_STORAGE_BASE_DIR: "/opt/DicomFlow/static"
+# Janitor
+DATABASE_PATH: "/opt/DicomFlow/database/database.sqlite"
 
-# CONSUMER
+# MQSub
 SUB_QUEUE_KWARGS:
-  queue: "FINGERPRINTER.SUCCESS"
-  passive: False
-  durable: False
-  exclusive: False
-  auto_delete: False
-
-SUB_PREFETCH_COUNT: 1
+    queue: ""
+    passive: False
+    durable: False
+    exclusive: False
+    auto_delete: True
+SUB_PREFETCH_COUNT: 10
 SUB_MODELS:
+  - exchange: "storescp"
+    exchange_type: "topic"
+    routing_key: "#"
   - exchange: "fingerprinter"
     exchange_type: "topic"
-    routing_key: "success"
-
-PUB_MODELS:
+    routing_key: "#"
   - exchange: "consumer"
     exchange_type: "topic"
-    routing_key_success: "success"
-    routing_key_fail: "fail"
-
-GPUS:
+    routing_key: "#"
+  - exchange: "storescu"
+    exchange_type: "topic"
+    routing_key: "#"

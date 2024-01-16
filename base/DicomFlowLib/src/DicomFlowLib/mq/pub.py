@@ -1,11 +1,13 @@
 import queue
+import threading
 import time
 import traceback
 from queue import Queue
 
+from DicomFlowLib.log import CollectiveLogger
 from .base import MQBase
 from ..data_structures.contexts import PublishContext
-from DicomFlowLib.log import CollectiveLogger
+
 
 
 class MQPub(MQBase):
@@ -30,13 +32,9 @@ class MQPub(MQBase):
         self.stop()
 
     def publish_message(self, context: PublishContext):
+        # Declare Exchanges
         self.setup_exchange(exchange=context.exchange,
                             exchange_type=context.exchange_type)
-
-        if context.routing_key_as_queue:
-            self.setup_queue_and_bind(exchange=context.exchange,
-                                      routing_key=context.routing_key,
-                                      routing_key_as_queue=context.routing_key_as_queue)
 
         self.basic_publish(exchange=context.exchange,
                            routing_key=context.routing_key,
@@ -49,6 +47,7 @@ class MQPub(MQBase):
         self.logger.info('Published message # {}'.format(self._message_number))
 
     def run(self):
+
         while not self._stopping:
             self._deliveries = {}
             self._acked = 0
@@ -61,6 +60,7 @@ class MQPub(MQBase):
             self.logger.debug("Connecting", finished=True)
             # self.logger.info('Enabling delivery confirmations')
             # self.enable_delivery_confirmations()
+
 
             self.logger.info('Starting publishing')
             while not self._stopping:

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0111,C0103,R0205
-import logging
 import threading
 import traceback
+from typing import List, Dict
 
-from .base import MQBase
 from DicomFlowLib.log import CollectiveLogger
+from .base import MQBase
+from ..data_structures.contexts.pub_context import SubModel
+
 
 
 class MQSub(MQBase):
@@ -25,13 +27,11 @@ class MQSub(MQBase):
     def __init__(self,
                  rabbit_hostname: str,
                  rabbit_port: int,
-                 sub_routing_key: str,
-                 sub_routing_key_as_queue: bool,
+                 sub_models: List[SubModel],
                  work_function: callable,
                  sub_prefetch_value: int,
                  logger: CollectiveLogger,
-                 sub_exchange: str,
-                 sub_exchange_type: str,
+                 sub_queue_kwargs: Dict,
                  ):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
@@ -52,33 +52,32 @@ class MQSub(MQBase):
         self._consumer_tag = None
         self._consuming = False
 
-        self.sub_exchange = sub_exchange
-        self.sub_exchange_type = sub_exchange_type
-        self.sub_routing_key = sub_routing_key
-        self.sub_routing_key_as_queue = sub_routing_key_as_queue
         self.work_function = work_function
         self.sub_prefetch_value = sub_prefetch_value
-
         self._thread_lock = threading.Lock()
         self._threads = []
 
+        self.sub_bases = sub_models
+        self.sub_queue_kwargs = sub_queue_kwargs
+        self.queue = None
 
     def run(self):
         # Set Connection and channel
         self.connect()
+        self.queue = self.setup_queue(**self.sub_queue_kwargs)
 
         # Declare exchange
-        self.setup_exchange(exchange=self.sub_exchange, exchange_type=self.sub_exchange_type)
+        for sub in self.sub_bases:
+            self.setup_exchange(exchange=sub.exchange, exchange_type=sub.exchange_type)
 
-        # Declare queue
-        queue = self.setup_queue_and_bind(exchange=self.sub_exchange,
-                                          routing_key=self.sub_routing_key,
-                                          routing_key_as_queue=self.sub_routing_key_as_queue)
+            # Declare queue
+            self.bind_queue(queue=self.queue, exchange=sub.exchange, routing_key=sub.routing_key)
 
         # Set prefetch value
         self._channel.basic_qos(prefetch_count=self.sub_prefetch_value)
 
-        self._channel.basic_consume(queue=queue, on_message_callback=self.on_message)
+        # Set consuming queue
+        self._channel.basic_consume(queue=self.queue, on_message_callback=self.on_message)
 
         self.logger.info(' [*] Waiting for messages')
         self._channel.start_consuming()
@@ -90,7 +89,7 @@ class MQSub(MQBase):
                              args=(self._connection, self._channel, basic_deliver, properties, body))
         t.start()
         while True:
-            t.join(self.heartbeat/4)
+            t.join(self.heartbeat / 4)
             if t.is_alive():
                 self.process_event_data()
             else:

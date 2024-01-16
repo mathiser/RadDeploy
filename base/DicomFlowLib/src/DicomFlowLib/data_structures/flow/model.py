@@ -16,8 +16,12 @@ class Model(BaseModel):
     docker_kwargs: Dict
 
     gpu: str | bool
+
     input_dir: str | None = None
     output_dir: str | None = None
+
+    static_uid: str | None = None
+    static_dir: str | None = None
 
     pull_before_exec: bool = True
 

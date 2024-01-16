@@ -14,13 +14,21 @@ LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)
 FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
 
 # STORESCU
-SUB_ROUTING_KEY: ""
-SUB_EXCHANGE: "CONSUMER_FINISHED"
-SUB_ROUTING_KEY_AS_QUEUE: False
-SUB_EXCHANGE_TYPE: "fanout"
+SUB_QUEUE_KWARGS:
+    queue: ""
+    passive: False
+    durable: False
+    exclusive: False
+    auto_delete: True
 SUB_PREFETCH_COUNT: 1
+SUB_MODELS:
+  - exchange: "consumer"
+    exchange_type: "topic"
+    routing_key: "success"
 
-PUB_ROUTING_KEY: ""
-PUB_EXCHANGE: "STORESCU_FINISHED"
-PUB_ROUTING_KEY_AS_QUEUE: False
-PUB_EXCHANGE_TYPE: "fanout"
+PUB_MODELS:
+  - exchange: "storescu"
+    exchange_type: "topic"
+    routing_key_success: "success"
+    routing_key_fail: "fail"
+
