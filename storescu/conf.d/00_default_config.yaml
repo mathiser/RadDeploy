@@ -31,3 +31,4 @@ PUB_MODELS:
     exchange_type: "topic"
     routing_key_success: "success"
     routing_key_fail: "fail"
+

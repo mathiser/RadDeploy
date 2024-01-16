@@ -9,6 +9,7 @@ from .base import MQBase
 from ..data_structures.contexts import PublishContext
 
 
+
 class MQPub(MQBase):
     def     __init__(self,
                      rabbit_hostname: str,

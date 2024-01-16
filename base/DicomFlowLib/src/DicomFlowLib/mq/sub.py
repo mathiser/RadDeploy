@@ -9,6 +9,7 @@ from .base import MQBase
 from ..data_structures.contexts.pub_context import SubModel
 
 
+
 class MQSub(MQBase):
     """This is an example consumer that will handle unexpected interactions
     with RabbitMQ such as channel and connection closures.

@@ -90,6 +90,7 @@ class Fingerprinter(MQSubEntrypoint):
                     with open(fp_path) as r:
                         fp = yaml.safe_load(r)
                         yield Flow(**fp)
+
                 except Exception as e:
                     self.logger.error(f"Error when parsing flow definition: {fp_path} - skipping")
                     self.logger.error(str(e))

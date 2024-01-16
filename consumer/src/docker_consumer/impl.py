@@ -4,6 +4,7 @@ import time
 from io import BytesIO
 from typing import List
 
+
 import docker
 from docker import types
 
@@ -51,9 +52,7 @@ class DockerConsumer(MQSubEntrypoint):
         self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=False)
         context.output_file_uid = self.fs.put(output_tar)
         self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=True)
-
         self.publish(mq, context)
-
         self.logger.info(f"PROCESSING", uid=context.uid, finished=True)
 
     def exec_model(self,
@@ -76,12 +75,12 @@ class DockerConsumer(MQSubEntrypoint):
             f"{tempfile.mkdtemp()}:{model.input_dir}:rw",  # is there a better way
             f"{tempfile.mkdtemp()}:{model.output_dir}:rw"
         ]
-
         # Mount static_uid to static_folder if they are set
         # if model.static_uid and model.static_dir:
         #     print(f"{self.ss.get_file_path(model.static_uid)}:{model.static_dir}")
         #     kwargs["volumes"].append(f"{self.ss.get_file_path(model.static_uid)}:{model.static_dir}:ro")
         # print(kwargs["volumes"])
+
         # Allow GPU usage. If int, use as count, if str use as uuid
         if self.gpus:
             kwargs["ipc_mode"] = "host"
@@ -113,7 +112,6 @@ class DockerConsumer(MQSubEntrypoint):
                 self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid,
                                  finished=True)
                 return output_tar
-
 
         except Exception as e:
             self.logger.error(e)

@@ -34,3 +34,4 @@ PUB_MODELS:
     routing_key_success: "success"
     routing_key_fail: "fail"
 
+

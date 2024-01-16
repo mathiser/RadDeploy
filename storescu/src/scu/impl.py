@@ -4,6 +4,7 @@ import tarfile
 import tempfile
 from typing import List
 
+
 import pydicom
 from pydicom.errors import InvalidDicomError
 from pynetdicom import AE, StoragePresentationContexts
@@ -26,7 +27,7 @@ class SCU(MQSubEntrypoint):
         self.fs = file_storage
         self.pub_models = pub_models
         self.pub_declared = False
-
+        
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
 
         context = FlowContext(**json.loads(body.decode()))
@@ -54,7 +55,9 @@ class SCU(MQSubEntrypoint):
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=uid, finished=True)
 
         mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
+
         self.publish(mq, context)
+
         self.logger.info("SCU", uid=uid, finished=True)
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:

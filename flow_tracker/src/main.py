@@ -2,14 +2,11 @@ import os
 import signal
 
 import yaml
+from pydantic.v1.utils import deep_update
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts import PubModel, SubModel
-
-from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQSub
-from scu import SCU
+from flow_tracker import FlowTracker
 
 
 class Main:
@@ -25,32 +22,23 @@ class Main:
                                        rabbit_password=config["RABBIT_PASSWORD"],
                                        rabbit_username=config["RABBIT_USERNAME"])
 
-        self.fs = FileStorage(logger=self.logger,
-                              base_dir=config["FILE_STORAGE_BASE_DIR"])
-        
-        self.scu = SCU(file_storage=self.fs,
-                       logger=self.logger,
-                       pub_models=[PubModel(**d) for d in config["PUB_MODELS"]])
+        self.ft = FlowTracker(logger=self.logger,
+                              sub_exchanges=config["SUB_EXCHANGES"],
+                              sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
+                              rabbit_hostname=config["RABBIT_HOSTNAME"],
+                              rabbit_port=int(config["RABBIT_PORT"]))
 
-        self.mq = MQSub(logger=self.logger,
-                        sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
-                        sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        work_function=self.scu.mq_entrypoint,
-                        rabbit_hostname=config["RABBIT_HOSTNAME"],
-                        rabbit_port=int(config["RABBIT_PORT"]),
-                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
-        
     def start(self):
-        self.logger.debug("Starting SCU", finished=False)
+        self.logger.debug("Starting FlowTracker", finished=False)
         self.running = True
         self.logger.start()
-        self.mq.start()
-        self.logger.debug("Starting SCU", finished=True)
+        self.ft.start()
+        self.logger.debug("Starting FlowTracker", finished=True)
 
         while self.running:
             try:
-                self.mq.join(timeout=5)
-                if self.mq.is_alive():
+                self.ft.join(timeout=5)
+                if self.ft.is_alive():
                     pass
                 else:
                     self.stop()
@@ -58,12 +46,12 @@ class Main:
                 self.stop()
 
     def stop(self):
-        self.logger.debug("Stopping SCU", finished=False)
+        self.logger.debug("Stopping FlowTracker", finished=False)
         self.running = False
-        self.mq.stop()
+        self.ft.stop()
         self.logger.stop()
 
-        self.mq.join()
+        self.ft.join()
         self.logger.join()
         self.logger.debug("Stopping SCU", finished=True)
 

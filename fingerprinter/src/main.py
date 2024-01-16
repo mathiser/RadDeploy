@@ -4,6 +4,7 @@ import signal
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.data_structures.contexts.pub_context import SubModel, PubModel
 from DicomFlowLib.fs import FileStorage
+
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from fingerprinter import Fingerprinter
@@ -29,6 +30,7 @@ class Main:
         self.fp = Fingerprinter(logger=self.logger,
                                 file_storage=self.fs,
                                 pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
+
                                 flow_directory=config["FLOW_DIRECTORY"])
 
         self.mq = MQSub(logger=self.logger,
@@ -38,6 +40,7 @@ class Main:
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
                         sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
+
 
     def start(self):
         self.logger.start()

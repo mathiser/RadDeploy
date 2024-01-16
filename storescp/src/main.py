@@ -7,6 +7,7 @@ import yaml
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.data_structures.contexts.pub_context import PubModel
+
 from DicomFlowLib.fs.file_storage import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQPub
@@ -37,6 +38,7 @@ class Main:
                        tar_subdir=config["TAR_SUBDIR"],
                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                        ae_title=config["AE_TITLE"],
+
                        pynetdicom_log_level=config["PYNETDICOM_LOG_LEVEL"])
         self.mq = MQPub(logger=self.logger,
                         publish_queue=self.publish_queue,
