@@ -76,10 +76,8 @@ class DockerConsumer(MQSubEntrypoint):
             f"{tempfile.mkdtemp()}:{model.output_dir}:rw"
         ]
         # Mount static_uid to static_folder if they are set
-        # if model.static_uid and model.static_dir:
-        #     print(f"{self.ss.get_file_path(model.static_uid)}:{model.static_dir}")
-        #     kwargs["volumes"].append(f"{self.ss.get_file_path(model.static_uid)}:{model.static_dir}:ro")
-        # print(kwargs["volumes"])
+        if model.static_mount:
+            kwargs["volumes"].append(f"{model.static_mount}")
 
         # Allow GPU usage. If int, use as count, if str use as uuid
         if self.gpus:
