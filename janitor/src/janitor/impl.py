@@ -31,6 +31,8 @@ class Janitor(MQSubEntrypoint):
 
     def file_janitor(self, event):
         if event.exchange == "storescu":
-            self.db.delete_files_by_id(_id=event.id)
+            self.db.delete_files_by_id(id=event.id)
+        elif event.exchange == "fingerprinter":
+            self.db.delete_all_files_by_kwargs(uid=event.uid, exchange="storescp")
         elif event.routing_key == "fail":
-            self.db.delete_files_by_id(_id=event.id)
+            self.db.delete_all_files_by_kwargs(id=event.id)

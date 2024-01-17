@@ -46,9 +46,9 @@ class Database:
 
             return event
 
-    def update_event(self, _id, **kwargs):
+    def update_event(self, id, **kwargs):
         with self.Session() as session:
-            event = session.query(Event).filter_by(id=_id).first()
+            event = session.query(Event).filter_by(id=id).first()
             for k, v in kwargs.items():
                 event.__setattr__(k, v)
             session.commit()
@@ -59,14 +59,14 @@ class Database:
         with self.Session() as session:
             return session.query(Event).filter_by(**kwargs)
 
-    def delete_files_by_id(self, _id):
-        event = self.get_events_by_kwargs(id=_id).first()
+    def delete_files_by_id(self, id):
+        event = self.get_events_by_kwargs(id=id).first()
         try:
             if not event.input_file_deleted:
                 self.fs.delete(event.input_file_uid)
-                self.update_event(_id=event.id, input_file_deleted=True)
+                self.update_event(id=event.id, input_file_deleted=True)
         except FileNotFoundError:
-            self.update_event(_id=event.id, input_file_deleted=True)
+            self.update_event(id=event.id, input_file_deleted=True)
         except Exception as e:
             raise e
 
@@ -75,9 +75,9 @@ class Database:
             if event.output_file_uid:
                 if not event.output_file_deleted:
                     self.fs.delete(event.output_file_uid)
-                    self.update_event(_id=event.id, output_file_deleted=True)
+                    self.update_event(id=event.id, output_file_deleted=True)
         except FileNotFoundError:
-            self.update_event(_id=event.id, output_file_deleted=True)
+            self.update_event(id=event.id, output_file_deleted=True)
         except Exception as e:
             raise e
 
@@ -85,7 +85,7 @@ class Database:
         all_events_by_uid = self.get_events_by_kwargs(**kwargs).all()
         for event in all_events_by_uid:
             try:
-                self.delete_files_by_id(_id=event.id)
+                self.delete_files_by_id(id=event.id)
             except FileNotFoundError:
                 pass
 
