@@ -29,15 +29,10 @@ class Main:
         self.fs = FileStorage(logger=self.logger,
                               base_dir=config["FILE_STORAGE_BASE_DIR"])
 
-        self.ss = FileStorage(logger=self.logger,
-                              base_dir=config["STATIC_STORAGE_BASE_DIR"],
-                              suffix="")
 
         self.consumer = DockerConsumer(logger=self.logger,
                                        file_storage=self.fs,
-                                       static_storage=self.ss,
                                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
-
                                        gpus=config["GPUS"])
 
         self.mq = MQSub(logger=self.logger,

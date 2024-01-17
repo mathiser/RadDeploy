@@ -30,7 +30,6 @@ class Main:
         self.fp = Fingerprinter(logger=self.logger,
                                 file_storage=self.fs,
                                 pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
-
                                 flow_directory=config["FLOW_DIRECTORY"])
 
         self.mq = MQSub(logger=self.logger,

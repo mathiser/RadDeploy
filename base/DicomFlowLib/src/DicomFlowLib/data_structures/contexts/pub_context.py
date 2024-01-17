@@ -16,6 +16,5 @@ class SubModel(Base):
 class PublishContext(PubModel):
     body: bytes
     routing_key: str
-
     reply_to: str | None = None
     priority: int = 0

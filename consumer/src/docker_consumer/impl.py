@@ -19,14 +19,12 @@ class DockerConsumer(MQSubEntrypoint):
     def __init__(self,
                  logger: CollectiveLogger,
                  file_storage: FileStorage,
-                 static_storage: FileStorage,
                  pub_models: List[PubModel],
                  gpus: str | List | None):
         super().__init__(logger, pub_models)
         self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
-        self.ss = static_storage
         self.pub_models = pub_models
 
         if gpus and isinstance(gpus, str):
@@ -42,19 +40,19 @@ class DockerConsumer(MQSubEntrypoint):
         mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
 
         context = FlowContext(**json.loads(body.decode()))
-
-        self.logger.info(f"PROCESSING", uid=context.uid, finished=False)
+        self.uid = context.flow_instance_uid
+        self.logger.info(f"PROCESSING", uid=self.uid, finished=False)
 
         input_tar = self.fs.get(context.input_file_uid)
 
         output_tar = self.exec_model(context, input_tar)
 
-        self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=False)
+        self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=False)
         context.output_file_uid = self.fs.put(output_tar)
-        self.logger.info(f"RUNNING FLOW", uid=context.uid, finished=True)
+        self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=True)
         self.publish(mq, context)
-        self.logger.info(f"PROCESSING", uid=context.uid, finished=True)
-
+        self.logger.info(f"PROCESSING", uid=self.uid, finished=True)
+        self.uid = None
     def exec_model(self,
                    context: FlowContext,
                    input_tar: BytesIO) -> BytesIO:
@@ -66,7 +64,7 @@ class DockerConsumer(MQSubEntrypoint):
             except Exception as e:
                 self.logger.error("Could not pull container - does it exist on docker hub?")
                 raise e
-        self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid, finished=False)
+        self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=self.uid, finished=False)
 
         kwargs = model.docker_kwargs
         # Mount point of input/output to container. These are dummy binds, to make sure the container has /input and /output
@@ -107,7 +105,7 @@ class DockerConsumer(MQSubEntrypoint):
                 for chunk in output:
                     output_tar.write(chunk)
                 output_tar.seek(0)
-                self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=context.uid,
+                self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=self.uid,
                                  finished=True)
                 return output_tar
 
@@ -119,16 +117,16 @@ class DockerConsumer(MQSubEntrypoint):
             while counter < 5:
                 try:
                     self.logger.debug(f"Attempting to remove container {container.short_id}",
-                                      uid=context.uid,
+                                      uid=self.uid,
                                       finished=False)
                     container.remove()
                     self.logger.debug(f"Attempting to remove container {container.short_id}",
-                                      uid=context.uid,
+                                      uid=self.uid,
                                       finished=True)
                     break
                 except:
                     self.logger.debug(f"Failed to remove {container.short_id}. Trying again in 5 sec...",
-                                      uid=context.uid,
+                                      uid=self.uid,
                                       finished=True)
                     counter += 1
                     time.sleep(5)

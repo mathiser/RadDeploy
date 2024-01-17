@@ -27,38 +27,41 @@ class SCU(MQSubEntrypoint):
         self.fs = file_storage
         self.pub_models = pub_models
         self.pub_declared = False
-        
+
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
 
         context = FlowContext(**json.loads(body.decode()))
-        uid = context.uid
+        self.uid = context.flow_instance_uid
 
-        self.logger.info("SCU", uid=uid, finished=False)
+        self.logger.info("SCU", uid=self.uid, finished=False)
 
-        self.logger.info("EXTRACTING FILE(S)", uid=uid, finished=False)
+        self.logger.info("EXTRACTING FILE(S)", uid=self.uid, finished=False)
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_tar = self.fs.get(context.output_file_uid)
             with tarfile.TarFile.open(fileobj=output_tar, mode="r:*") as tf:
                 tf.extractall(tmp_dir)
 
-            self.logger.info("EXTRACTING FILE(S)", uid=uid, finished=True)
+            self.logger.info("EXTRACTING FILE(S)", uid=self.uid, finished=True)
 
             if context.flow.return_to_sender:
-                self.logger.info(f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}", uid=uid, finished=False)
+                self.logger.info(f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}", uid=self.uid, finished=False)
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=context.sender)
-                self.logger.info(f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}", uid=uid, finished=True)
+                self.logger.info(f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}", uid=self.uid, finished=True)
 
 
             for dest in context.flow.destinations:
-                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=uid, finished=False)
+                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid, finished=False)
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
-                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=uid, finished=True)
+                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid, finished=True)
 
         mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
 
         self.publish(mq, context)
 
-        self.logger.info("SCU", uid=uid, finished=True)
+        self.logger.info("SCU", uid=self.uid, finished=True)
+
+        self.uid = None
+
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:
         ae = AE()
@@ -77,9 +80,9 @@ class SCU(MQSubEntrypoint):
                         # Check the status of the storage request
                         if status:
                             # If the storage request succeeded this will be 0x0000
-                            self.logger.debug('C-STORE request status: 0x{0:04x}'.format(status.Status))
+                            self.logger.debug('C-STORE request status: 0x{0:04x}'.format(status.Status), uid=self.uid)
                         else:
-                            self.logger.info('Connection timed out, was aborted or received invalid response')
+                            self.logger.info('Connection timed out, was aborted or received invalid response', uid=self.uid)
                     except InvalidDicomError as e:
                         self.logger.error(str(e), uid=p)
                     except Exception as e:

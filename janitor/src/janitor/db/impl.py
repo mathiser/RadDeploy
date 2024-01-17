@@ -25,12 +25,12 @@ class Database:
         self.Session = scoped_session(self.session_maker)
 
     def add_event(self,
-                  uid: str,
                   exchange: str,
                   routing_key: str,
                   context: FlowContext):
         with self.Session() as session:
-            event = Event(uid=uid,
+            event = Event(uid=context.uid,
+                          flow_instance_uid=context.flow_instance_uid,
                           exchange=exchange,
                           routing_key=routing_key,
                           context_as_json=context.model_dump_json(exclude={"file_metas"}),
@@ -81,8 +81,8 @@ class Database:
         except Exception as e:
             raise e
 
-    def delete_all_files_by_uid(self, uid):
-        all_events_by_uid = self.get_events_by_kwargs(uid=uid).all()
+    def delete_all_files_by_kwargs(self, **kwargs):
+        all_events_by_uid = self.get_events_by_kwargs(**kwargs).all()
         for event in all_events_by_uid:
             try:
                 self.delete_files_by_id(_id=event.id)

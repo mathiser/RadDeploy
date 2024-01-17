@@ -45,7 +45,6 @@ class SCP(MQSubEntrypoint):
         super().__init__(logger, pub_models)
         self.fs = file_storage
         self.ae = None
-
         self.tar_subdir = tar_subdir
 
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
@@ -65,9 +64,9 @@ class SCP(MQSubEntrypoint):
         # Association id unique to this transaction
         # Set up all the things
         assoc_id = event.assoc.native_id
-        self.logger.debug(f"HANDLE_ESTABLISHED", uid=assoc_id, finished=False)
 
         ac = AssocContext()
+        self.logger.debug(f"HANDLE_ESTABLISHED", uid=ac.flow_context.uid, finished=False)
 
         # Unwrap sender info
         ac.flow_context.sender = Destination(host=event.assoc.requestor.address,
@@ -75,7 +74,7 @@ class SCP(MQSubEntrypoint):
                                              ae_title=event.assoc.requestor._ae_title)
         # Add to assocs dict
         self.assoc[assoc_id] = ac
-        self.logger.debug(f"HANDLE_ESTABLISHED", uid=assoc_id, finished=True)
+        self.logger.debug(f"HANDLE_ESTABLISHED", uid=ac.flow_context.uid, finished=True)
 
         return 0x0000
 
@@ -84,7 +83,9 @@ class SCP(MQSubEntrypoint):
         """Handle EVT_C_STORE events."""
         assoc_id = event.assoc.native_id
         assoc_context = self.assoc[assoc_id]
-        self.logger.debug(f"HANDLE_STORE", uid=assoc_context.flow_context.uid, finished=False)
+        uid = assoc_context.flow_context.uid
+
+        self.logger.debug(f"HANDLE_STORE", uid=uid, finished=False)
 
         # Get data set from event
         ds = event.dataset
@@ -108,7 +109,7 @@ class SCP(MQSubEntrypoint):
         except Exception as e:
             print(e)
             raise e
-        self.logger.debug(f"HANDLE_STORE", uid=assoc_context.flow_context.uid, finished=True)
+        self.logger.debug(f"HANDLE_STORE", uid=uid, finished=True)
 
         # Return a 'Success' status
         return 0x0000
@@ -133,13 +134,14 @@ class SCP(MQSubEntrypoint):
         uid = assoc_context.flow_context.uid
         self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=False)
 
-        self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=uid, finished=False)
-        uid = self.publish_file_context(assoc_context=assoc_context)
-        self.logger.info(f"STORESCP PUBLISH TAR FILE", uid=uid, finished=True)
         try:
             self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=False)
-            self.assoc[assoc_id].flow_context.input_file_uid = uid
+
+            input_file_uid = self.publish_file_context(assoc_context=assoc_context)
+            self.assoc[assoc_id].flow_context.input_file_uid = input_file_uid
+
             self.publish_main_context(assoc_context=assoc_context)
+
             self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=True)
             self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=True)
         except Exception as e:

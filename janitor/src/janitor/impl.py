@@ -23,16 +23,14 @@ class Janitor(MQSubEntrypoint):
     def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
         context = FlowContext(**json.loads(body.decode()))
         context.file_metas = []
-        event = self.db.add_event(uid=context.uid,
-                                  exchange=basic_deliver.exchange,
+
+        event = self.db.add_event(exchange=basic_deliver.exchange,
                                   routing_key=basic_deliver.routing_key,
                                   context=context)
-
         self.file_janitor(event)
 
     def file_janitor(self, event):
         if event.exchange == "storescu":
-            if (self.db.get_events_by_kwargs(uid=event.uid, exchange="storescu").count()
-                    == self.db.get_events_by_kwargs(uid=event.uid, exchange="fingerprinter").count()
-                    != 0):
-                self.db.delete_all_files_by_uid(event.uid)
+            self.db.delete_files_by_id(_id=event.id)
+        elif event.routing_key == "fail":
+            self.db.delete_files_by_id(_id=event.id)

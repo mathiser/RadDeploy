@@ -30,7 +30,8 @@ class Main:
         
         self.scu = SCU(file_storage=self.fs,
                        logger=self.logger,
-                       pub_models=[PubModel(**d) for d in config["PUB_MODELS"]])
+                       pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
+                       )
 
         self.mq = MQSub(logger=self.logger,
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
