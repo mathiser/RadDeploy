@@ -1,5 +1,4 @@
 import json
-import os
 
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.fs import FileStorage
