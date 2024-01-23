@@ -38,6 +38,9 @@ class Janitor(MQSubEntrypoint):
             self.db.delete_all_files_by_kwargs(id=event.id)
 
     def dashboard_janitor(self, event, context):
+        if event.exchange == "storescp":
+            return
+
         self.db.maybe_insert_dashboard_row(flow_instance_uid=event.flow_instance_uid,
                                            flow_container_tag=context.flow.model.docker_kwargs["image"],
                                            sender_ae_hostname=context.sender.host)
