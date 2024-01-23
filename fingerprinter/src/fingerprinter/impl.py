@@ -71,7 +71,7 @@ class Fingerprinter(MQSubEntrypoint):
             if self.fingerprint(ds, flow.triggers):
                 self.logger.info(f"MATCHING FLOW", uid=self.uid, finished=True)
                 context = org_context.model_copy(deep=True)
-                context.flow = flow.model_copy(deep=True)
+                context.add_flow(flow.model_copy(deep=True))
 
                 # Provide a link to the input file
                 context.input_file_uid = self.fs.clone(context.input_file_uid)

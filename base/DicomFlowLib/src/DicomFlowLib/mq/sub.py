@@ -4,6 +4,8 @@ import threading
 import traceback
 from typing import List, Dict
 
+import pika.channel
+
 from DicomFlowLib.log import CollectiveLogger
 from .base import MQBase
 from ..data_structures.contexts.pub_context import SubModel
@@ -32,6 +34,7 @@ class MQSub(MQBase):
                  sub_prefetch_value: int,
                  logger: CollectiveLogger,
                  sub_queue_kwargs: Dict,
+                 fetch_echo_routing_key: str | None = "fetch"
                  ):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
@@ -51,7 +54,7 @@ class MQSub(MQBase):
 
         self._consumer_tag = None
         self._consuming = False
-
+        self.fetch_echo_routing_key = fetch_echo_routing_key
         self.work_function = work_function
         self.sub_prefetch_value = sub_prefetch_value
         self._thread_lock = threading.Lock()
@@ -81,10 +84,13 @@ class MQSub(MQBase):
 
         self.logger.info(' [*] Waiting for messages')
         self._channel.start_consuming()
+    def fetch_echo(self, chan: pika.channel.Channel, exchange, body):
+        if self.fetch_echo_routing_key:
+            chan.basic_publish(exchange=exchange, routing_key=self.fetch_echo_routing_key, body=body)
 
     def on_message(self, _unused_channel, basic_deliver, properties, body):
         self.logger.debug('Received message # {} from {}'.format(basic_deliver.delivery_tag, properties.app_id))
-
+        self.fetch_echo(chan=_unused_channel, exchange=basic_deliver.exchange, body=body)
         t = threading.Thread(target=self.work_function_wrapper,
                              args=(self._connection, self._channel, basic_deliver, properties, body))
         t.start()
