@@ -23,7 +23,7 @@ class SCU:
         self.logger = logger
         self.fs = file_storage
 
-    def mq_entrypoint(self,basic_deliver, body) -> Iterable[MQEntrypointResult]:
+    def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
 
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.flow_instance_uid
@@ -53,10 +53,12 @@ class SCU:
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid, finished=True)
 
-        yield MQEntrypointResult(body=context.model_dump_json().encode())
 
         self.logger.info("SCU", uid=self.uid, finished=True)
         self.uid = None
+
+        return [MQEntrypointResult(body=context.model_dump_json().encode())]
+
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:
         ae = AE()

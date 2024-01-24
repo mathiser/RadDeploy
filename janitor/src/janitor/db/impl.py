@@ -107,7 +107,6 @@ class Database:
             row = session.query(DashboardRow).filter_by(flow_instance_uid=flow_instance_uid).first()
             assert row
 
-            row.status = status
             if status == 0:
                 pass
             elif status == 1:
@@ -120,6 +119,9 @@ class Database:
                 pass
             else:
                 raise Exception("Invalid Status")
+
+            if status > row.status:
+                row.status = status
 
             session.commit()
             session.refresh(row)
