@@ -4,12 +4,11 @@ import threading
 import traceback
 from typing import List, Dict
 
-import pika.channel
-
 from DicomFlowLib.log import CollectiveLogger
 from .base import MQBase
-from ..data_structures.contexts.pub_context import SubModel
-
+from ..data_structures.contexts import PubModel, PublishContext
+from ..data_structures.contexts import SubModel
+from ..data_structures.mq.mq_entrypoint_result import MQEntrypointResult
 
 
 class MQSub(MQBase):
@@ -30,12 +29,11 @@ class MQSub(MQBase):
                  rabbit_hostname: str,
                  rabbit_port: int,
                  sub_models: List[SubModel],
+                 pub_models: List[PubModel],
                  work_function: callable,
                  sub_prefetch_value: int,
                  logger: CollectiveLogger,
-                 sub_queue_kwargs: Dict,
-                 fetch_echo_routing_key: str | None = "fetch"
-                 ):
+                 sub_queue_kwargs: Dict, ):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
 
@@ -54,13 +52,14 @@ class MQSub(MQBase):
 
         self._consumer_tag = None
         self._consuming = False
-        self.fetch_echo_routing_key = fetch_echo_routing_key
         self.work_function = work_function
         self.sub_prefetch_value = sub_prefetch_value
         self._thread_lock = threading.Lock()
         self._threads = []
 
-        self.sub_bases = sub_models
+        self.sub_models = {sm.exchange: sm for sm in sub_models}
+        self.pub_models = {pm.exchange: pm for pm in pub_models}
+
         self.sub_queue_kwargs = sub_queue_kwargs
         self.queue = None
 
@@ -70,7 +69,7 @@ class MQSub(MQBase):
         self.queue = self.setup_queue(**self.sub_queue_kwargs)
 
         # Declare exchange
-        for sub in self.sub_bases:
+        for sub in self.sub_models.values():
             self.setup_exchange(exchange=sub.exchange, exchange_type=sub.exchange_type)
 
             # Declare queue
@@ -84,33 +83,50 @@ class MQSub(MQBase):
 
         self.logger.info(' [*] Waiting for messages')
         self._channel.start_consuming()
-    def fetch_echo(self, chan: pika.channel.Channel, exchange, body):
-        if self.fetch_echo_routing_key:
-            chan.basic_publish(exchange=exchange, routing_key=self.fetch_echo_routing_key, body=body)
+
+    def fetch_echo(self, exchange, body):
+        if self.sub_models[exchange].routing_key_fetch_echo:
+            self.basic_publish_callback(exchange=exchange,
+                                        routing_key=self.sub_models[exchange].routing_key_fetch_echo,
+                                        body=body)
+
+    def publish_on_all_pub_models(self, result: MQEntrypointResult, success: bool = True):
+        for pub_model in self.pub_models.values():
+            if success:
+                routing_key = pub_model.routing_key_success
+            else:
+                routing_key = pub_model.routing_key_fail
+
+            self.basic_publish_callback(exchange=pub_model.exchange,
+                                        routing_key=routing_key,
+                                        body=result.body,
+                                        priority=result.priority)
 
     def on_message(self, _unused_channel, basic_deliver, properties, body):
         self.logger.debug('Received message # {} from {}'.format(basic_deliver.delivery_tag, properties.app_id))
-        self.fetch_echo(chan=_unused_channel, exchange=basic_deliver.exchange, body=body)
+
+        self.fetch_echo(exchange=basic_deliver.exchange, body=body)
+
         t = threading.Thread(target=self.work_function_wrapper,
-                             args=(self._connection, self._channel, basic_deliver, properties, body))
+                             args=(basic_deliver, body))
         t.start()
-        while True:
+
+        while t.is_alive():
             t.join(self.heartbeat / 4)
-            if t.is_alive():
-                self.process_event_data()
-            else:
-                break
+            self.process_event_data()
+
         self._threads.append(t)
 
-    def work_function_wrapper(self, connection, channel, basic_deliver, properties, body):
+    def work_function_wrapper(self, basic_deliver, body):
         try:
-            self.logger.debug('Starting work function of message # {}'.format(basic_deliver.delivery_tag))
-            self.work_function(connection, channel, basic_deliver, properties, body)
-            self.logger.debug('Finishing work function of message # {}'.format(basic_deliver.delivery_tag))
+            result: MQEntrypointResult
+            for result in self.work_function(basic_deliver, body):
+                self.publish_on_all_pub_models(result=result, success=True)  # Routing key on success
+
         except Exception as e:
             self.logger.error(str(e))
             self.logger.error(str(traceback.format_exc()))
-            # raise e
+            self.publish_on_all_pub_models(result=MQEntrypointResult(body=body), success=False)  # routing key on fail
         finally:
             self.logger.info('Acknowledging message {}'.format(basic_deliver.delivery_tag))
             self.acknowledge_message_callback(basic_deliver.delivery_tag)

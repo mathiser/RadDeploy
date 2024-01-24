@@ -2,30 +2,25 @@ import json
 import tempfile
 import time
 from io import BytesIO
-from typing import List
-
+from typing import List, Iterable
 
 import docker
 from docker import types
 
-from DicomFlowLib.data_structures.contexts import PubModel
-from DicomFlowLib.data_structures.contexts.data_context import FlowContext
+from DicomFlowLib.data_structures.contexts import PublishContext, FlowContext
+from DicomFlowLib.data_structures.mq.mq_entrypoint_result import MQEntrypointResult
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQBase, MQSubEntrypoint
 
 
-class DockerConsumer(MQSubEntrypoint):
+class DockerConsumer:
     def __init__(self,
                  logger: CollectiveLogger,
                  file_storage: FileStorage,
-                 pub_models: List[PubModel],
                  gpus: str | List | None):
-        super().__init__(logger, pub_models)
         self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
-        self.pub_models = pub_models
 
         if gpus and isinstance(gpus, str):
             self.gpus = gpus.split()
@@ -36,23 +31,20 @@ class DockerConsumer(MQSubEntrypoint):
     def __del__(self):
         self.cli.close()
 
-    def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
-        mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
-
+    def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.flow_instance_uid
-        self.logger.info(f"PROCESSING", uid=self.uid, finished=False)
-
-        input_tar = self.fs.get(context.input_file_uid)
-
-        output_tar = self.exec_model(context, input_tar)
 
         self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=False)
+        input_tar = self.fs.get(context.input_file_uid)
+        output_tar = self.exec_model(context, input_tar)
         context.output_file_uid = self.fs.put(output_tar)
         self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=True)
-        self.publish(mq, context)
-        self.logger.info(f"PROCESSING", uid=self.uid, finished=True)
+
         self.uid = None
+
+        return [MQEntrypointResult(body=context.model_dump_json().encode())]
+
     def exec_model(self,
                    context: FlowContext,
                    input_tar: BytesIO) -> BytesIO:

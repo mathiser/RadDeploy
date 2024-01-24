@@ -1,25 +1,26 @@
 import json
+from typing import Iterable
 
 from DicomFlowLib.data_structures.contexts import FlowContext
+from DicomFlowLib.data_structures.mq.mq_entrypoint_result import MQEntrypointResult
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQSubEntrypoint
 from .db import Database
 
 
-class Janitor(MQSubEntrypoint):
+class Janitor:
     def __init__(self,
                  file_storage: FileStorage,
                  logger: CollectiveLogger,
                  database_path: str):
-        super().__init__(logger=logger, pub_models=None)
+        self.logger = logger
         self.engine = None
         self.database_url = None
 
         self.database_path = database_path
         self.db = Database(database_path=self.database_path, file_storage=file_storage)
 
-    def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
+    def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
         context = FlowContext(**json.loads(body.decode()))
         context.file_metas = []
 
@@ -28,6 +29,7 @@ class Janitor(MQSubEntrypoint):
                                   context=context)
         self.file_janitor(event)
         self.dashboard_janitor(event, context)
+        return []
 
     def file_janitor(self, event):
         if event.exchange == "storescu":

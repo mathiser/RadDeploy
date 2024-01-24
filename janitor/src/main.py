@@ -33,16 +33,16 @@ class Main:
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
+                        pub_models=[],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
-                        fetch_echo_routing_key=None)
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
 
     def start(self):
-        self.logger.debug("Starting FlowTracker", finished=False)
+        self.logger.debug("Starting Janitor", finished=False)
         self.running = True
         self.logger.start()
         self.mq.start()
-        self.logger.debug("Starting FlowTracker", finished=True)
+        self.logger.debug("Starting Janitor", finished=True)
 
         while self.running:
             try:
@@ -55,14 +55,14 @@ class Main:
                 self.stop()
 
     def stop(self):
-        self.logger.debug("Stopping FlowTracker", finished=False)
+        self.logger.debug("Stopping Janitor", finished=False)
         self.running = False
         self.ft.stop()
         self.logger.stop()
 
         self.ft.join()
         self.logger.join()
-        self.logger.debug("Stopping SCU", finished=True)
+        self.logger.debug("Stopping Janitor", finished=True)
 
 
 if __name__ == "__main__":

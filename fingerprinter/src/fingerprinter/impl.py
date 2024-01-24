@@ -2,27 +2,25 @@ import json
 import os
 import traceback
 from multiprocessing.pool import ThreadPool
-from typing import List
+from typing import List, Iterable
 
 import pandas as pd
 import pydicom
 import yaml
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PubModel
+from DicomFlowLib.data_structures.contexts import FlowContext, PubModel, PublishContext
 from DicomFlowLib.data_structures.flow import Flow
+from DicomFlowLib.data_structures.mq.mq_entrypoint_result import MQEntrypointResult
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQBase, MQSubEntrypoint
 
 
-class Fingerprinter(MQSubEntrypoint):
-    def __init__(self, pub_models: List[PubModel], file_storage: FileStorage,
+class Fingerprinter:
+    def __init__(self,
+                 file_storage: FileStorage,
                  logger: CollectiveLogger,
                  flow_directory: str):
-        super().__init__(logger, pub_models)
-
-        self.pub_declared = False
-        self.flows = []
+        self.logger = logger
         self.flow_directory = flow_directory
         self.fs = file_storage
         self.uid = None
@@ -52,18 +50,15 @@ class Fingerprinter(MQSubEntrypoint):
                     match[keyword].str.contains(regex_pattern, regex=True)]  # Regex match. This is "recursive"
 
             if not bool(len(match)):
-                self.logger.info(f"FOUND NOT MATCH", uid=self.uid, finished=True)
+                self.logger.debug(f"FOUND NOT MATCH", uid=self.uid, finished=True)
                 return False
-
         else:
             self.logger.info(f"FOUND MATCH", uid=self.uid, finished=True)
-            self.logger.info(f"RUNNING FINGERPRINTING", uid=self.uid, finished=True)
             return True
 
-    def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
+    def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
         org_context = FlowContext(**json.loads(body.decode()))
         self.uid = org_context.uid
-        mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
 
         ds = self.parse_file_metas(org_context.file_metas)
 
@@ -77,7 +72,9 @@ class Fingerprinter(MQSubEntrypoint):
                 context.input_file_uid = self.fs.clone(context.input_file_uid)
 
                 # Publish the
-                self.publish(mq, context)
+                yield MQEntrypointResult(body=context.model_dump_json().encode(),
+                                         priority=flow.priority)
+
             else:
                 self.logger.info(f"NOT MATCHING FLOW", uid=self.uid, finished=True)
         self.uid = None
@@ -95,3 +92,4 @@ class Fingerprinter(MQSubEntrypoint):
                     self.logger.error(f"Error when parsing flow definition: {fp_path} - skipping")
                     self.logger.error(str(e))
                     self.logger.error(traceback.format_exc())
+                    raise e

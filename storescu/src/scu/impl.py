@@ -2,33 +2,28 @@ import json
 import os
 import tarfile
 import tempfile
-from typing import List
-
+from typing import List, Iterable
 
 import pydicom
 from pydicom.errors import InvalidDicomError
 from pynetdicom import AE, StoragePresentationContexts
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PubModel
+from DicomFlowLib.data_structures.contexts import FlowContext, PubModel, PublishContext
 from DicomFlowLib.data_structures.flow import Destination
+from DicomFlowLib.data_structures.mq.mq_entrypoint_result import MQEntrypointResult
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQBase, MQSubEntrypoint
 
 
-class SCU(MQSubEntrypoint):
+class SCU:
     def __init__(self,
                  file_storage: FileStorage,
-                 logger: CollectiveLogger,
-                 pub_models: List[PubModel]):
-                 
-        super().__init__(logger, pub_models)
+                 logger: CollectiveLogger):
+
         self.logger = logger
         self.fs = file_storage
-        self.pub_models = pub_models
-        self.pub_declared = False
 
-    def mq_entrypoint(self, connection, channel, basic_deliver, properties, body):
+    def mq_entrypoint(self,basic_deliver, body) -> Iterable[MQEntrypointResult]:
 
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.flow_instance_uid
@@ -44,24 +39,24 @@ class SCU(MQSubEntrypoint):
             self.logger.info("EXTRACTING FILE(S)", uid=self.uid, finished=True)
 
             if context.flow.return_to_sender:
-                self.logger.info(f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}", uid=self.uid, finished=False)
+                self.logger.info(
+                    f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}",
+                    uid=self.uid, finished=False)
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=context.sender)
-                self.logger.info(f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}", uid=self.uid, finished=True)
-
+                self.logger.info(
+                    f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}",
+                    uid=self.uid, finished=True)
 
             for dest in context.flow.destinations:
-                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid, finished=False)
+                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid,
+                                 finished=False)
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid, finished=True)
 
-        mq = MQBase(logger=self.logger, close_conn_on_exit=False).connect_with(connection=connection, channel=channel)
-
-        self.publish(mq, context)
+        yield MQEntrypointResult(body=context.model_dump_json().encode())
 
         self.logger.info("SCU", uid=self.uid, finished=True)
-
         self.uid = None
-
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:
         ae = AE()
@@ -82,7 +77,8 @@ class SCU(MQSubEntrypoint):
                             # If the storage request succeeded this will be 0x0000
                             self.logger.debug('C-STORE request status: 0x{0:04x}'.format(status.Status), uid=self.uid)
                         else:
-                            self.logger.info('Connection timed out, was aborted or received invalid response', uid=self.uid)
+                            self.logger.info('Connection timed out, was aborted or received invalid response',
+                                             uid=self.uid)
                     except InvalidDicomError as e:
                         self.logger.error(str(e), uid=p)
                     except Exception as e:

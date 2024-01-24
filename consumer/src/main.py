@@ -32,7 +32,6 @@ class Main:
 
         self.consumer = DockerConsumer(logger=self.logger,
                                        file_storage=self.fs,
-                                       pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                                        gpus=config["GPUS"])
 
         self.mq = MQSub(logger=self.logger,
@@ -41,7 +40,9 @@ class Main:
                         rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
+                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
+                        )
 
     def start(self):
         self.running = True

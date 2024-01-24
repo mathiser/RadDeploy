@@ -3,11 +3,8 @@ import queue
 import signal
 from typing import Dict
 
-import yaml
-
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts.pub_context import PubModel
-
+from DicomFlowLib.data_structures.contexts import PubModel
 from DicomFlowLib.fs.file_storage import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQPub
