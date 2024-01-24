@@ -29,12 +29,11 @@ class Main:
                               base_dir=config["FILE_STORAGE_BASE_DIR"])
         
         self.scu = SCU(file_storage=self.fs,
-                       logger=self.logger,
-                       pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
-                       )
+                       logger=self.logger)
 
         self.mq = MQSub(logger=self.logger,
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
+                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
                         work_function=self.scu.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],

@@ -29,6 +29,7 @@ SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"
     routing_key: "success"
+    routing_key_fetch_echo: "fetch"
 
 PUB_MODELS:
   - exchange: "consumer"

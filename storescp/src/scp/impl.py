@@ -13,7 +13,6 @@ from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, Pu
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.mq import MQSubEntrypoint
 
 
 class AssocContext:
@@ -38,14 +37,15 @@ class AssocContext:
         self.tar.addfile(info, file)
 
 
-class SCP(MQSubEntrypoint):
+class SCP:
     def __init__(self, publish_queue: Queue, file_storage: FileStorage, ae_title: str, hostname: str, port: int,
                  logger: CollectiveLogger, pub_models: List[PubModel], pynetdicom_log_level: str,
                  tar_subdir: List[str]):
-        super().__init__(logger, pub_models)
+        self.logger = logger
         self.fs = file_storage
         self.ae = None
         self.tar_subdir = tar_subdir
+        self.pub_models = pub_models
 
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
 

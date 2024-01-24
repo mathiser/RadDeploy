@@ -29,13 +29,13 @@ class Main:
 
         self.fp = Fingerprinter(logger=self.logger,
                                 file_storage=self.fs,
-                                pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                                 flow_directory=config["FLOW_DIRECTORY"])
 
         self.mq = MQSub(logger=self.logger,
                         work_function=self.fp.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
+                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
                         sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
