@@ -9,7 +9,7 @@ from typing import Dict, List
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
 
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext, PubModel
+from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, PubModel
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
@@ -21,7 +21,7 @@ class AssocContext:
         self.file = BytesIO()
         self.tar = tarfile.TarFile.open(fileobj=self.file, mode="w")
 
-        self.flow_context = FlowContext()
+        self.flow_context = SCPContext()
 
     def __del__(self):
         try:

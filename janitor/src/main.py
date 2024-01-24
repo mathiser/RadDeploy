@@ -34,7 +34,8 @@ class Main:
                         rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
+                        fetch_echo_routing_key=None)
 
     def start(self):
         self.logger.debug("Starting FlowTracker", finished=False)

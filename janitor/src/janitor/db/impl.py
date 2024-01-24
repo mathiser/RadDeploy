@@ -1,11 +1,11 @@
 import os
 
 import sqlalchemy
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker, scoped_session, session
 
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.fs import FileStorage
-from .db_models import Base, Event
+from .db_models import Base, Event, DashboardRow, _now
 
 
 class Database:
@@ -34,12 +34,8 @@ class Database:
                           exchange=exchange,
                           routing_key=routing_key,
                           context_as_json=context.model_dump_json(exclude={"file_metas"}),
-                          flow_name=context.flow.name if context.flow else None,
                           input_file_uid=context.input_file_uid,
-                          output_file_uid=context.output_file_uid,
-                          sender_ae_hostname=context.sender.host,
-                          sender_ae_title=context.sender.ae_title,
-                          sender_ae_port=context.sender.port)
+                          output_file_uid=context.output_file_uid)
             session.add(event)
             session.commit()
             session.refresh(event)
@@ -55,12 +51,12 @@ class Database:
             session.refresh(event)
         return event
 
-    def get_events_by_kwargs(self, **kwargs):
+    def get_objs_by_kwargs(self, **kwargs):
         with self.Session() as session:
             return session.query(Event).filter_by(**kwargs)
 
     def delete_files_by_id(self, id):
-        event = self.get_events_by_kwargs(id=id).first()
+        event = self.get_objs_by_kwargs(id=id).first()
         try:
             if not event.input_file_deleted:
                 self.fs.delete(event.input_file_uid)
@@ -82,10 +78,49 @@ class Database:
             raise e
 
     def delete_all_files_by_kwargs(self, **kwargs):
-        all_events_by_uid = self.get_events_by_kwargs(**kwargs).all()
+        all_events_by_uid = self.get_objs_by_kwargs(**kwargs).all()
         for event in all_events_by_uid:
             try:
                 self.delete_files_by_id(id=event.id)
             except FileNotFoundError:
                 pass
 
+    def maybe_insert_dashboard_row(self,
+                             flow_instance_uid: str,
+                             flow_container_tag: str,
+                             sender_ae_hostname: str):
+        with self.Session() as session:
+            row = session.query(DashboardRow).filter_by(flow_instance_uid=flow_instance_uid).first()
+            if not row:
+                row = DashboardRow(flow_instance_uid=flow_instance_uid,
+                                   flow_container_tag=flow_container_tag,
+                                   sender_ae_hostname=sender_ae_hostname)
+                session.add(row)
+                session.commit()
+                session.refresh(row)
+                return row
+            else:
+                return row
+
+    def set_status_of_dashboard_row(self, flow_instance_uid: str, status: int):
+        with (self.Session() as session):
+            row = session.query(DashboardRow).filter_by(flow_instance_uid=flow_instance_uid).first()
+            assert row
+
+            row.status = status
+            if status == 0:
+                pass
+            elif status == 1:
+                row.dt_dispatched = _now()
+            elif status == 2:
+                row.dt_finished = _now()
+            elif status == 3:
+                row.dt_sent = _now()
+            elif status == 400:
+                pass
+            else:
+                raise Exception("Invalid Status")
+
+            session.commit()
+            session.refresh(row)
+            return row

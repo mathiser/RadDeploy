@@ -27,6 +27,7 @@ class Janitor(MQSubEntrypoint):
                                   routing_key=basic_deliver.routing_key,
                                   context=context)
         self.file_janitor(event)
+        self.dashboard_janitor(event, context)
 
     def file_janitor(self, event):
         if event.exchange == "storescu":
@@ -35,3 +36,23 @@ class Janitor(MQSubEntrypoint):
             self.db.delete_all_files_by_kwargs(uid=event.uid, exchange="storescp")
         elif event.routing_key == "fail":
             self.db.delete_all_files_by_kwargs(id=event.id)
+
+    def dashboard_janitor(self, event, context):
+        if event.exchange == "storescp":
+            return
+        print(event.flow_instance_uid, "##############################")
+        self.db.maybe_insert_dashboard_row(flow_instance_uid=event.flow_instance_uid,
+                                           flow_container_tag=context.flow.model.docker_kwargs["image"],
+                                           sender_ae_hostname=context.sender.host)
+        if event.routing_key == "fail":
+            self.db.set_status_of_dashboard_row(flow_instance_uid=event.flow_instance_uid, status=400)
+        elif event.exchange == "fingerprinter" and event.routing_key == "success":
+            self.db.set_status_of_dashboard_row(flow_instance_uid=event.flow_instance_uid, status=0)
+        elif event.exchange == "fingerprinter" and event.routing_key == "fetch":
+            self.db.set_status_of_dashboard_row(flow_instance_uid=event.flow_instance_uid, status=1)
+        elif event.exchange == "consumer" and event.routing_key == "success":
+            self.db.set_status_of_dashboard_row(flow_instance_uid=event.flow_instance_uid, status=2)
+        elif event.exchange == "storescu" and event.routing_key == "success":
+            self.db.set_status_of_dashboard_row(flow_instance_uid=event.flow_instance_uid, status=3)
+        else:
+            pass
