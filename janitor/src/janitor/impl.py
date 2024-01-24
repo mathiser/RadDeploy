@@ -44,7 +44,7 @@ class Janitor:
             return
 
         self.db.maybe_insert_dashboard_row(flow_instance_uid=event.flow_instance_uid,
-                                           flow_container_tag=context.flow.model.docker_kwargs["image"],
+                                           flow_name=context.flow.name,
                                            sender_ae_hostname=context.sender.host)
         if event.routing_key == "fail":
             self.db.set_status_of_dashboard_row(flow_instance_uid=event.flow_instance_uid, status=400)

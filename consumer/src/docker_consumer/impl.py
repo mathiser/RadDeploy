@@ -8,6 +8,7 @@ import docker
 from docker import types
 
 from DicomFlowLib.data_structures.contexts import FlowContext
+from DicomFlowLib.data_structures.flow import Model
 from DicomFlowLib.data_structures.mq import MQEntrypointResult
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
@@ -36,9 +37,11 @@ class DockerConsumer:
         self.uid = context.flow_instance_uid
 
         self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=False)
-        input_tar = self.fs.get(context.input_file_uid)
-        output_tar = self.exec_model(context, input_tar)
-        context.output_file_uid = self.fs.put(output_tar)
+        tar = self.fs.get(context.input_file_uid)
+        for model in context.flow.models:
+            tar = self.exec_model(model, tar)
+
+        context.output_file_uid = self.fs.put(tar)
         self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=True)
 
         self.uid = None
@@ -46,10 +49,9 @@ class DockerConsumer:
         return [MQEntrypointResult(body=context.model_dump_json().encode())]
 
     def exec_model(self,
-                   context: FlowContext,
+                   model: Model,
                    input_tar: BytesIO) -> BytesIO:
 
-        model = context.flow.model
         if model.pull_before_exec:
             try:
                 self.cli.images.pull(*model.docker_kwargs["image"].split(":"))

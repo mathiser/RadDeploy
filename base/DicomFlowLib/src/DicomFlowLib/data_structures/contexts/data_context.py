@@ -9,8 +9,10 @@ from DicomFlowLib.data_structures.flow import Flow, Destination
 def generate_uid():
     return str(uuid.uuid4())
 
+
 class BaseContext(BaseModel):
     pass
+
 
 class SCPContext(BaseContext):
     uid: str | None = None
@@ -40,6 +42,7 @@ class FlowContext(SCPContext):
         super().__init__(**data)
         if not self.flow_instance_uid:
             self.flow_instance_uid = generate_uid()
+
     def add_flow(self, flow: Flow):
         self.flow = flow
         self.flow_instance_uid = generate_uid()

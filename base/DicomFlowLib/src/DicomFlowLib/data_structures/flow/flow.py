@@ -8,9 +8,9 @@ from .destination import Destination
 
 
 class Flow(BaseModel):
-    model: Model
     name: str = ""
     version: str = ""
+    models: List[Model] = []
     destinations: List[Destination] = []
     triggers: List[Dict[str, str]] = []
     priority: int = 0
