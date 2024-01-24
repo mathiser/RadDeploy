@@ -4,6 +4,8 @@ import threading
 import traceback
 from typing import List, Dict
 
+import pika.channel
+
 from DicomFlowLib.log import CollectiveLogger
 from .base import MQBase
 from ..data_structures.contexts import PubModel, PublishContext
@@ -89,8 +91,11 @@ class MQSub(MQBase):
             self.basic_publish_callback(exchange=exchange,
                                         routing_key=self.sub_models[exchange].routing_key_fetch_echo,
                                         body=body)
+            self.process_event_data()
 
-    def publish_on_all_pub_models(self, result: MQEntrypointResult, success: bool = True):
+    def publish_on_all_pub_models(self,
+                                  result: MQEntrypointResult,
+                                  success: bool = True):
         for pub_model in self.pub_models.values():
             if success:
                 routing_key = pub_model.routing_key_success
@@ -111,11 +116,11 @@ class MQSub(MQBase):
                              args=(basic_deliver, body))
         t.start()
 
-        while t.is_alive():
-            t.join(self.heartbeat / 4)
-            self.process_event_data()
+        # while t.is_alive():
+        #    t.join(self.heartbeat / 4)
+        #    self.process_event_data()
 
-        self._threads.append(t)
+        # self._threads.append(t)
 
     def work_function_wrapper(self, basic_deliver, body):
         try:

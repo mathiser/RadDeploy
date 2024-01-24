@@ -57,6 +57,7 @@ class Fingerprinter:
             return True
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
+        results = []
         org_context = FlowContext(**json.loads(body.decode()))
         self.uid = org_context.uid
 
@@ -72,12 +73,13 @@ class Fingerprinter:
                 context.input_file_uid = self.fs.clone(context.input_file_uid)
 
                 # Publish the
-                yield MQEntrypointResult(body=context.model_dump_json().encode(),
-                                         priority=flow.priority)
+                results.append(MQEntrypointResult(body=context.model_dump_json().encode(),
+                                                  priority=flow.priority))
 
             else:
                 self.logger.info(f"NOT MATCHING FLOW", uid=self.uid, finished=True)
         self.uid = None
+        return results
 
     def parse_fingerprints(self):
         for fol, subs, files in os.walk(self.flow_directory):
