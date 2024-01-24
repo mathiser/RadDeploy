@@ -85,7 +85,6 @@ class DockerConsumer:
             if model.input_dir:
                 # Add the input tar to provided input
                 container.put_archive(model.input_dir, input_tar)
-
             container.start()
             result = container.wait(timeout=model.timeout)  # Blocks...
 
