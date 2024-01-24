@@ -1,7 +1,7 @@
 version: "3"
 
 services:
-  dicom_flow_rabbit:
+  rabbit:
     restart: always
     image: rabbitmq:3-management
     network_mode: host
@@ -11,44 +11,83 @@ services:
   storescp:
     restart: always
     depends_on:
-      - dicom_flow_rabbit
+      - rabbit
     image: mathiser/dicom_flow-storescp:latest
     network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+      - PYNETDICOM_LOG_LEVEL=standard
+      - AE_PORT=10001
     volumes:
-      - /tmp/dicom_flow_files:/opt/DicomFlow/files
+      - ${FILES_DIR}:/opt/DicomFlow/files
+
   fingerprinter:
     restart: always
     network_mode: host
     depends_on:
-      - dicom_flow_rabbit
+      - rabbit
     image: mathiser/dicom_flow-fingerprinter:latest
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - /home/mathis/repos/DicomFlow/fingerprinter/flows:/opt/DicomFlow/flows
+      - ${FILES_DIR}:/opt/DicomFlow/files
+      - ${FLOWS_DIR}:/opt/DicomFlow/flow.d
+
   consumer:
     restart: always
+    deploy:
+      mode: replicated
+      replicas: 2
     network_mode: host
     depends_on:
-      - dicom_flow_rabbit
+      - rabbit
     image: mathiser/dicom_flow-consumer:latest
     environment:
       - PYTHONUNBUFFERED=1
+      - GPUS=0
     volumes:
-      - /tmp/dicom_flow_files:/opt/DicomFlow/files
+      - ${FILES_DIR}:/opt/DicomFlow/files:rw
       - /var/run/docker.sock:/var/run/docker.sock
 
   storescu:
     restart: always
     network_mode: host
     depends_on:
-      - dicom_flow_rabbit
+      - rabbit
     image: mathiser/dicom_flow-storescu:latest
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - /tmp/dicom_flow_files:/opt/DicomFlow/files
+      - ${FILES_DIR}:/opt/DicomFlow/files
 
+  janitor:
+    restart: always
+    depends_on:
+      - rabbit
+    image: mathiser/dicom_flow-janitor:latest
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+    volumes:
+      - ${JANITOR_DIR}:/opt/DicomFlow/database:rw
+      - ${FILES_DIR}:/opt/DicomFlow/files
 
+  dashboard:
+    restart: always
+    image: grafana/grafana-enterprise
+    ports:
+      - "3000:3000"
+    environment:
+      - "GF_INSTALL_PLUGINS=frser-sqlite-datasource,cloudspout-button-panel"
+    volumes:
+      - ${JANITOR_DIR}:/var/lib/grafana/database:ro
+      - dashboard_config:/etc/grafana:rw
+      - dashboard_home:/usr/share/grafana:rw
+      - dashboard_data:/var/lib/grafana:rw
+
+volumes:
+  dashboard_config:
+  dashboard_home:
+  dashboard_data:
