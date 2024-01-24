@@ -2,7 +2,7 @@ import json
 from typing import Iterable
 
 from DicomFlowLib.data_structures.contexts import FlowContext
-from DicomFlowLib.data_structures.mq.mq_entrypoint_result import MQEntrypointResult
+from DicomFlowLib.data_structures.mq import MQEntrypointResult
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from .db import Database

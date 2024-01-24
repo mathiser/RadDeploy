@@ -7,8 +7,8 @@ from typing import List, Iterable
 import docker
 from docker import types
 
-from DicomFlowLib.data_structures.contexts import PublishContext, FlowContext
-from DicomFlowLib.data_structures.mq.mq_entrypoint_result import MQEntrypointResult
+from DicomFlowLib.data_structures.contexts import FlowContext
+from DicomFlowLib.data_structures.mq import MQEntrypointResult
 from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 
@@ -85,9 +85,15 @@ class DockerConsumer:
                 container.put_archive(model.input_dir, input_tar)
 
             container.start()
-            container.wait()  # Blocks...
-            self.logger.info("####### CONTAINER LOG ##########")
+            result = container.wait()  # Blocks...
+            self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
             self.logger.info(container.logs().decode())
+
+            if result["StatusCode"] != 0:
+                self.logger.error("Flow execution failed")
+                raise Exception("Flow did not exit with code 0.")
+            else:
+                self.logger.info("Flow execution succeeded")
 
             if model.output_dir:
                 output, stats = container.get_archive(path=model.output_dir)
