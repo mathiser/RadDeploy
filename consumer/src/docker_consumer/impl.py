@@ -85,7 +85,8 @@ class DockerConsumer:
                 container.put_archive(model.input_dir, input_tar)
 
             container.start()
-            result = container.wait()  # Blocks...
+            result = container.wait(timeout=model.timeout)  # Blocks...
+
             self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
             self.logger.info(container.logs().decode())
 
@@ -117,7 +118,7 @@ class DockerConsumer:
                     self.logger.debug(f"Attempting to remove container {container.short_id}",
                                       uid=self.uid,
                                       finished=False)
-                    container.remove()
+                    container.remove(force=True)
                     self.logger.debug(f"Attempting to remove container {container.short_id}",
                                       uid=self.uid,
                                       finished=True)

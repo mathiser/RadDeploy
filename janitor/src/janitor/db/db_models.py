@@ -1,10 +1,10 @@
-import datetime
+import time
 
 from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
 
 
 def _now():
-    return str(datetime.datetime.now().isoformat())
+    return time.time()
 
 
 class Base(DeclarativeBase):
