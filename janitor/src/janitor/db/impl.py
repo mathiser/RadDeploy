@@ -86,14 +86,14 @@ class Database:
                 pass
 
     def maybe_insert_dashboard_row(self,
-                             flow_instance_uid: str,
-                             flow_container_tag: str,
-                             sender_ae_hostname: str):
+                                   flow_instance_uid: str,
+                                   flow_name: str,
+                                   sender_ae_hostname: str):
         with self.Session() as session:
             row = session.query(DashboardRow).filter_by(flow_instance_uid=flow_instance_uid).first()
             if not row:
                 row = DashboardRow(flow_instance_uid=flow_instance_uid,
-                                   flow_container_tag=flow_container_tag,
+                                   flow_name=flow_name,
                                    sender_ae_hostname=sender_ae_hostname)
                 session.add(row)
                 session.commit()

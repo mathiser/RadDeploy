@@ -28,7 +28,7 @@ class Event(Base):
 class DashboardRow(Base):
     __tablename__ = "dashboard_rows"
     flow_instance_uid: Mapped[str]
-    flow_container_tag: Mapped[str]
+    flow_name: Mapped[str]
     sender_ae_hostname: Mapped[str]
     status: Mapped[int] = mapped_column(default=0)
     dt_dispatched: Mapped[str] = mapped_column(nullable=True, default=None)
