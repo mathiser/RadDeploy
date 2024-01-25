@@ -29,7 +29,9 @@ services:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=20
       - PYNETDICOM_LOG_LEVEL=standard
-      - AE_PORT=10001
+      - AE_PORT=10000
+      - AE_HOST=localhost
+      - AE_TITLE=STORESCP
     volumes:
       - ${FILES_DIR}:/opt/DicomFlow/files
 
@@ -64,7 +66,7 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
-      - GPUS=0
+      #- GPUS=0
     volumes:
       - ${FILES_DIR}:/opt/DicomFlow/files:rw
       - /var/run/docker.sock:/var/run/docker.sock
