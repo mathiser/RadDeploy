@@ -72,7 +72,8 @@ models:
         CONTAINER_ORDER: 1
     gpu: True  # Request GPU support
     input_dir: /input/
-    output_dir: /output/
+    output_dir: /output/ #
+    pull_before_exec: True  # Try to pull "busybox" from hub.docker.com before every execution. 
     timeout: 1800  # default timeout is 1800 seconds. If the container is running for longer, it will be terminated forcefully. This is to avoid hanging container jobs, which obstruct the queue.
     static_mount: "/home/DicomFlow/models/AwesomeModel1:/model:ro"  # giving the container access to static model. Note that if consumers are run on different nodes, this directory must exist on all.
 
@@ -89,13 +90,59 @@ destinations:
     ae_title: FANCYSTORE
 ```
 #### Other variables
-Furhtermore the following variables can be set in the flow definition:
+Furhtermore the following variables can be set in the flow definition
+
+##### name
+Is the name of the Flow. Defaults to "" (empty string)
+
+##### version
+Version of the Flow. Defaults to "" (empty string)
+
 ##### priority
 `priority` can be set to an integer between 0 and 5, where 5 is highest priority. 0 is default. When consumers are receiving a new flow to be run, the available flow with highest priority with run. 
 Note, that priority makes flows jump the queue, but NOT pause running flows.
 
+### Full Flow example
+```
+name: "FancyFlow"
+version: "1.02
+priority: 4
+triggers:
+  - Modality: "CT" 
+    SeriesDescription: "Head|Neck|Brain" 
+  - SOPClassUID: "1.2.840.10008.5.1.4.1.1.4" 
+    StudyDescription: "AutoSegProtocol"
+models:
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $CONTAINER_ORDER; cp -r /input /output/'
+      environment:
+        CONTAINER_ORDER: 0
+    gpu: False
+    input_dir: /input/
+    output_dir: /output/
+    
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $CONTAINER_ORDER; cp -r /input /output/'
+      environment:
+        CONTAINER_ORDER: 1
+    gpu: True
+    input_dir: /input/
+    output_dir: /output/
+    pull_before_exec: True
+    timeout: 1800
+    static_mount: "/home/DicomFlow/models/AwesomeModel1:/model:ro"
+destinations:
+  - host: localhost
+    port: 10001
+    ae_title: STORESCP
+  - host: storage.some-system.org
+    port: 104
+    ae_title: FANCYSTORE
+```
 
-## Configuration
+## Configuration of services
 All services in DicomFlow are extensively configurable, but is by default configured to work as is. 
 
 If you would like to change a configuration, you have two options. 
@@ -164,6 +211,12 @@ Which will results in something like:
     - 2.2.2.2.2
       - MR1_T2.dcm
 
-#### Fingerprinter
-In the Fingerprinter, the actual behavior of container execution is configured.
+#### Consumer
+`GPUS` is a list of physical GPUs that are at disposal for flow execution. For instance:
+```
+GPUS: 
+  - 0
+```
+Defaults to an empty list.
+It can also be provided as a space seperated string in an environment variable like `GPUS=0 2 5`
 
