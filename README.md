@@ -23,6 +23,16 @@ docker compose up -d --build
 If the services build successfully, you can inspect the logs of all services using `docker compose logs -f` and logs of a specific service with `docker compose logs -f {service name}`. 
 Now you should have a DICOM receiver running by default on `localhost:10000` with the ae title: `STORESCU`.
 
+### Docker compose mounts
+The first mandatory mount to make DicomFlow to work is that `storescp`, `fingerprinter`, `consumer` and `storescu` must have access to the same folder where tar files are temporarily stored. By default this should be mounted in `/opt/DicomFlow/files`. In the current docker compose file, we mount `./mounts/files` into all the services as specified by the `.env` file. 
+
+Further more, the `fingerprinter`-service should have a folder container flow-definitions (see next section) mounted. By defaults this this mount is: `./mounts/flows:/opt/DicomFlow/flows`
+
+In all services, logs are put in `/opt/DicomFlow/logs`, and can be mounted to a permenent dir if needed.
+
+If you want to set up a grafana dashboard, you need to give grafana access to the janitor database, which by default is `./mounts/janitor:/opt/DicomFlow/database`
+
+
 ### Defining a Flow
 In DicomFlow, a "Flow" refers to the full of path of a dicom input through model execution an dicom sending to a different endpoint. Flows are defined in yaml files (one per flow) and mounted to `fingerprinter` in `/opt/DicomFlow/flows`.
 
@@ -220,3 +230,19 @@ GPUS:
 Defaults to an empty list.
 It can also be provided as a space seperated string in an environment variable like `GPUS=0 2 5`
 
+## Dashboard
+If you want to set up the grafana dashboard, make sure that the grafana service has access to `janitor`'s `/opt/DicomFlow/database/database.sqlite` with the following two mounts:
+*janitor*: `./mounts/janitor:/opt/DicomFlow/database:rw`
+*dashboard*: `./mounts/janitor:/var/lib/grafana/database:ro`
+
+You can then go to http://localhost:3000.
+When you setup a new datasource, use sqlite and set the path to the database to: Path `/var/lib/grafana/database/database.sqlite`
+
+You can use the SQL query: `SELECT * FROM dashboard_rows` and format dt-columns to file. 
+
+### Status
+- 1: Pending Flow (waiting to be executed)
+- 2: Running Flow
+- 3: Finished Flow (but not yet sent to destinations)
+- 4: Sent Flow
+- 400: Failed
