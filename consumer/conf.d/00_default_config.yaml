@@ -13,9 +13,6 @@ LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)
 # File Storage
 FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
 
-# Static Storage
-STATIC_STORAGE_BASE_DIR: "/opt/DicomFlow/static"
-
 # CONSUMER
 SUB_QUEUE_KWARGS:
   queue: "FINGERPRINTER.SUCCESS"
@@ -37,4 +34,4 @@ PUB_MODELS:
     routing_key_success: "success"
     routing_key_fail: "fail"
 
-GPUS:
+GPUS: []

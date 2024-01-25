@@ -18,15 +18,12 @@ class DockerConsumer:
     def __init__(self,
                  logger: CollectiveLogger,
                  file_storage: FileStorage,
-                 gpus: str | List | None):
+                 gpus: List):
         self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
 
-        if gpus and isinstance(gpus, str):
-            self.gpus = gpus.split()
-        else:
-            self.gpus = gpus
+        self.gpus = gpus
         self.cli = docker.from_env()
 
     def __del__(self):
@@ -72,7 +69,7 @@ class DockerConsumer:
             kwargs["volumes"].append(f"{model.static_mount}")
 
         # Allow GPU usage. If int, use as count, if str use as uuid
-        if self.gpus:
+        if len(self.gpus) > 0:
             kwargs["ipc_mode"] = "host"
             kwargs["device_requests"] = [types.DeviceRequest(device_ids=self.gpus, capabilities=[['gpu']])]
 
