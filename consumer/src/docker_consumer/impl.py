@@ -18,12 +18,15 @@ class DockerConsumer:
     def __init__(self,
                  logger: CollectiveLogger,
                  file_storage: FileStorage,
-                 gpus: List):
+                 gpus: List | str):
         self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
+        if isinstance(gpus, str):
+            self.gpus = gpus.split()
+        else:
+            self.gpus = gpus
 
-        self.gpus = gpus
         self.cli = docker.from_env()
 
     def __del__(self):
