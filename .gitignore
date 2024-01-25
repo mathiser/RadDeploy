@@ -1,8 +1,7 @@
 .idea
 **/__pycache__/**
-fingerprinter/flow.d
 **/logs/**
 **/config/config.yaml
-docker-compose.yaml
-mounts
-mount
+mounts/**
+!mounts/flows/**
+!mounts/rabbit/**

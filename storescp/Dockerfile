@@ -1,4 +1,6 @@
-FROM mathiser/dicom_flow-base:latest
+ARG BASE_IMAGE=mathiser/dicom_flow-base:latest
+FROM ${BASE_IMAGE}
+
 LABEL authors="Mathis Ersted Rasmussen"
 ADD requirements /requirements
 RUN pip install -r /requirements

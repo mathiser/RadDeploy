@@ -1,24 +1,37 @@
 version: "3"
 
 services:
+  base:
+    image: dicom_flow-base
+    build:
+      context: "base"
+      dockerfile: "Dockerfile"
+
+
   rabbit:
     restart: always
     image: rabbitmq:3-management
     network_mode: host
     volumes:
-        - ./rabbit/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
+        - ./mounts/rabbit/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
 
   storescp:
     restart: always
     depends_on:
       - rabbit
-    image: mathiser/dicom_flow-storescp:latest
+    build:
+      context: "storescp"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
     network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=20
       - PYNETDICOM_LOG_LEVEL=standard
-      - AE_PORT=10001
+      - AE_PORT=10000
+      - AE_HOST=localhost
+      - AE_TITLE=STORESCP
     volumes:
       - ${FILES_DIR}:/opt/DicomFlow/files
 
@@ -27,12 +40,16 @@ services:
     network_mode: host
     depends_on:
       - rabbit
-    image: mathiser/dicom_flow-fingerprinter:latest
+    build:
+      context: "fingerprinter"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
       - ${FILES_DIR}:/opt/DicomFlow/files
-      - ${FLOWS_DIR}:/opt/DicomFlow/flow.d
+      - ${FLOWS_DIR}:/opt/DicomFlow/flows
 
   consumer:
     restart: always
@@ -42,10 +59,14 @@ services:
     network_mode: host
     depends_on:
       - rabbit
-    image: mathiser/dicom_flow-consumer:latest
+    build:
+      context: "consumer"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
-      - GPUS=0
+      #- GPUS=0
     volumes:
       - ${FILES_DIR}:/opt/DicomFlow/files:rw
       - /var/run/docker.sock:/var/run/docker.sock
@@ -55,7 +76,11 @@ services:
     network_mode: host
     depends_on:
       - rabbit
-    image: mathiser/dicom_flow-storescu:latest
+    build:
+      context: "storescu"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
@@ -65,7 +90,11 @@ services:
     restart: always
     depends_on:
       - rabbit
-    image: mathiser/dicom_flow-janitor:latest
+    build:
+      context: "janitor"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
     network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
