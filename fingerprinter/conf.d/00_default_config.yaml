@@ -14,7 +14,7 @@ LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)
 FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
 
 # FINGERPRINTER
-FLOW_DIRECTORY: "/opt/DicomFlow/flow.d"
+FLOW_DIRECTORY: "/opt/DicomFlow/flows"
 SUB_QUEUE_KWARGS:
   queue: ""
   passive: False
