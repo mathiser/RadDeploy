@@ -11,13 +11,13 @@ import yaml
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Flow
 from DicomFlowLib.data_structures.mq import MQEntrypointResult
-from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 
 
 class Fingerprinter:
     def __init__(self,
-                 file_storage: FileStorage,
+                 file_storage: FileStorageClient,
                  logger: CollectiveLogger,
                  flow_directory: str):
         self.logger = logger

@@ -5,7 +5,7 @@ from typing import Dict
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.data_structures.contexts import PubModel
-from DicomFlowLib.fs.file_storage import FileStorage
+from DicomFlowLib.fs.file_storage_client import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQPub
 from scp import SCP
@@ -25,8 +25,10 @@ class Main:
                                        rabbit_password=config["RABBIT_PASSWORD"],
                                        rabbit_username=config["RABBIT_USERNAME"])
 
-        self.fs = FileStorage(logger=self.logger,
-                              base_dir=config["FILE_STORAGE_BASE_DIR"])
+        self.fs = FileStorageClient(logger=self.logger,
+                              file_storage_host=config["FILE_STORAGE_HOST"],
+                              file_storage_port=config["FILE_STORAGE_PORT"])
+
         self.scp = SCP(logger=self.logger,
                        file_storage=self.fs,
                        publish_queue=self.publish_queue,

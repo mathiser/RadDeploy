@@ -11,7 +11,7 @@ from pynetdicom import AE, evt, StoragePresentationContexts, _config
 
 from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, PubModel
 from DicomFlowLib.data_structures.flow import Destination
-from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 
 
@@ -38,7 +38,7 @@ class AssocContext:
 
 
 class SCP:
-    def __init__(self, publish_queue: Queue, file_storage: FileStorage, ae_title: str, hostname: str, port: int,
+    def __init__(self, publish_queue: Queue, file_storage: FileStorageClient, ae_title: str, hostname: str, port: int,
                  logger: CollectiveLogger, pub_models: List[PubModel], pynetdicom_log_level: str,
                  tar_subdir: List[str]):
         self.logger = logger
@@ -107,7 +107,7 @@ class SCP:
                 ds.save_as(tf, write_like_original=False)
                 assoc_context.add_file_to_tar(path_in_tar, tf)  ## does not need to seek(0)
         except Exception as e:
-            print(e)
+            self.logger.error(str(e))
             raise e
         self.logger.debug(f"HANDLE_STORE", uid=uid, finished=True)
 
@@ -126,7 +126,7 @@ class SCP:
     def publish_file_context(self, assoc_context):
         assoc_context.tar.close()
         assoc_context.file.seek(0)
-        return self.fs.put(assoc_context.file)
+        return self.fs.post(assoc_context.file)
 
     def handle_release(self, event):
         assoc_id = event.assoc.native_id
