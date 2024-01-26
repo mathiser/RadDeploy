@@ -1,4 +1,6 @@
 import json
+import os
+import tarfile
 import tempfile
 import time
 from io import BytesIO
@@ -107,6 +109,8 @@ class DockerConsumer:
                 output_tar.seek(0)
                 self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", uid=self.uid,
                                  finished=True)
+
+                output_tar = self.postprocess_output_tar(model.output_dir, tarf=output_tar)
                 return output_tar
 
         except Exception as e:
@@ -130,3 +134,32 @@ class DockerConsumer:
                                       finished=True)
                     counter += 1
                     time.sleep(5)
+
+    def postprocess_output_tar(self, output_dir: str, tarf: BytesIO):
+        """
+        Removes one layer from the output_tar - i.e. the /output/
+        """
+        """
+        Removes one layer from the output_tar - i.e. the /output/
+        If dump_logs==True, container logs are dumped to container.log
+        """
+
+        # Unwrap container tar to temp dir
+        with tempfile.TemporaryDirectory() as tmpd:
+            with tarfile.TarFile.open(fileobj=tarf, mode="r|*") as container_tar_obj:
+                container_tar_obj.extractall(tmpd)
+
+            # Make a new temp tar.gz
+            new_tar_file = BytesIO()
+            with tarfile.TarFile.open(fileobj=new_tar_file, mode="w") as new_tar_obj:
+                # Walk directory from output to strip it away the base dir
+                to_del = "/" + tmpd.strip("/") + "/" + output_dir.strip("/") + "/"
+                for fol, subs, files in os.walk(os.path.join(tmpd)):
+                    for file in files:
+                        path = os.path.join(fol, file)
+                        new_path = path.replace(to_del, "")
+                        new_tar_obj.add(path, arcname=new_path)
+
+            new_tar_file.seek(0)  # Reset pointer
+            return new_tar_file  # Ready to ship directly to DB
+
