@@ -3,14 +3,14 @@ from typing import Iterable
 
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.mq import MQEntrypointResult
-from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from .db import Database
 
 
 class Janitor:
     def __init__(self,
-                 file_storage: FileStorage,
+                 file_storage: FileStorageClient,
                  logger: CollectiveLogger,
                  database_path: str):
         self.logger = logger
@@ -18,7 +18,7 @@ class Janitor:
         self.database_url = None
 
         self.database_path = database_path
-        self.db = Database(database_path=self.database_path, file_storage=file_storage)
+        self.db = Database(logger=self.logger, database_path=self.database_path, file_storage=file_storage)
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
         context = FlowContext(**json.loads(body.decode()))
@@ -33,7 +33,7 @@ class Janitor:
     def file_janitor(self, event):
         if event.exchange == "storescu":
             self.db.delete_files_by_id(id=event.id)
-        elif event.exchange == "fingerprinter":
+        elif event.exchange == "fingerprinter" and event.routing_key == "success":
             self.db.delete_all_files_by_kwargs(uid=event.uid, exchange="storescp")
         elif event.routing_key == "fail":
             self.db.delete_all_files_by_kwargs(id=event.id)

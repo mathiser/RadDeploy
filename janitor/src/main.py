@@ -3,7 +3,7 @@ import signal
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.data_structures.contexts import SubModel
-from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from janitor import Janitor
@@ -21,8 +21,10 @@ class Main:
                                        rabbit_port=int(config["RABBIT_PORT"]),
                                        rabbit_password=config["RABBIT_PASSWORD"],
                                        rabbit_username=config["RABBIT_USERNAME"])
-        self.fs = FileStorage(logger=self.logger,
-                              base_dir=config["FILE_STORAGE_BASE_DIR"])
+
+        self.fs = FileStorageClient(logger=self.logger,
+                                    file_storage_host=config["FILE_STORAGE_HOST"],
+                                    file_storage_port=config["FILE_STORAGE_PORT"])
 
         self.ft = Janitor(file_storage=self.fs,
                           logger=self.logger,

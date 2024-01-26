@@ -1,12 +1,10 @@
 import os
 import signal
 
-import yaml
-
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.data_structures.contexts import PubModel, SubModel
 
-from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from scu import SCU
@@ -25,9 +23,10 @@ class Main:
                                        rabbit_password=config["RABBIT_PASSWORD"],
                                        rabbit_username=config["RABBIT_USERNAME"])
 
-        self.fs = FileStorage(logger=self.logger,
-                              base_dir=config["FILE_STORAGE_BASE_DIR"])
-        
+        self.fs = FileStorageClient(logger=self.logger,
+                                    file_storage_host=config["FILE_STORAGE_HOST"],
+                                    file_storage_port=config["FILE_STORAGE_PORT"])
+
         self.scu = SCU(file_storage=self.fs,
                        logger=self.logger)
 
@@ -39,7 +38,7 @@ class Main:
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
                         sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
-        
+
     def start(self):
         self.logger.debug("Starting SCU", finished=False)
         self.running = True

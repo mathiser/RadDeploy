@@ -9,7 +9,8 @@
         "pika",
         "pydantic",
         "python_logging_rabbitmq",
-        "pyyaml"
+        "pyyaml",
+        "requests"
     ]
     classifiers = []
     keywords = []

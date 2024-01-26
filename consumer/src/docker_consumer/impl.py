@@ -12,14 +12,14 @@ from docker import types
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Model
 from DicomFlowLib.data_structures.mq import MQEntrypointResult
-from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 
 
 class DockerConsumer:
     def __init__(self,
                  logger: CollectiveLogger,
-                 file_storage: FileStorage,
+                 file_storage: FileStorageClient,
                  gpus: List | str):
         self.pub_declared = False
         self.logger = logger
@@ -43,7 +43,7 @@ class DockerConsumer:
         for model in context.flow.models:
             tar = self.exec_model(model, tar)
 
-        context.output_file_uid = self.fs.put(tar)
+        context.output_file_uid = self.fs.post(tar)
         self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=True)
 
         self.uid = None

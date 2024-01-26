@@ -1,1 +1,1 @@
-from .file_storage import FileStorage
+from .file_storage_client import FileStorageClient

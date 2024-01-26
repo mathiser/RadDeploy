@@ -32,8 +32,6 @@ services:
       - AE_PORT=10000
       - AE_HOST=localhost
       - AE_TITLE=STORESCP
-    volumes:
-      - ${FILES_DIR}:/opt/DicomFlow/files
 
   fingerprinter:
     restart: always
@@ -48,7 +46,6 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - ${FILES_DIR}:/opt/DicomFlow/files
       - ${FLOWS_DIR}:/opt/DicomFlow/flows
 
   consumer:
@@ -68,7 +65,6 @@ services:
       - PYTHONUNBUFFERED=1
       #- GPUS=0
     volumes:
-      - ${FILES_DIR}:/opt/DicomFlow/files:rw
       - /var/run/docker.sock:/var/run/docker.sock
 
   storescu:
@@ -83,8 +79,6 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
-    volumes:
-      - ${FILES_DIR}:/opt/DicomFlow/files
 
   janitor:
     restart: always
@@ -101,7 +95,6 @@ services:
       - LOG_LEVEL=20
     volumes:
       - ${JANITOR_DIR}:/opt/DicomFlow/database:rw
-      - ${FILES_DIR}:/opt/DicomFlow/files
 
   flow_tracker:
     restart: always
@@ -119,6 +112,18 @@ services:
     volumes:
       - ${FLOWTRACKER_DIR}:/opt/DicomFlow/database:rw
 
+  file_storage:
+    restart: always
+    build:
+      context: "file_storage"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=10
+
   dashboard:
     restart: always
     image: grafana/grafana-enterprise
@@ -127,10 +132,12 @@ services:
     environment:
       - "GF_INSTALL_PLUGINS=frser-sqlite-datasource,cloudspout-button-panel"
     volumes:
-      - ${FLOWTRACKER_DIR}:/var/lib/grafana/database:ro
       - dashboard_config:/etc/grafana:rw
       - dashboard_home:/usr/share/grafana:rw
-
+      - dashboard_data:/var/lib/grafana:rw
+      - ${FLOWTRACKER_DIR}:/var/lib/grafana/database:ro
 volumes:
   dashboard_config:
   dashboard_home:
+  dashboard_data:
+

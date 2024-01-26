@@ -3,7 +3,6 @@ import signal
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.data_structures.contexts import SubModel
-from DicomFlowLib.fs import FileStorage
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from flow_tracker import FlowTracker

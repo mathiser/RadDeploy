@@ -11,13 +11,13 @@ from pynetdicom import AE, StoragePresentationContexts
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.data_structures.mq import MQEntrypointResult
-from DicomFlowLib.fs import FileStorage
+from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 
 
 class SCU:
     def __init__(self,
-                 file_storage: FileStorage,
+                 file_storage: FileStorageClient,
                  logger: CollectiveLogger):
 
         self.logger = logger

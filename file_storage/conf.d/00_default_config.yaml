@@ -5,23 +5,13 @@ RABBIT_USERNAME: "guest"
 RABBIT_PASSWORD: "guest"
 
 # Logging
-LOG_NAME: "STORESCP"
+LOG_NAME: "FILE_STORAGE"
 LOG_DIR: "/opt/DicomFlow/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 
 # File Storage
+FILE_STORAGE_SUFFIX: ".tar"
+FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/Files"
 FILE_STORAGE_HOST: "localhost"
 FILE_STORAGE_PORT: 2244
-# SCP
-AE_TITLE: "STORESCP"
-AE_HOSTNAME: "localhost"
-AE_PORT: 10000
-PYNETDICOM_LOG_LEVEL: "standard"
-TAR_SUBDIR: []
-PUB_MODELS:
-  - exchange: "storescp"
-    exchange_type: "topic"
-    routing_key_success: "success"
-    routing_key_fail: "fail"
-
