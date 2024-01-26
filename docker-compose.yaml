@@ -103,6 +103,22 @@ services:
       - ${JANITOR_DIR}:/opt/DicomFlow/database:rw
       - ${FILES_DIR}:/opt/DicomFlow/files
 
+  flow_tracker:
+    restart: always
+    depends_on:
+      - rabbit
+    build:
+      context: "flow_tracker"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+    volumes:
+      - ${FLOWTRACKER_DIR}:/opt/DicomFlow/database:rw
+
   dashboard:
     restart: always
     image: grafana/grafana-enterprise
@@ -111,12 +127,10 @@ services:
     environment:
       - "GF_INSTALL_PLUGINS=frser-sqlite-datasource,cloudspout-button-panel"
     volumes:
-      - ${JANITOR_DIR}:/var/lib/grafana/database:ro
+      - ${FLOWTRACKER_DIR}:/var/lib/grafana/database:ro
       - dashboard_config:/etc/grafana:rw
       - dashboard_home:/usr/share/grafana:rw
-      - dashboard_data:/var/lib/grafana:rw
 
 volumes:
   dashboard_config:
   dashboard_home:
-  dashboard_data:
