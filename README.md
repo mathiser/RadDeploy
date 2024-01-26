@@ -23,14 +23,17 @@ docker compose up -d --build
 If the services build successfully, you can inspect the logs of all services using `docker compose logs -f` and logs of a specific service with `docker compose logs -f {service name}`. 
 Now you should have a DICOM receiver running by default on `localhost:10000` with the ae title: `STORESCU`.
 
+
+
 ### Docker compose mounts
 The first mandatory mount to make DicomFlow to work is that `storescp`, `fingerprinter`, `consumer` and `storescu` must have access to the same folder where tar files are temporarily stored. By default this should be mounted in `/opt/DicomFlow/files`. In the current docker compose file, we mount `./mounts/files` into all the services as specified by the `.env` file. 
 
-Further more, the `fingerprinter`-service should have a folder container flow-definitions (see next section) mounted. By defaults this this mount is: `./mounts/flows:/opt/DicomFlow/flows`
+Furthermore, the `fingerprinter`-service should have a folder container flow-definitions (see next section) mounted. By defaults this this mount is: `./mounts/flows:/opt/DicomFlow/flows`
 
-In all services, logs are put in `/opt/DicomFlow/logs`, and can be mounted to a permenent dir if needed.
+In all services, logs are put in `/opt/DicomFlow/logs`, and can be mounted to a permanent dir if needed.
 
-If you want to set up a grafana dashboard, you need to give grafana access to the janitor database, which by default is `./mounts/janitor:/opt/DicomFlow/database`
+If you want to spin up a grafana dashboard, you need to have flow_tracker running, and 
+to give grafana access to it's database, which by default is `./mounts/flow_tracker:/opt/DicomFlow/database`
 
 
 ### Defining a Flow
@@ -232,17 +235,20 @@ It can also be provided as a space seperated string in an environment variable l
 
 ## Dashboard
 If you want to set up the grafana dashboard, make sure that the grafana service has access to `janitor`'s `/opt/DicomFlow/database/database.sqlite` with the following two mounts:
-*janitor*: `./mounts/janitor:/opt/DicomFlow/database:rw`
-*dashboard*: `./mounts/janitor:/var/lib/grafana/database:ro`
+*flow_tracker*: `./mounts/flow_tracker:/opt/DicomFlow/database:rw`
+*dashboard*: `./mounts/flow_tracker:/var/lib/grafana/database:ro`
 
 You can then go to http://localhost:3000.
 When you setup a new datasource, use sqlite and set the path to the database to: Path `/var/lib/grafana/database/database.sqlite`
 
-You can use the SQL query: `SELECT * FROM dashboard_rows` and format dt-columns to file. 
+You can use the SQL query: `SELECT * FROM rows` and format ts, Dispatched, Finished and Sent as time objects. 
 
 ### Status
-- 1: Pending Flow (waiting to be executed)
-- 2: Running Flow
-- 3: Finished Flow (but not yet sent to destinations)
-- 4: Sent Flow
+- 0: Pending Flow (waiting to be executed)
+- 1: Running Flow
+- 2: Finished Flow (but not yet sent to destinations)
+- 3: Sending output files
+- 4: Sent output files
 - 400: Failed
+
+In the table settings, these status codes can be mapped to human readable strings.

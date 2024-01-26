@@ -1,0 +1,54 @@
+# RabbitMQ
+RABBIT_HOSTNAME: "localhost"
+RABBIT_PORT: 5672
+RABBIT_USERNAME: "guest"
+RABBIT_PASSWORD: "guest"
+
+# Logging
+LOG_NAME: "FLOW_TRACKER"
+LOG_DIR: "/opt/DicomFlow/logs"
+LOG_LEVEL: 20
+LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+
+# FlowTracker
+DATABASE_PATH: "/opt/DicomFlow/database/database.sqlite"
+
+# MQSub
+SUB_QUEUE_KWARGS:
+    queue: ""
+    passive: False
+    durable: False
+    exclusive: False
+    auto_delete: True
+SUB_PREFETCH_COUNT: 10
+SUB_MODELS:
+  - exchange: "fingerprinter"
+    exchange_type: "topic"
+    routing_key: "#"
+  - exchange: "consumer"
+    exchange_type: "topic"
+    routing_key: "#"
+  - exchange: "storescu"
+    exchange_type: "topic"
+    routing_key: "#"
+
+# Dashboard Rules:
+DASHBOARD_RULES:
+  - on_exchange: "#"
+    on_routing_key: "fail"
+    status: 400
+  - on_exchange: "fingerprinter"
+    on_routing_key: "success"
+    status: 0
+  - on_exchange: "fingerprinter"
+    on_routing_key: "fetch"
+    status: 1
+  - on_exchange: "consumer"
+    on_routing_key: "success"
+    status: 2
+  - on_exchange: "storescu"
+    on_routing_key: "fetch"
+    status: 3
+  - on_exchange: "storescu"
+    on_routing_key: "success"
+    status: 4
