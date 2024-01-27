@@ -2,8 +2,8 @@ import os
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.log import CollectiveLogger
-#from DicomFlowLib.fs import FileStorageServer
-from file_storage_server import FileStorageServer
+from DicomFlowLib.fs import FileStorageServer
+
 
 class Main:
     def __init__(self, config):
@@ -21,7 +21,11 @@ class Main:
                                     host=config["FILE_STORAGE_HOST"],
                                     port=config["FILE_STORAGE_PORT"],
                                     base_dir=config["FILE_STORAGE_BASE_DIR"],
-                                    suffix=config["FILE_STORAGE_SUFFIX"])
+                                    suffix=config["FILE_STORAGE_SUFFIX"],
+                                    allow_get=True,
+                                    allow_clone=False,
+                                    allow_post=False,
+                                    allow_delete=False)
 
     def start(self):
         self.fs.start()

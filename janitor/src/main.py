@@ -23,8 +23,7 @@ class Main:
                                        rabbit_username=config["RABBIT_USERNAME"])
 
         self.fs = FileStorageClient(logger=self.logger,
-                                    file_storage_host=config["FILE_STORAGE_HOST"],
-                                    file_storage_port=config["FILE_STORAGE_PORT"])
+                                    file_storage_url=config["FILE_STORAGE_URL"])
 
         self.ft = Janitor(file_storage=self.fs,
                           logger=self.logger,

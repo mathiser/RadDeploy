@@ -11,8 +11,7 @@ LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 
 # File Storage
-FILE_STORAGE_HOST: "localhost"
-FILE_STORAGE_PORT: 2244
+FILE_STORAGE_URL: "http://localhost:2244"
 
 # FINGERPRINTER
 FLOW_DIRECTORY: "/opt/DicomFlow/flows"

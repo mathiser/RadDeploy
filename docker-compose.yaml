@@ -79,22 +79,20 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
-
-  janitor:
-    restart: always
-    depends_on:
-      - rabbit
-    build:
-      context: "janitor"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    network_mode: host
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=20
-    volumes:
-      - ${JANITOR_DIR}:/opt/DicomFlow/database:rw
+#
+#  janitor:
+#    restart: always
+#    depends_on:
+#      - rabbit
+#    build:
+#      context: "janitor"
+#      dockerfile: "Dockerfile"
+#      args:
+#        BASE_IMAGE: dicom_flow-base
+#    network_mode: host
+#    environment:
+#      - PYTHONUNBUFFERED=1
+#      - LOG_LEVEL=20
 
   flow_tracker:
     restart: always
