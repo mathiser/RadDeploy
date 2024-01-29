@@ -1,14 +1,14 @@
 # RabbitMQ
 RABBIT_HOSTNAME: "localhost"
 RABBIT_PORT: 5672
-RABBIT_USERNAME: "guest"
-RABBIT_PASSWORD: "guest"
 
 # Logging
 LOG_NAME: "FILE_STORAGE"
 LOG_DIR: "/opt/DicomFlow/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+LOG_PUB_MODELS:
+  - exchange: logs
 
 # File Storage
 FILE_STORAGE_SUFFIX: ".tar"

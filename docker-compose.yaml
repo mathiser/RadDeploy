@@ -19,6 +19,7 @@ services:
     restart: always
     depends_on:
       - rabbit
+      - base
     build:
       context: "storescp"
       dockerfile: "Dockerfile"
@@ -38,6 +39,7 @@ services:
     network_mode: host
     depends_on:
       - rabbit
+      - base
     build:
       context: "fingerprinter"
       dockerfile: "Dockerfile"
@@ -56,6 +58,7 @@ services:
     network_mode: host
     depends_on:
       - rabbit
+      - base
     build:
       context: "consumer"
       dockerfile: "Dockerfile"
@@ -72,6 +75,7 @@ services:
     network_mode: host
     depends_on:
       - rabbit
+      - base
     build:
       context: "storescu"
       dockerfile: "Dockerfile"
@@ -98,6 +102,7 @@ services:
     restart: always
     depends_on:
       - rabbit
+      - base
     build:
       context: "flow_tracker"
       dockerfile: "Dockerfile"
@@ -112,6 +117,8 @@ services:
 
   file_storage:
     restart: always
+    depends_on:
+      - base
     build:
       context: "file_storage"
       dockerfile: "Dockerfile"

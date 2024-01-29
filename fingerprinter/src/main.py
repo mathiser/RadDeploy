@@ -22,8 +22,7 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       rabbit_password=config["RABBIT_PASSWORD"],
-                                       rabbit_username=config["RABBIT_USERNAME"])
+                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
 
         self.fs = FileStorageClient(logger=self.logger,
                                     file_storage_url=config["FILE_STORAGE_URL"])
@@ -42,7 +41,7 @@ class Main:
                         sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
 
     def start(self):
-        self.logger.start()
+        
         self.mq.start()
         while self.running:
             try:

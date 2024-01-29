@@ -1,9 +1,10 @@
 import os
 
 from DicomFlowLib.conf import load_configs
+from DicomFlowLib.data_structures.contexts import PubModel
 from DicomFlowLib.log import CollectiveLogger
-#from DicomFlowLib.fs import FileStorageServer
-from file_storage_server import FileStorageServer
+from DicomFlowLib.fs import FileStorageServer
+
 
 class Main:
     def __init__(self, config):
@@ -14,8 +15,7 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       rabbit_password=config["RABBIT_PASSWORD"],
-                                       rabbit_username=config["RABBIT_USERNAME"])
+                                       pub_models=[PubModel(**m) for m in config["LOG_PUB_MODELS"]])
 
         self.fs = FileStorageServer(logger=self.logger,
                                     host=config["FILE_STORAGE_HOST"],

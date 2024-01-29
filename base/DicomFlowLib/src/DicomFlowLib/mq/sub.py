@@ -4,12 +4,8 @@ import threading
 import traceback
 from typing import List, Dict
 
-import pika.channel
-
-from DicomFlowLib.log import CollectiveLogger
 from .base import MQBase
-from ..data_structures.contexts import PubModel, PublishContext
-from ..data_structures.contexts import SubModel
+from ..data_structures.contexts import PubModel, SubModel
 from ..data_structures.mq.mq_entrypoint_result import MQEntrypointResult
 
 
@@ -34,7 +30,7 @@ class MQSub(MQBase):
                  pub_models: List[PubModel],
                  work_function: callable,
                  sub_prefetch_value: int,
-                 logger: CollectiveLogger,
+                 logger,
                  sub_queue_kwargs: Dict, ):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.

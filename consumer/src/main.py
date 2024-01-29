@@ -21,8 +21,7 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       rabbit_password=config["RABBIT_PASSWORD"],
-                                       rabbit_username=config["RABBIT_USERNAME"])
+                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
 
         self.fs = FileStorageClient(logger=self.logger,
                                     file_storage_url=config["FILE_STORAGE_URL"])
@@ -44,7 +43,7 @@ class Main:
     def start(self):
         self.running = True
 
-        self.logger.start()
+        
         self.mq.start()
         while self.running:
             try:
@@ -62,7 +61,6 @@ class Main:
         self.logger.stop()
 
         self.mq.join()
-        self.logger.join()
 
 
 if __name__ == "__main__":

@@ -20,8 +20,7 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       rabbit_password=config["RABBIT_PASSWORD"],
-                                       rabbit_username=config["RABBIT_USERNAME"])
+                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
 
         self.fs = FileStorageClient(logger=self.logger,
                                     file_storage_url=config["FILE_STORAGE_URL"])
@@ -41,7 +40,7 @@ class Main:
     def start(self):
         self.logger.debug("Starting SCU", finished=False)
         self.running = True
-        self.logger.start()
+        
         self.mq.start()
         self.logger.debug("Starting SCU", finished=True)
 
@@ -62,7 +61,6 @@ class Main:
         self.logger.stop()
 
         self.mq.join()
-        self.logger.join()
         self.logger.debug("Stopping SCU", finished=True)
 
 

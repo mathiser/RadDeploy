@@ -1,21 +1,18 @@
 import queue
-import threading
 import time
 import traceback
 from queue import Queue
 
-from DicomFlowLib.log import CollectiveLogger
 from .base import MQBase
 from ..data_structures.contexts import PublishContext
 
 
-
 class MQPub(MQBase):
-    def     __init__(self,
+    def __init__(self,
                      rabbit_hostname: str,
                      rabbit_port: int,
                      publish_queue: Queue,
-                     logger: CollectiveLogger):
+                     logger):
         super().__init__(logger=logger,
                          close_conn_on_exit=True,
                          rabbit_hostname=rabbit_hostname,
@@ -54,10 +51,10 @@ class MQPub(MQBase):
             self._nacked = 0
             self._message_number = 0
 
-            self.logger.debug("Connecting", finished=False)
+            self.logger.debug("Connecting")
 
             self.connect()
-            self.logger.debug("Connecting", finished=True)
+            self.logger.debug("Connecting")
             # self.logger.info('Enabling delivery confirmations')
             # self.enable_delivery_confirmations()
 

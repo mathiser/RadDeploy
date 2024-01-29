@@ -6,10 +6,9 @@
     ]
     requires-python = ">=3.12"
     dependencies = [
-        #"fastapi[all]",
+        "fastapi[all]",
         "pika",
         "pydantic",
-        "python_logging_rabbitmq",
         "pyyaml",
         "requests",
     ]
