@@ -28,7 +28,7 @@ SUB_MODELS:
   - exchange: "storescp"
     exchange_type: "topic"
     routing_key: "#"
-  - exchange: "fingerprinter"
+  - exchange: "fp"
     exchange_type: "topic"
     routing_key: "#"
   - exchange: "consumer"

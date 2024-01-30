@@ -7,7 +7,7 @@ from DicomFlowLib.fs import FileStorageClient
 
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
-from fingerprinter import Fingerprinter
+from DicomFlowLib.fp import Fingerprinter
 
 
 class Main:

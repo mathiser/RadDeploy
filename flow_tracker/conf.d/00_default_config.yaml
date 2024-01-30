@@ -22,7 +22,7 @@ SUB_QUEUE_KWARGS:
     auto_delete: True
 SUB_PREFETCH_COUNT: 10
 SUB_MODELS:
-  - exchange: "fingerprinter"
+  - exchange: "fp"
     exchange_type: "topic"
     routing_key: "#"
   - exchange: "consumer"
@@ -37,10 +37,10 @@ DASHBOARD_RULES:
   - on_exchange: "#"
     on_routing_key: "fail"
     status: 400
-  - on_exchange: "fingerprinter"
+  - on_exchange: "fp"
     on_routing_key: "success"
     status: 0
-  - on_exchange: "fingerprinter"
+  - on_exchange: "fp"
     on_routing_key: "fetch"
     status: 1
   - on_exchange: "consumer"

@@ -112,12 +112,6 @@ class MQSub(MQBase):
                              args=(basic_deliver, body))
         t.start()
 
-        # while t.is_alive():
-        #    t.join(self.heartbeat / 4)
-        #    self.process_event_data()
-
-        # self._threads.append(t)
-
     def work_function_wrapper(self, basic_deliver, body):
         try:
             result: MQEntrypointResult
@@ -129,5 +123,5 @@ class MQSub(MQBase):
             self.logger.error(str(traceback.format_exc()))
             self.publish_on_all_pub_models(result=MQEntrypointResult(body=body), success=False)  # routing key on fail
         finally:
-            self.logger.info('Acknowledging message {}'.format(basic_deliver.delivery_tag))
+            self.logger.debug('Acknowledging message {}'.format(basic_deliver.delivery_tag))
             self.acknowledge_message_callback(basic_deliver.delivery_tag)
