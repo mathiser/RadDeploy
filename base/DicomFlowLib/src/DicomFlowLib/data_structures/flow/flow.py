@@ -1,4 +1,3 @@
-
 from typing import Dict, List
 
 from pydantic import BaseModel
@@ -14,4 +13,5 @@ class Flow(BaseModel):
     destinations: List[Destination] = []
     triggers: List[Dict[str, str]] = []
     priority: int = 0
-    return_to_sender: bool = False
+    return_to_sender_on_port: List[int] = []
+    optional_kwargs: Dict = {}

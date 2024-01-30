@@ -38,18 +38,19 @@ class SCU:
 
             self.logger.info("EXTRACTING FILE(S)", uid=self.uid, finished=True)
 
-            if context.flow.return_to_sender:
+            for port in context.flow.return_to_sender_on_port:
                 self.logger.info(
                     f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}",
                     uid=self.uid, finished=False)
-                self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=context.sender)
+                sender = context.sender
+                sender.port = port
+                self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=sender)
                 self.logger.info(
                     f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}",
                     uid=self.uid, finished=True)
 
             for dest in context.flow.destinations:
-                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid,
-                                 finished=False)
+                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid,finished=False)
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid, finished=True)
 
