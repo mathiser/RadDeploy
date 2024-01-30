@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import tarfile
 import tempfile
 import time
@@ -67,6 +68,7 @@ class DockerConsumer:
         kwargs = model.docker_kwargs
         # Mount point of input/output to container. These are dummy binds, to make sure the container has /input and /output
         # container.
+
         kwargs["volumes"] = [
             f"{tempfile.mkdtemp()}:{model.input_dir}:rw",  # is there a better way
             f"{tempfile.mkdtemp()}:{model.output_dir}:rw"
@@ -128,6 +130,12 @@ class DockerConsumer:
             self.logger.error(e)
             raise e
         finally:
+            # Delete dummy directories from mounts. These are empty, so no loss if this fails for some reason.
+            for src_dst_perm in kwargs["volumes"]:
+                src, dst, perm = src_dst_perm.split(":")
+                if os.path.exists(src):
+                    shutil.rmtree(src)
+
             counter = 0
             while counter < 5:
                 try:
