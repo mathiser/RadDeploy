@@ -129,8 +129,6 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=20
-      - ./mounts/files:/opt/DicomFlow/files:rw
-
 
   static_storage:
     restart: always
@@ -146,7 +144,7 @@ services:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=10
     volumes:
-      - "./mounts/static:/opt/DicomFlow/static:ro"
+      - ${STATIC_DIR}:/opt/DicomFlow/static:ro
 
   dashboard:
     restart: always
