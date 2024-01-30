@@ -1,5 +1,7 @@
 # DicomFlow
-DicomFlow is a extendable service-oriented framework to executed containerized workflows on DICOM files. 
+DicomFlow is an extendable micro-service-oriented framework to executed containerized workflows on DICOM files.
+Though DicomFlow can be extensively configured, it is designed to provide basic functionality with as little user configuration
+as possible - even though this sometimes may come at the price of reduced performance.
 
 ## Intended Use
 DicomFlow is provided as is and without any responsibility or warrenty by the authors. The author does not considered it a medical device under EU's Medical Device Regulation (MDR),
@@ -11,7 +13,7 @@ If used in a clinical/research setting, beaware that the docker containers shoul
 ## Get started
 ### Dependencies
 DicomFlow should be able run in any environment with [Docker](https://www.docker.com/get-started/) installed. If the executed containers require GPU-support, [NVIDIA container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-must be installed with appropriate dependiencies and a compatible GPU installed.
+must be installed with appropriate dependencies and a compatible GPU installed.
 
 ### Setting up DicomFlow
 One you have dependencies set up, you can clone this repository and start up DicomFlow with docker compose:
@@ -26,9 +28,9 @@ Now you should have a DICOM receiver running by default on `localhost:10000` wit
 
 
 ### Docker compose mounts
-The first mandatory mount to make DicomFlow to work is that `storescp`, `fingerprinter`, `consumer` and `storescu` must have access to the same folder where tar files are temporarily stored. By default this should be mounted in `/opt/DicomFlow/files`. In the current docker compose file, we mount `./mounts/files` into all the services as specified by the `.env` file. 
-
-Furthermore, the `fingerprinter`-service should have a folder container flow-definitions (see next section) mounted. By defaults this this mount is: `./mounts/flows:/opt/DicomFlow/flows`
+The `fingerprinter`-service should have a folder container flow-definitions (see next section) mounted. By defaults this this mount is: `./mounts/flows:/opt/DicomFlow/flows`
+The `static_storage`-service should have static tars mounted to `/opt/DicomFlow/static`. It is not mandatory to have
+the `static_storage` running if you do not have any static content for your docker containers. See how to configure below.
 
 In all services, logs are put in `/opt/DicomFlow/logs`, and can be mounted to a permanent dir if needed.
 
@@ -88,7 +90,13 @@ models:
     output_dir: /output/ #
     pull_before_exec: True  # Try to pull "busybox" from hub.docker.com before every execution. 
     timeout: 1800  # default timeout is 1800 seconds. If the container is running for longer, it will be terminated forcefully. This is to avoid hanging container jobs, which obstruct the queue.
-    static_mount: "/home/DicomFlow/models/AwesomeModel1:/model:ro"  # giving the container access to static model. Note that if consumers are run on different nodes, this directory must exist on all.
+    static_mounts: 
+      - "AwesomeModel1:/model"
+      - "AwesomeModel2:/model"# giving the container access to static model. 
+                                             # Note "AwesomeModel2" must be mounted to the static_storage service to
+                                             # "/opt/DicomFlow/static" as tar: "/opt/DicomFlow/static/AwesomeModel2.tar"
+                                             # Note that you cannot specify "ro" or "rw" - only one colon should be in the string
+                                             # splitting src_filename:dst_in_container
 
 ```
 #### destinations
