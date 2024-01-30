@@ -114,14 +114,20 @@ destinations:
 Furhtermore the following variables can be set in the flow definition
 
 ##### name
-Is the name of the Flow. Defaults to "" (empty string)
+`name` of the Flow. Defaults to "" (empty string)
 
 ##### version
-Version of the Flow. Defaults to "" (empty string)
+`version` of the Flow. Defaults to "" (empty string)
 
 ##### priority
 `priority` can be set to an integer between 0 and 5, where 5 is highest priority. 0 is default. When consumers are receiving a new flow to be run, the available flow with highest priority with run. 
 Note, that priority makes flows jump the queue, but NOT pause running flows.
+
+##### optional_kwargs
+`optional_kwargs` is a dictionary that will follow the flow all the way. It can be used for custom services etc..
+
+##### return_to_sender_on_port
+`return_to_sender_on_port` is a list of integer ports. Can beused to directly send back to the scu (sender) of the flow on a specific port. 
 
 ### Full Flow example
 ```
