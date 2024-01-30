@@ -2,7 +2,7 @@ import os
 import signal
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts import SubModel
+from DicomFlowLib.data_structures.contexts import SubModel, PubModel
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from flow_tracker import FlowTracker
@@ -18,8 +18,8 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       rabbit_password=config["RABBIT_PASSWORD"],
-                                       rabbit_username=config["RABBIT_USERNAME"])
+                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]],
+                                       )
 
         self.ft = FlowTracker(logger=self.logger,
                               database_path=config["DATABASE_PATH"],
@@ -37,7 +37,7 @@ class Main:
     def start(self):
         self.logger.debug("Starting Janitor", finished=False)
         self.running = True
-        self.logger.start()
+        
         self.mq.start()
         self.logger.debug("Starting Janitor", finished=True)
 
@@ -58,7 +58,6 @@ class Main:
         self.logger.stop()
 
         self.ft.join()
-        self.logger.join()
         self.logger.debug("Stopping Janitor", finished=True)
 
 

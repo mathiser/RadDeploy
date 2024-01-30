@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import tarfile
 import tempfile
 import time
@@ -20,10 +21,12 @@ class DockerConsumer:
     def __init__(self,
                  logger: CollectiveLogger,
                  file_storage: FileStorageClient,
+                 static_storage: FileStorageClient | None,
                  gpus: List | str):
         self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
+        self.ss = static_storage
         if isinstance(gpus, str):
             self.gpus = gpus.split()
         else:
@@ -65,13 +68,15 @@ class DockerConsumer:
         kwargs = model.docker_kwargs
         # Mount point of input/output to container. These are dummy binds, to make sure the container has /input and /output
         # container.
+
         kwargs["volumes"] = [
             f"{tempfile.mkdtemp()}:{model.input_dir}:rw",  # is there a better way
             f"{tempfile.mkdtemp()}:{model.output_dir}:rw"
         ]
-        # Mount static_uid to static_folder if they are set
-        if model.static_mount:
-            kwargs["volumes"].append(f"{model.static_mount}")
+        # Create mountpoints for static dirs:
+        for sm in model.static_mounts:
+            _, dst = sm.split(":")
+            kwargs["volumes"].append(f"{tempfile.mkdtemp()}:{dst}:rw")
 
         # Allow GPU usage. If int, use as count, if str use as uuid
         if len(self.gpus) > 0:
@@ -81,12 +86,20 @@ class DockerConsumer:
         try:
             # Create container
             container = self.cli.containers.create(**kwargs)
+
             # Reload new params
             container.reload()
 
+            # Add the input tar to provided input
             if model.input_dir:
-                # Add the input tar to provided input
                 container.put_archive(model.input_dir, input_tar)
+
+            # Mount static_uid to static_folder if they are set
+            for sm in model.static_mounts:
+                src_uid, dst = sm.split(":")
+                static_tar = self.ss.get(src_uid)
+                container.put_archive(dst, static_tar)
+
             container.start()
             result = container.wait(timeout=model.timeout)  # Blocks...
 
@@ -117,6 +130,12 @@ class DockerConsumer:
             self.logger.error(e)
             raise e
         finally:
+            # Delete dummy directories from mounts. These are empty, so no loss if this fails for some reason.
+            for src_dst_perm in kwargs["volumes"]:
+                src, dst, perm = src_dst_perm.split(":")
+                if os.path.exists(src):
+                    shutil.rmtree(src)
+
             counter = 0
             while counter < 5:
                 try:

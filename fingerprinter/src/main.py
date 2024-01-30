@@ -7,7 +7,7 @@ from DicomFlowLib.fs import FileStorageClient
 
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
-from fingerprinter import Fingerprinter
+from DicomFlowLib.fp import Fingerprinter
 
 
 class Main:
@@ -22,12 +22,10 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       rabbit_password=config["RABBIT_PASSWORD"],
-                                       rabbit_username=config["RABBIT_USERNAME"])
+                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
 
         self.fs = FileStorageClient(logger=self.logger,
-                                    file_storage_host=config["FILE_STORAGE_HOST"],
-                                    file_storage_port=config["FILE_STORAGE_PORT"])
+                                    file_storage_url=config["FILE_STORAGE_URL"])
 
         self.fp = Fingerprinter(logger=self.logger,
                                 file_storage=self.fs,
@@ -43,7 +41,7 @@ class Main:
                         sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
 
     def start(self):
-        self.logger.start()
+        
         self.mq.start()
         while self.running:
             try:

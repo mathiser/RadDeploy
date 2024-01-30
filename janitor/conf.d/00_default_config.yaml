@@ -1,18 +1,18 @@
 # RabbitMQ
 RABBIT_HOSTNAME: "localhost"
 RABBIT_PORT: 5672
-RABBIT_USERNAME: "guest"
-RABBIT_PASSWORD: "guest"
 
 # Logging
 LOG_NAME: "JANITOR"
 LOG_DIR: "/opt/DicomFlow/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+LOG_PUB_MODELS:
+  - exchange: logs
 
 # File Storage
-FILE_STORAGE_HOST: "localhost"
-FILE_STORAGE_PORT: 2244
+FILE_STORAGE_URL: "http://localhost:2244"
+
 # Janitor
 DATABASE_PATH: "/opt/DicomFlow/database/database.sqlite"
 
@@ -28,7 +28,7 @@ SUB_MODELS:
   - exchange: "storescp"
     exchange_type: "topic"
     routing_key: "#"
-  - exchange: "fingerprinter"
+  - exchange: "fp"
     exchange_type: "topic"
     routing_key: "#"
   - exchange: "consumer"

@@ -15,13 +15,17 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       pub_models=[PubModel(**m) for m in config["LOG_PUB_MODELS"]])
+                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
 
         self.fs = FileStorageServer(logger=self.logger,
                                     host=config["FILE_STORAGE_HOST"],
                                     port=config["FILE_STORAGE_PORT"],
                                     base_dir=config["FILE_STORAGE_BASE_DIR"],
-                                    suffix=config["FILE_STORAGE_SUFFIX"])
+                                    suffix=config["FILE_STORAGE_SUFFIX"],
+                                    allow_get=True,
+                                    allow_clone=False,
+                                    allow_post=False,
+                                    allow_delete=False)
 
     def start(self):
         self.fs.start()

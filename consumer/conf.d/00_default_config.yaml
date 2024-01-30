@@ -1,18 +1,22 @@
 # RabbitMQ
 RABBIT_HOSTNAME: "localhost"
 RABBIT_PORT: 5672
-RABBIT_USERNAME: "guest"
-RABBIT_PASSWORD: "guest"
 
 # Logging
 LOG_NAME: "CONSUMER"
 LOG_DIR: "/opt/DicomFlow/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+LOG_PUB_MODELS:
+  - exchange: logs
 
 # File Storage
-FILE_STORAGE_HOST: "localhost"
-FILE_STORAGE_PORT: 2244
+FILE_STORAGE_URL: "http://localhost:2244"
+
+# Static Storage
+STATIC_STORAGE_URL: "http://localhost:2245"
+STATIC_STORAGE_CACHE_DIR: "/opt/DicomFlow/static"
+
 # CONSUMER
 SUB_QUEUE_KWARGS:
   queue: "FINGERPRINTER.SUCCESS"
@@ -23,7 +27,7 @@ SUB_QUEUE_KWARGS:
 
 SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
-  - exchange: "fingerprinter"
+  - exchange: "fp"
     exchange_type: "topic"
     routing_key: "success"
     routing_key_fetch_echo: "fetch"

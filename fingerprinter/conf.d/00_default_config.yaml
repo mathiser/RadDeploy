@@ -1,18 +1,17 @@
 # RabbitMQ
 RABBIT_HOSTNAME: "localhost"
 RABBIT_PORT: 5672
-RABBIT_USERNAME: "guest"
-RABBIT_PASSWORD: "guest"
 
 # Logging
 LOG_NAME: "FINGERPRINTER"
 LOG_DIR: "/opt/DicomFlow/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+LOG_PUB_MODELS:
+  - exchange: logs
 
 # File Storage
-FILE_STORAGE_HOST: "localhost"
-FILE_STORAGE_PORT: 2244
+FILE_STORAGE_URL: "http://localhost:2244"
 
 # FINGERPRINTER
 FLOW_DIRECTORY: "/opt/DicomFlow/flows"
@@ -31,7 +30,7 @@ SUB_MODELS:
 
 
 PUB_MODELS:
-  - exchange: "fingerprinter"
+  - exchange: "fp"
     exchange_type: "topic"
     routing_key_success: "success"
     routing_key_fail: "fail"

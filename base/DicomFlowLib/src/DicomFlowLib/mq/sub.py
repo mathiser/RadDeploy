@@ -4,12 +4,8 @@ import threading
 import traceback
 from typing import List, Dict
 
-import pika.channel
-
-from DicomFlowLib.log import CollectiveLogger
 from .base import MQBase
-from ..data_structures.contexts import PubModel, PublishContext
-from ..data_structures.contexts import SubModel
+from ..data_structures.contexts import PubModel, SubModel
 from ..data_structures.mq.mq_entrypoint_result import MQEntrypointResult
 
 
@@ -34,7 +30,7 @@ class MQSub(MQBase):
                  pub_models: List[PubModel],
                  work_function: callable,
                  sub_prefetch_value: int,
-                 logger: CollectiveLogger,
+                 logger,
                  sub_queue_kwargs: Dict, ):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
@@ -116,12 +112,6 @@ class MQSub(MQBase):
                              args=(basic_deliver, body))
         t.start()
 
-        # while t.is_alive():
-        #    t.join(self.heartbeat / 4)
-        #    self.process_event_data()
-
-        # self._threads.append(t)
-
     def work_function_wrapper(self, basic_deliver, body):
         try:
             result: MQEntrypointResult
@@ -133,5 +123,5 @@ class MQSub(MQBase):
             self.logger.error(str(traceback.format_exc()))
             self.publish_on_all_pub_models(result=MQEntrypointResult(body=body), success=False)  # routing key on fail
         finally:
-            self.logger.info('Acknowledging message {}'.format(basic_deliver.delivery_tag))
+            self.logger.debug('Acknowledging message {}'.format(basic_deliver.delivery_tag))
             self.acknowledge_message_callback(basic_deliver.delivery_tag)

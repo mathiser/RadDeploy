@@ -4,11 +4,10 @@ import threading
 import pika
 from pika import channel, connection
 
-from DicomFlowLib.log import CollectiveLogger
 
 class MQBase(threading.Thread):
     def __init__(self,
-                 logger: CollectiveLogger,
+                 logger,
                  close_conn_on_exit: bool = False,
                  rabbit_hostname: str | None = None,
                  rabbit_port: int | None = None):
@@ -25,7 +24,6 @@ class MQBase(threading.Thread):
 
         self._declared_exchanges = {""}
         self._declared_queues = set()
-
 
     def __del__(self):
         if self.close_conn_on_exit:
@@ -109,7 +107,7 @@ class MQBase(threading.Thread):
         if exchange in self._declared_exchanges:
             self.logger.debug('Exchange {} type {} already exist'.format(exchange, exchange_type))
         else:
-            self.logger.info('Declaring exchange {} type {}'.format(exchange, exchange_type))
+            self.logger.debug('Declaring exchange {} type {}'.format(exchange, exchange_type))
             self._channel.exchange_declare(exchange=exchange,
                                            exchange_type=exchange_type)
             self._declared_exchanges.add(exchange)
@@ -123,8 +121,8 @@ class MQBase(threading.Thread):
                     passive: bool = False,
                     durable: bool = False,
                     exclusive: bool = False,
-                    auto_delete: bool = False,  ):
-        queue = self._channel.queue_declare(queue=queue,passive=passive, durable=durable,
+                    auto_delete: bool = False, ):
+        queue = self._channel.queue_declare(queue=queue, passive=passive, durable=durable,
                                             exclusive=exclusive, auto_delete=auto_delete,
                                             arguments={"x-max-priority": 5}).method.queue
         self._declared_queues.add(queue)
@@ -149,7 +147,7 @@ class MQBase(threading.Thread):
         if queue not in self._declared_queues:
             queue = self.setup_queue(queue)
             self.bind_queue(queue=queue, exchange=exchange, routing_key=routing_key)
-            self.logger.info('Declaring queue {} on exchange {}'.format(queue, exchange))
+            self.logger.debug('Declaring queue {} on exchange {}'.format(queue, exchange))
             self._declared_queues.add(queue)
         return queue
 
@@ -161,7 +159,7 @@ class MQBase(threading.Thread):
         if exchange == "":
             self.logger.debug("Binding queues on default exchange is not allowed - continuing")
         else:
-            self.logger.info("Binding queue: {}".format(queue))
+            self.logger.debug("Binding queue: {}".format(queue))
             self._channel.queue_bind(queue=queue, exchange=exchange, routing_key=routing_key)
             self._declared_queues.add(queue)
 
@@ -187,7 +185,7 @@ class MQBase(threading.Thread):
 
     def basic_publish(self, exchange: str, routing_key: str, body: bytes, priority: int = 0,
                       reply_to: str | None = None):
-        self.logger.info(f"Publishing with routing_key: {routing_key} on exchange: {exchange}", finished=False)
+        self.logger.debug(f"Publishing with routing_key: {routing_key} on exchange: {exchange}")
 
         self._channel.basic_publish(
             exchange=exchange,
@@ -198,7 +196,6 @@ class MQBase(threading.Thread):
                 priority=priority
             )
         )
-        self.logger.info(f"Publishing with routing_key: {routing_key} on exchange: {exchange}", finished=True)
 
     def delete_queue_callback(self, queue: str, if_empty: bool = False):
         cb = functools.partial(self.delete_queue,

@@ -19,6 +19,7 @@ services:
     restart: always
     depends_on:
       - rabbit
+      - base
     build:
       context: "storescp"
       dockerfile: "Dockerfile"
@@ -38,6 +39,7 @@ services:
     network_mode: host
     depends_on:
       - rabbit
+      - base
     build:
       context: "fingerprinter"
       dockerfile: "Dockerfile"
@@ -52,10 +54,11 @@ services:
     restart: always
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
     network_mode: host
     depends_on:
       - rabbit
+      - base
     build:
       context: "consumer"
       dockerfile: "Dockerfile"
@@ -63,6 +66,7 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
       #- GPUS=0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -72,6 +76,7 @@ services:
     network_mode: host
     depends_on:
       - rabbit
+      - base
     build:
       context: "storescu"
       dockerfile: "Dockerfile"
@@ -93,13 +98,12 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=20
-    volumes:
-      - ${JANITOR_DIR}:/opt/DicomFlow/database:rw
 
   flow_tracker:
     restart: always
     depends_on:
       - rabbit
+      - base
     build:
       context: "flow_tracker"
       dockerfile: "Dockerfile"
@@ -114,6 +118,8 @@ services:
 
   file_storage:
     restart: always
+    depends_on:
+      - base
     build:
       context: "file_storage"
       dockerfile: "Dockerfile"
@@ -122,7 +128,25 @@ services:
     network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+      - ./mounts/files:/opt/DicomFlow/files:rw
+
+
+  static_storage:
+    restart: always
+    depends_on:
+      - base
+    build:
+      context: "static_storage"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
       - LOG_LEVEL=10
+    volumes:
+      - "./mounts/static:/opt/DicomFlow/static:ro"
 
   dashboard:
     restart: always

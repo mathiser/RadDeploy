@@ -21,15 +21,20 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       rabbit_password=config["RABBIT_PASSWORD"],
-                                       rabbit_username=config["RABBIT_USERNAME"])
+                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
 
         self.fs = FileStorageClient(logger=self.logger,
-                                    file_storage_host=config["FILE_STORAGE_HOST"],
-                                    file_storage_port=config["FILE_STORAGE_PORT"])
+                                    file_storage_url=config["FILE_STORAGE_URL"])
 
+        if config["STATIC_STORAGE_URL"] and config["STATIC_STORAGE_CACHE_DIR"]:
+            self.ss = FileStorageClient(logger=self.logger,
+                                        file_storage_url=config["STATIC_STORAGE_URL"],
+                                        local_cache=config["STATIC_STORAGE_CACHE_DIR"])
+        else:
+            self.ss = None
         self.consumer = DockerConsumer(logger=self.logger,
                                        file_storage=self.fs,
+                                       static_storage=self.ss,
                                        gpus=config["GPUS"])
 
         self.mq = MQSub(logger=self.logger,
@@ -45,7 +50,7 @@ class Main:
     def start(self):
         self.running = True
 
-        self.logger.start()
+        
         self.mq.start()
         while self.running:
             try:
@@ -63,7 +68,6 @@ class Main:
         self.logger.stop()
 
         self.mq.join()
-        self.logger.join()
 
 
 if __name__ == "__main__":

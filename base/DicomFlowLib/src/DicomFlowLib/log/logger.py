@@ -2,22 +2,22 @@ import logging
 import os
 import queue
 import threading
-import time
+from typing import List
 
-from python_logging_rabbitmq import RabbitMQHandler
+from DicomFlowLib.data_structures.contexts import PublishContext, PubModel
+from DicomFlowLib.mq import MQPub
 
 
-class CollectiveLogger(threading.Thread):
+class CollectiveLogger:
     def __init__(self,
                  name: str,
                  log_dir: str,
                  log_level: int,
                  log_format: str,
+                 pub_models: List[PubModel] | None = None,
                  rabbit_hostname: str | None = None,
-                 rabbit_port: int | None = None,
-                 rabbit_username: str | None = None,
-                 rabbit_password: str | None = None):
-        super().__init__()
+                 rabbit_port: int | None = None):
+
         self.stopping = False
         self.logger = logging.getLogger(name=name)
         self.queue = queue.Queue()
@@ -38,14 +38,22 @@ class CollectiveLogger(threading.Thread):
         self.file_handler.setFormatter(formatter)
         self.logger.addHandler(self.file_handler)
 
-        self.mq_handler = None
-        if rabbit_hostname and rabbit_port and rabbit_username and rabbit_password:
-            self.mq_handler = RabbitMQHandler(host=rabbit_hostname,
-                                              port=rabbit_port,
-                                              username=rabbit_username,
-                                              password=rabbit_password,
-                                              declare_exchange=True)
-            self.logger.addHandler(self.mq_handler)
+        if not pub_models:
+            self.pub_models = []
+        else:
+            self.pub_models = pub_models
+
+        if rabbit_hostname and rabbit_port:
+            self.mq_queue = queue.Queue()
+            self.mq = MQPub(rabbit_hostname=rabbit_hostname,
+                            rabbit_port=rabbit_port,
+                            logger=self.logger,
+                            publish_queue=self.mq_queue)
+            self.mq.connect()
+            for pub_model in self.pub_models:
+                self.mq.setup_exchange(pub_model.exchange, exchange_type=pub_model.exchange_type)
+            self.mq.start()
+
 
     def process_log_call(self, queue_obj):
         level, uid, finished, msg = queue_obj
@@ -56,39 +64,34 @@ class CollectiveLogger(threading.Thread):
         return {"level": level,
                 "msg": msg}
 
-    def run(self):
-        while not self.stopping:
-            time_zero = time.time()
-            interval = 10
-            while time.time() - time_zero < (self.mq_handler.connection_params["heartbeat"] / 4):
-                try:
-                    log_obj = self.queue.get(timeout=interval)
-                    log_obj = self.process_log_call(log_obj)
-                    self.logger.log(**log_obj)
-                except queue.Empty:
-                    if not self.stopping:
-                        if self.mq_handler:
-                            self.mq_handler.connection.process_data_events()
-                except KeyboardInterrupt:
-                    self.stopping = True
-            if not self.stopping and self.mq_handler:
-                self.mq_handler.connection.process_data_events()
+    def log(self, log_obj):
+        self.logger.log(level=log_obj["level"], msg=log_obj["msg"])
+        for pub_model in self.pub_models:
+            self.mq_queue.put(PublishContext(exchange=pub_model.exchange,
+                                             routing_key=str(log_obj["level"]),
+                                             body=log_obj["msg"].encode()))
 
     def stop(self):
         self.stopping = True
-        self.mq_handler.close()
+        if self.mq:
+            self.mq.stop()
 
     def debug(self, msg, uid: str = "SYSTEM", finished: bool = True):
-        self.queue.put((10, uid, finished, msg))
+        obj = self.process_log_call((10, uid, finished, msg))
+        self.log(obj)
 
     def info(self, msg, uid: str = "SYSTEM", finished: bool = True):
-        self.queue.put((20, uid, finished, msg))
+        obj = self.process_log_call((20, uid, finished, msg))
+        self.log(obj)
 
     def warning(self, msg, uid: str = "SYSTEM", finished: bool = True):
-        self.queue.put((30, uid, finished, msg))
+        obj = self.process_log_call((30, uid, finished, msg))
+        self.log(obj)
 
     def error(self, msg, uid: str = "SYSTEM", finished: bool = True):
-        self.queue.put((40, uid, finished, msg))
+        obj = self.process_log_call((40, uid, finished, msg))
+        self.log(obj)
 
     def critical(self, msg, uid: str = "SYSTEM", finished: bool = True):
-        self.queue.put((50, uid, finished, msg))
+        obj = self.process_log_call((50, uid, finished, msg))
+        self.log(obj)

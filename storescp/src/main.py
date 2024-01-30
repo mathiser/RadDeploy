@@ -22,12 +22,10 @@ class Main:
                                        log_dir=config["LOG_DIR"],
                                        rabbit_hostname=config["RABBIT_HOSTNAME"],
                                        rabbit_port=int(config["RABBIT_PORT"]),
-                                       rabbit_password=config["RABBIT_PASSWORD"],
-                                       rabbit_username=config["RABBIT_USERNAME"])
+                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
 
         self.fs = FileStorageClient(logger=self.logger,
-                              file_storage_host=config["FILE_STORAGE_HOST"],
-                              file_storage_port=config["FILE_STORAGE_PORT"])
+                                    file_storage_url=config["FILE_STORAGE_URL"])
 
         self.scp = SCP(logger=self.logger,
                        file_storage=self.fs,
@@ -48,7 +46,6 @@ class Main:
         self.running = True
         self.logger.debug("Starting")
         self.scp.start(blocking=False)
-        self.logger.start()
         self.mq.start()
         while self.running:
             try:
@@ -67,7 +64,6 @@ class Main:
         self.logger.stop()
 
         self.mq.join()
-        self.logger.join()
 
 
 
