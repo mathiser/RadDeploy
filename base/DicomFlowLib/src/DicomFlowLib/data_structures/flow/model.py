@@ -20,7 +20,7 @@ class Model(BaseModel):
     input_dir: str | None = None
     output_dir: str | None = None
 
-    static_mount: str | None = None
+    static_mounts: List[str] = []
 
     pull_before_exec: bool = True
     timeout: int = 1800

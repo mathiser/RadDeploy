@@ -41,7 +41,7 @@ class MQPub(MQBase):
 
         self._message_number += 1
         self._deliveries[self._message_number] = True
-        self.logger.info('Published message # {}'.format(self._message_number))
+        self.logger.debug('Published message # {}'.format(self._message_number))
 
     def run(self):
 

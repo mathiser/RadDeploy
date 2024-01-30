@@ -1,3 +1,4 @@
+import hashlib
 import os
 import uuid
 
@@ -5,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import FileResponse
 
+from DicomFlowLib.fs.utils import hash_file
 from DicomFlowLib.log import CollectiveLogger
 
 
@@ -82,6 +84,30 @@ class FileStorageServer(FastAPI):
             os.remove(self.get_file_path(uid))
             self.logger.debug(f"Deleting file with uid: {uid}", finished=True)
             return "success"
+
+        @self.get("/")
+        def get(uid: str) -> FileResponse:
+            if not self.allow_get:
+                raise HTTPException(status_code=405, detail="Method not allowed")
+
+            self.logger.debug(f"Serving file with uid: {uid}", finished=False)
+
+            assert self.file_exists(uid)
+
+            self.logger.debug(f"Serving file with uid: {uid}", finished=True)
+            return FileResponse(self.get_file_path(uid))
+
+        @self.get("/hash")
+        def get_hash(uid: str) -> str:
+            if not self.allow_get:
+                raise HTTPException(status_code=405, detail="Method not allowed")
+
+            self.logger.debug(f"Serving hash of: {uid}", finished=False)
+
+            assert self.file_exists(uid)
+
+            self.logger.debug(f"Serving hash of: {uid}", finished=True)
+            return hash_file(self.get_file_path(uid))
 
     def get_file_path(self, uid):
         return os.path.join(self.base_dir, uid + self.suffix)

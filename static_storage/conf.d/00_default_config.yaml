@@ -12,6 +12,6 @@ LOG_PUB_MODELS:
 
 # File Storage
 FILE_STORAGE_SUFFIX: ".tar"
-FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/files"
+FILE_STORAGE_BASE_DIR: "/opt/DicomFlow/static"
 FILE_STORAGE_HOST: "localhost"
 FILE_STORAGE_PORT: 2245

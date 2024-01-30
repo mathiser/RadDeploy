@@ -12,6 +12,11 @@ LOG_PUB_MODELS:
 
 # File Storage
 FILE_STORAGE_URL: "http://localhost:2244"
+
+# Static Storage
+STATIC_STORAGE_URL: "http://localhost:2245"
+STATIC_STORAGE_CACHE_DIR: "/opt/DicomFlow/static"
+
 # CONSUMER
 SUB_QUEUE_KWARGS:
   queue: "FINGERPRINTER.SUCCESS"

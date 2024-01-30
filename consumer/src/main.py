@@ -26,8 +26,15 @@ class Main:
         self.fs = FileStorageClient(logger=self.logger,
                                     file_storage_url=config["FILE_STORAGE_URL"])
 
+        if config["STATIC_STORAGE_URL"] and config["STATIC_STORAGE_CACHE_DIR"]:
+            self.ss = FileStorageClient(logger=self.logger,
+                                        file_storage_url=config["STATIC_STORAGE_URL"],
+                                        local_cache=config["STATIC_STORAGE_CACHE_DIR"])
+        else:
+            self.ss = None
         self.consumer = DockerConsumer(logger=self.logger,
                                        file_storage=self.fs,
+                                       static_storage=self.ss,
                                        gpus=config["GPUS"])
 
         self.mq = MQSub(logger=self.logger,

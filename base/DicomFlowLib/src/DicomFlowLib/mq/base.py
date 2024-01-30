@@ -107,7 +107,7 @@ class MQBase(threading.Thread):
         if exchange in self._declared_exchanges:
             self.logger.debug('Exchange {} type {} already exist'.format(exchange, exchange_type))
         else:
-            self.logger.info('Declaring exchange {} type {}'.format(exchange, exchange_type))
+            self.logger.debug('Declaring exchange {} type {}'.format(exchange, exchange_type))
             self._channel.exchange_declare(exchange=exchange,
                                            exchange_type=exchange_type)
             self._declared_exchanges.add(exchange)
@@ -147,7 +147,7 @@ class MQBase(threading.Thread):
         if queue not in self._declared_queues:
             queue = self.setup_queue(queue)
             self.bind_queue(queue=queue, exchange=exchange, routing_key=routing_key)
-            self.logger.info('Declaring queue {} on exchange {}'.format(queue, exchange))
+            self.logger.debug('Declaring queue {} on exchange {}'.format(queue, exchange))
             self._declared_queues.add(queue)
         return queue
 
@@ -159,7 +159,7 @@ class MQBase(threading.Thread):
         if exchange == "":
             self.logger.debug("Binding queues on default exchange is not allowed - continuing")
         else:
-            self.logger.info("Binding queue: {}".format(queue))
+            self.logger.debug("Binding queue: {}".format(queue))
             self._channel.queue_bind(queue=queue, exchange=exchange, routing_key=routing_key)
             self._declared_queues.add(queue)
 
@@ -185,7 +185,7 @@ class MQBase(threading.Thread):
 
     def basic_publish(self, exchange: str, routing_key: str, body: bytes, priority: int = 0,
                       reply_to: str | None = None):
-        self.logger.info(f"Publishing with routing_key: {routing_key} on exchange: {exchange}")
+        self.logger.debug(f"Publishing with routing_key: {routing_key} on exchange: {exchange}")
 
         self._channel.basic_publish(
             exchange=exchange,

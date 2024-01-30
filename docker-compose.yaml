@@ -54,7 +54,7 @@ services:
     restart: always
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
     network_mode: host
     depends_on:
       - rabbit
@@ -66,6 +66,7 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=10
       #- GPUS=0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -127,7 +128,23 @@ services:
     network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+
+  static_storage:
+    restart: always
+    depends_on:
+      - base
+    build:
+      context: "static_storage"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
       - LOG_LEVEL=10
+    volumes:
+      - "./mounts/static:/opt/DicomFlow/static:ro"
 
   dashboard:
     restart: always
