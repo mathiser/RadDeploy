@@ -52,13 +52,14 @@ class Main:
                 self.stop()
 
     def stop(self):
-        self.logger.debug("Stopping Janitor", finished=False)
+        self.logger.debug("Stopping FlowTracker", finished=False)
         self.running = False
-        self.ft.stop()
+        self.mq.stop()
         self.logger.stop()
 
+        self.mq.join()
         self.ft.join()
-        self.logger.debug("Stopping Janitor", finished=True)
+        self.logger.debug("Stopping FlowTracker", finished=True)
 
 
 if __name__ == "__main__":

@@ -14,8 +14,9 @@ class Base(DeclarativeBase):
 
 class Row(Base):
     __tablename__ = "rows"
-    UID: Mapped[str]
+    UID: Mapped[str] = mapped_column(unique=True)
     Name: Mapped[str]
+    Patient: Mapped[str]
     Priority: Mapped[int]
     Sender: Mapped[str]
     Dispatched: Mapped[str] = mapped_column(nullable=True, default=None)

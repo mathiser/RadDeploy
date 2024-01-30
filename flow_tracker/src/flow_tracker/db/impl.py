@@ -7,7 +7,7 @@ from .db_models import Base, Row, _now
 
 
 class Database:
-    def __init__(self, database_path: str):
+    def __init__(self, logger, database_path: str):
         self.database_path = database_path
         os.makedirs(os.path.dirname(self.database_path), exist_ok=True)
 
@@ -21,22 +21,26 @@ class Database:
         self.session_maker = sessionmaker(bind=self.engine, expire_on_commit=False)
         self.Session = scoped_session(self.session_maker)
 
-
+        self.logger = logger
     def maybe_insert_row(self,
                          uid: str,
                          name: str,
+                         patient: str,
                          sender: str,
                          priority: int):
+
         with self.Session() as session:
             row = session.query(Row).filter_by(UID=uid).first()
             if not row:
                 row = Row(UID=uid,
                           Name=name,
+                          Patient=patient,
                           Sender=sender,
                           Priority=priority)
                 session.add(row)
                 session.commit()
                 session.refresh(row)
+                self.logger.info(f"Inserted row: {row.__dict__}")
                 return row
             else:
                 return row
