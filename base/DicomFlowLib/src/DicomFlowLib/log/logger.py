@@ -44,11 +44,9 @@ class CollectiveLogger:
             self.pub_models = pub_models
 
         if rabbit_hostname and rabbit_port:
-            self.mq_queue = queue.Queue()
             self.mq = MQPub(rabbit_hostname=rabbit_hostname,
                             rabbit_port=rabbit_port,
-                            logger=self.logger,
-                            publish_queue=self.mq_queue)
+                            logger=self.logger)
             self.mq.connect()
             for pub_model in self.pub_models:
                 self.mq.setup_exchange(pub_model.exchange, exchange_type=pub_model.exchange_type)
@@ -67,9 +65,10 @@ class CollectiveLogger:
     def log(self, log_obj):
         self.logger.log(level=log_obj["level"], msg=log_obj["msg"])
         for pub_model in self.pub_models:
-            self.mq_queue.put(PublishContext(exchange=pub_model.exchange,
-                                             routing_key=str(log_obj["level"]),
-                                             body=log_obj["msg"].encode()))
+            pub_context = PublishContext(routing_key=str(log_obj["level"]),
+                                         body=log_obj["msg"].encode())
+
+            self.mq.add_publish_message(pub_model, pub_context)
 
     def stop(self):
         self.stopping = True

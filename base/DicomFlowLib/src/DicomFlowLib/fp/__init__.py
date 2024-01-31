@@ -1,1 +1,1 @@
-from .impl import Fingerprinter
+from .impl import parse_fingerprints, fingerprint, parse_file_metas

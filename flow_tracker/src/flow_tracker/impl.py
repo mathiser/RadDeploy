@@ -3,8 +3,7 @@ from typing import Iterable, Dict, List
 
 import pydicom
 
-from DicomFlowLib.data_structures.contexts import FlowContext
-from DicomFlowLib.data_structures.mq import MQEntrypointResult
+from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.log import CollectiveLogger
 from .db import Database
 
@@ -21,7 +20,7 @@ class FlowTracker:
         self.database_path = database_path
         self.db = Database(logger=self.logger, database_path=self.database_path)
 
-    def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
+    def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         context = FlowContext(**json.loads(body.decode()))
         self.update_dashboard_rows(basic_deliver, context)
         return []

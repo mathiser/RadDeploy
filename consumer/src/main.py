@@ -35,7 +35,9 @@ class Main:
         self.consumer = DockerConsumer(logger=self.logger,
                                        file_storage=self.fs,
                                        static_storage=self.ss,
-                                       gpus=config["GPUS"])
+                                       gpus=config["GPUS"],
+                                       pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
+                                       pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"])
 
         self.mq = MQSub(logger=self.logger,
                         work_function=self.consumer.mq_entrypoint,
@@ -44,6 +46,7 @@ class Main:
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
                         sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
+                        pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"],
                         pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                         )
 

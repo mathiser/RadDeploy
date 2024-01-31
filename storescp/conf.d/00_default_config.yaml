@@ -19,9 +19,10 @@ AE_HOSTNAME: "localhost"
 AE_PORT: 10000
 PYNETDICOM_LOG_LEVEL: "standard"
 TAR_SUBDIR: []
+PUB_ROUTING_KEY_ERROR: "error"
+PUB_ROUTING_KEY_SUCCESS: "success"
+PUB_ROUTING_KEY_FAIL: "fail"
 PUB_MODELS:
   - exchange: "storescp"
     exchange_type: "topic"
-    routing_key_success: "success"
-    routing_key_fail: "fail"
 

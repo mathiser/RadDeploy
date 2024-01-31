@@ -26,21 +26,23 @@ class Main:
 
         self.fs = FileStorageClient(logger=self.logger,
                                     file_storage_url=config["FILE_STORAGE_URL"])
-
+        self.mq = MQPub(logger=self.logger,
+                        rabbit_port=int(config["RABBIT_PORT"]),
+                        rabbit_hostname=config["RABBIT_HOSTNAME"])
         self.scp = SCP(logger=self.logger,
                        file_storage=self.fs,
-                       publish_queue=self.publish_queue,
                        port=int(config["AE_PORT"]),
                        hostname=config["AE_HOSTNAME"],
                        tar_subdir=config["TAR_SUBDIR"],
                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                        ae_title=config["AE_TITLE"],
-                       pynetdicom_log_level=config["PYNETDICOM_LOG_LEVEL"])
+                       mq_pub=self.mq,
+                       pynetdicom_log_level=config["PYNETDICOM_LOG_LEVEL"],
+                       routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
+                       routing_key_fail=config["PUB_ROUTING_KEY_FAIL"]
+                       )
 
-        self.mq = MQPub(logger=self.logger,
-                        publish_queue=self.publish_queue,
-                        rabbit_port=int(config["RABBIT_PORT"]),
-                        rabbit_hostname=config["RABBIT_HOSTNAME"])
+
 
     def start(self):
         self.running = True

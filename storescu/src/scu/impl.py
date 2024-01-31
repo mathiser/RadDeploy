@@ -8,9 +8,8 @@ import pydicom
 from pydicom.errors import InvalidDicomError
 from pynetdicom import AE, StoragePresentationContexts
 
-from DicomFlowLib.data_structures.contexts import FlowContext
+from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.data_structures.flow import Destination
-from DicomFlowLib.data_structures.mq import MQEntrypointResult
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 
@@ -18,12 +17,18 @@ from DicomFlowLib.log import CollectiveLogger
 class SCU:
     def __init__(self,
                  file_storage: FileStorageClient,
-                 logger: CollectiveLogger):
+                 logger: CollectiveLogger,
+                 pub_routing_key_success: str,
+                 pub_routing_key_fail: str
+                 ):
+
+        self.pub_routing_key_success = pub_routing_key_success
+        self.pub_routing_key_fail = pub_routing_key_fail
 
         self.logger = logger
         self.fs = file_storage
 
-    def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
+    def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
 
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.flow_instance_uid
@@ -58,7 +63,7 @@ class SCU:
         self.logger.info("SCU", uid=self.uid, finished=True)
         self.uid = None
 
-        return [MQEntrypointResult(body=context.model_dump_json().encode())]
+        return [PublishContext(body=context.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
 
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:
@@ -82,6 +87,7 @@ class SCU:
                         else:
                             self.logger.info('Connection timed out, was aborted or received invalid response',
                                              uid=self.uid)
+
                     except InvalidDicomError as e:
                         self.logger.error(str(e), uid=p)
                     except Exception as e:

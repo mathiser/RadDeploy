@@ -26,7 +26,9 @@ class Main:
                                     file_storage_url=config["FILE_STORAGE_URL"])
 
         self.scu = SCU(file_storage=self.fs,
-                       logger=self.logger)
+                       logger=self.logger,
+                       pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
+                       pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"])
 
         self.mq = MQSub(logger=self.logger,
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
@@ -35,7 +37,8 @@ class Main:
                         work_function=self.scu.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
-                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
+                        pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"])
 
     def start(self):
         self.logger.debug("Starting SCU", finished=False)
