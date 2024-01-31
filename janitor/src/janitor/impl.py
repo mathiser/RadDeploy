@@ -32,7 +32,7 @@ class Janitor:
     def file_janitor(self, event):
         if event.exchange == "storescu":
             self.db.delete_files_by_id(id=event.id)
-        elif event.exchange == "fp" and event.routing_key == "success":
+        elif event.exchange == "fingerprinter" and event.routing_key == "success":
             self.db.delete_all_files_by_kwargs(uid=event.uid, exchange="storescp")
         elif event.routing_key == "fail":
             self.db.delete_all_files_by_kwargs(id=event.id)

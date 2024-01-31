@@ -1,4 +1,4 @@
-for fol in base storescp fingerprinter consumer storescu janitor
+for fol in base storescp fingerprinter consumer storescu janitor flow_tracker file_storage static_storage
 do
   cd $fol
   bash build.sh

@@ -1,0 +1,165 @@
+version: "3"
+
+services:
+  base:
+    image: dicom_flow-base
+    build:
+      context: "base"
+      dockerfile: "Dockerfile"
+
+
+  rabbit:
+    restart: always
+    image: rabbitmq:3-management
+    network_mode: host
+    volumes:
+        - ./mounts/rabbit/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
+
+  storescp:
+    restart: always
+    depends_on:
+      - rabbit
+      - base
+    build:
+      context: "storescp"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+      - PYNETDICOM_LOG_LEVEL=standard
+      - AE_PORT=10000
+      - AE_HOST=localhost
+      - AE_TITLE=STORESCP
+
+  fingerprinter:
+    restart: always
+    network_mode: host
+    depends_on:
+      - rabbit
+      - base
+    build:
+      context: "fingerprinter"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ${FLOWS_DIR}:/opt/DicomFlow/flows
+
+  consumer:
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    network_mode: host
+    depends_on:
+      - rabbit
+      - base
+    build:
+      context: "consumer"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+      #- GPUS=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  storescu:
+    restart: always
+    network_mode: host
+    depends_on:
+      - rabbit
+      - base
+    build:
+      context: "storescu"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  janitor:
+    restart: always
+    depends_on:
+      - rabbit
+    build:
+      context: "janitor"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+
+  flow_tracker:
+    restart: always
+    depends_on:
+      - rabbit
+      - base
+    build:
+      context: "flow_tracker"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+    volumes:
+      - ${FLOWTRACKER_DIR}:/opt/DicomFlow/database:rw
+
+  file_storage:
+    restart: always
+    depends_on:
+      - base
+    build:
+      context: "file_storage"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=20
+
+  static_storage:
+    restart: always
+    depends_on:
+      - base
+    build:
+      context: "static_storage"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=10
+    volumes:
+      - ${STATIC_DIR}:/opt/DicomFlow/static:ro
+
+  dashboard:
+    restart: always
+    image: grafana/grafana-enterprise
+    ports:
+      - "3000:3000"
+    environment:
+      - "GF_INSTALL_PLUGINS=frser-sqlite-datasource,cloudspout-button-panel"
+    volumes:
+      - dashboard_config:/etc/grafana:rw
+      - dashboard_home:/usr/share/grafana:rw
+      - dashboard_data:/var/lib/grafana:rw
+      - ${FLOWTRACKER_DIR}:/var/lib/grafana/database:ro
+volumes:
+  dashboard_config:
+  dashboard_home:
+  dashboard_data:
+

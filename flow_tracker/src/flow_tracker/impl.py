@@ -22,6 +22,7 @@ class FlowTracker:
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         context = FlowContext(**json.loads(body.decode()))
+        print(context)
         self.update_dashboard_rows(basic_deliver, context)
         return []
 
@@ -40,7 +41,7 @@ class FlowTracker:
     @staticmethod
     def generate_pseudonym(file_meta: str):
         ds = pydicom.Dataset.from_json(file_meta)
-        cpr = str(ds.PatientID)[:8]
-        names = str(ds.PatientName).replace(" ", "^").split("^")
-        name_prefix = [n[:2] for n in names]
-        return cpr + "-" + "".join(name_prefix)
+        cpr = str(ds.PatientID)[:4]
+        full_name = str(ds.PatientName).split("^")
+        name = [name[0] for names in reversed(full_name) for name in names.split(" ")]
+        return cpr + "".join(name)

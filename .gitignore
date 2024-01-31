@@ -5,3 +5,5 @@
 mounts/**
 !mounts/flows/**
 !mounts/rabbit/**
+docker-compose.yaml
+.env
