@@ -89,7 +89,7 @@ class SCU:
                                              uid=self.uid)
 
                     except InvalidDicomError as e:
-                        self.logger.error(str(e), uid=p)
+                        pass
                     except Exception as e:
                         self.logger.error(str(e), uid=p)
 
