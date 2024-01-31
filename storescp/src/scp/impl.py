@@ -159,7 +159,7 @@ class SCP:
         self.logger.info(f"Replying to ECHO", finished=True)
         return 0x0000
 
-    def stop(self):
+    def stop(self, signalnum=None, stack_frame=None):
         self.ae.shutdown()
 
     def start(self, blocking=True):

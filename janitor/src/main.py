@@ -55,7 +55,7 @@ class Main:
             except KeyboardInterrupt:
                 self.stop()
 
-    def stop(self):
+    def stop(self, signalnum=None, stack_frame=None):
         self.logger.debug("Stopping Janitor", finished=False)
         self.running = False
         self.ft.stop()

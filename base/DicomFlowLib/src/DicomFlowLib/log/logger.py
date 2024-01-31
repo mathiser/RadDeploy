@@ -70,7 +70,7 @@ class CollectiveLogger:
 
             self.mq.add_publish_message(pub_model, pub_context)
 
-    def stop(self):
+    def stop(self, signalnum=None, stack_frame=None):
         self.stopping = True
         if self.mq:
             self.mq.stop()

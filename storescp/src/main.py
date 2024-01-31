@@ -59,7 +59,7 @@ class Main:
             except KeyboardInterrupt:
                 self.stop()
 
-    def stop(self):
+    def stop(self, signalnum=None, stack_frame=None):
         self.running = False
         self.mq.stop()
         self.scp.stop()

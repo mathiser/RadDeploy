@@ -62,7 +62,7 @@ class MQBase(threading.Thread):
 
         return self
 
-    def stop(self):
+    def stop(self, signalnum=None, stack_frame=None):
         """Stop the example by closing the channel and connection. We
         set a flag here so that we stop scheduling new messages to be
         published. The IOLoop is started because this method is
