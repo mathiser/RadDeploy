@@ -5,8 +5,7 @@ import traceback
 from typing import List, Dict
 
 from .base import MQBase
-from ..data_structures.contexts import PubModel, SubModel
-from ..data_structures.mq.mq_entrypoint_result import MQEntrypointResult
+from ..data_structures.contexts import PubModel, SubModel, PublishContext
 
 
 class MQSub(MQBase):
@@ -31,7 +30,9 @@ class MQSub(MQBase):
                  work_function: callable,
                  sub_prefetch_value: int,
                  logger,
-                 sub_queue_kwargs: Dict, ):
+                 sub_queue_kwargs: Dict,
+                 pub_routing_key_error: str):
+
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
 
@@ -57,7 +58,7 @@ class MQSub(MQBase):
 
         self.sub_models = {sm.exchange: sm for sm in sub_models}
         self.pub_models = {pm.exchange: pm for pm in pub_models}
-
+        self.pub_routing_key_error = pub_routing_key_error
         self.sub_queue_kwargs = sub_queue_kwargs
         self.queue = None
 
@@ -90,16 +91,10 @@ class MQSub(MQBase):
             self.process_event_data()
 
     def publish_on_all_pub_models(self,
-                                  result: MQEntrypointResult,
-                                  success: bool = True):
+                                  result: PublishContext):
         for pub_model in self.pub_models.values():
-            if success:
-                routing_key = pub_model.routing_key_success
-            else:
-                routing_key = pub_model.routing_key_fail
-
             self.basic_publish_callback(exchange=pub_model.exchange,
-                                        routing_key=routing_key,
+                                        routing_key=result.routing_key,
                                         body=result.body,
                                         priority=result.priority)
 
@@ -114,14 +109,15 @@ class MQSub(MQBase):
 
     def work_function_wrapper(self, basic_deliver, body):
         try:
-            result: MQEntrypointResult
+            result: PublishContext
             for result in self.work_function(basic_deliver, body):
-                self.publish_on_all_pub_models(result=result, success=True)  # Routing key on success
+                self.publish_on_all_pub_models(result=result)  # Routing key on success
 
         except Exception as e:
             self.logger.error(str(e))
             self.logger.error(str(traceback.format_exc()))
-            self.publish_on_all_pub_models(result=MQEntrypointResult(body=body), success=False)  # routing key on fail
+            self.publish_on_all_pub_models(
+                result=PublishContext(body=body, routing_key=self.pub_routing_key_error))  # routing key on fail
         finally:
             self.logger.debug('Acknowledging message {}'.format(basic_deliver.delivery_tag))
             self.acknowledge_message_callback(basic_deliver.delivery_tag)

@@ -10,9 +10,8 @@ from typing import List, Iterable
 import docker
 from docker import types
 
-from DicomFlowLib.data_structures.contexts import FlowContext
+from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.data_structures.mq import MQEntrypointResult
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 
@@ -22,11 +21,16 @@ class DockerConsumer:
                  logger: CollectiveLogger,
                  file_storage: FileStorageClient,
                  static_storage: FileStorageClient | None,
-                 gpus: List | str):
+                 gpus: List | str,
+                 pub_routing_key_success: str,
+                 pub_routing_key_fail: str):
         self.pub_declared = False
         self.logger = logger
         self.fs = file_storage
         self.ss = static_storage
+        self.pub_routing_key_success = pub_routing_key_success
+        self.pub_routing_key_fail = pub_routing_key_fail
+
         if isinstance(gpus, str):
             self.gpus = gpus.split()
         else:
@@ -37,21 +41,24 @@ class DockerConsumer:
     def __del__(self):
         self.cli.close()
 
-    def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
+    def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         context = FlowContext(**json.loads(body.decode()))
         self.uid = context.flow_instance_uid
 
         self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=False)
-        tar = self.fs.get(context.input_file_uid)
-        for model in context.flow.models:
-            tar = self.exec_model(model, tar)
+        try:
+            tar = self.fs.get(context.input_file_uid)
+            for model in context.flow.models:
+                tar = self.exec_model(model, tar)
 
-        context.output_file_uid = self.fs.post(tar)
-        self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=True)
+            context.output_file_uid = self.fs.post(tar)
+            self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=True)
+            return [PublishContext(body=context.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
+        except:
+            return [PublishContext(body=context.model_dump_json().encode(), routing_key=self.pub_routing_key_fail)]
+        finally:
+            self.uid = None
 
-        self.uid = None
-
-        return [MQEntrypointResult(body=context.model_dump_json().encode())]
 
     def exec_model(self,
                    model: Model,

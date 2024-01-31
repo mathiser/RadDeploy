@@ -1,22 +1,17 @@
 from pydantic import BaseModel
 
 
-class Base(BaseModel):
-    exchange: str
+class PubModel(BaseModel):
+    exchange: str | None = None
     exchange_type: str = "topic"
 
 
-class PubModel(Base):
-    routing_key_success: str = "success"
-    routing_key_fail: str = "fail"
-
-
-class SubModel(Base):
+class SubModel(PubModel):
     routing_key: str
     routing_key_fetch_echo: str | None = None
 
 
-class PublishContext(PubModel):
+class PublishContext(BaseModel):
     body: bytes
     routing_key: str | None = None
     reply_to: str | None = None

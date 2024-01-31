@@ -13,6 +13,7 @@ from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, Pu
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
+from DicomFlowLib.mq import MQPub
 
 
 class AssocContext:
@@ -38,18 +39,22 @@ class AssocContext:
 
 
 class SCP:
-    def __init__(self, publish_queue: Queue, file_storage: FileStorageClient, ae_title: str, hostname: str, port: int,
-                 logger: CollectiveLogger, pub_models: List[PubModel], pynetdicom_log_level: str,
-                 tar_subdir: List[str]):
+    def __init__(self, file_storage: FileStorageClient, ae_title: str, hostname: str, port: int,
+                 logger: CollectiveLogger, pub_models: List[PubModel], pynetdicom_log_level: str, tar_subdir: List[str],
+                 routing_key_success: str,
+                 routing_key_fail: str,
+                 mq_pub: MQPub):
         self.logger = logger
         self.fs = file_storage
         self.ae = None
+        self.mq_pub = mq_pub
         self.tar_subdir = tar_subdir
         self.pub_models = pub_models
+        self.routing_key_success = routing_key_success
+        self.routing_key_fail = routing_key_fail
 
         _config.LOG_HANDLER_LEVEL = pynetdicom_log_level
 
-        self.publish_queue = publish_queue
         self.ae_title = ae_title
         self.hostname = hostname
         self.port = port
@@ -116,12 +121,12 @@ class SCP:
 
     def publish_main_context(self, assoc_context):
         for pub_model in self.pub_models:
-            publish_context = PublishContext(
-                routing_key=pub_model.routing_key_success,
+            pub_context = PublishContext(
+                routing_key=self.routing_key_success,
                 exchange=pub_model.exchange,
-                body=assoc_context.flow_context.model_dump_json().encode()
-            )
-            self.publish_queue.put(publish_context, block=True)
+                body=assoc_context.flow_context.model_dump_json().encode())
+
+            self.mq_pub.add_publish_message(pub_model, pub_context)
 
     def publish_file_context(self, assoc_context):
         assoc_context.tar.close()

@@ -35,7 +35,8 @@ class Main:
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         pub_models=[],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"])
+                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
+                        pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"])
 
     def start(self):
         self.logger.debug("Starting Janitor", finished=False)

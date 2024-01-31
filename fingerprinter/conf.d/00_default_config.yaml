@@ -28,11 +28,11 @@ SUB_MODELS:
     routing_key: "success"
     routing_key_fetch_echo: "fetch"
 
-
+PUB_ROUTING_KEY_ERROR: "error"
+PUB_ROUTING_KEY_SUCCESS: "success"
+PUB_ROUTING_KEY_FAIL: "fail"
 PUB_MODELS:
   - exchange: "fp"
     exchange_type: "topic"
-    routing_key_success: "success"
-    routing_key_fail: "fail"
 
 

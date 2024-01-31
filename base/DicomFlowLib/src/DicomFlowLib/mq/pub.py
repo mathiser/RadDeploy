@@ -1,43 +1,51 @@
+import functools
 import queue
 import time
 import traceback
 from queue import Queue
 
 from .base import MQBase
-from ..data_structures.contexts import PublishContext
+from ..data_structures.contexts import PublishContext, PubModel
 
 
 class MQPub(MQBase):
     def __init__(self,
                      rabbit_hostname: str,
                      rabbit_port: int,
-                     publish_queue: Queue,
                      logger):
         super().__init__(logger=logger,
                          close_conn_on_exit=True,
                          rabbit_hostname=rabbit_hostname,
                          rabbit_port=rabbit_port)
 
-        self.publish_queue = publish_queue
+        self.publish_queue = queue.Queue()
 
         self._deliveries = {}
         self._acked = 0
         self._nacked = 0
         self._message_number = 0
 
+
     def __del__(self):
         self.stop()
 
-    def publish_message(self, context: PublishContext):
-        # Declare Exchanges
-        self.setup_exchange(exchange=context.exchange,
-                            exchange_type=context.exchange_type)
+    def add_publish_message(self, pub_model: PubModel, pub_context: PublishContext):
+        self.publish_queue.put({"pub_model": pub_model, "pub_context": pub_context})
 
-        self.basic_publish(exchange=context.exchange,
-                           routing_key=context.routing_key,
-                           body=context.body,
-                           reply_to=context.reply_to,
-                           priority=context.priority)
+    def publish_message_callback(self, pub_model: PubModel, pub_context: PublishContext):
+        cb = functools.partial(self.publish_message, pub_model=pub_model, pub_context=pub_context)
+        self._connection.add_callback_theadsafe(cb)
+
+    def publish_message(self, pub_model: PubModel, pub_context: PublishContext):
+        # Declare Exchanges
+        self.setup_exchange(exchange=pub_model.exchange,
+                            exchange_type=pub_model.exchange_type)
+
+        self.basic_publish(exchange=pub_model.exchange,
+                           routing_key=pub_context.routing_key,
+                           body=pub_context.body,
+                           reply_to=pub_context.reply_to,
+                           priority=pub_context.priority)
 
         self._message_number += 1
         self._deliveries[self._message_number] = True
@@ -65,8 +73,8 @@ class MQPub(MQBase):
                 interval = 10
                 while time.time() - time_zero < (self.heartbeat / 4):
                     try:
-                        context = self.publish_queue.get(timeout=interval)
-                        self.publish_message(context=context)
+                        pub_context = self.publish_queue.get(timeout=interval)
+                        self.publish_message(**pub_context)
                     except queue.Empty:
                         if not self._stopping and self._connection:
                             self.process_event_data()

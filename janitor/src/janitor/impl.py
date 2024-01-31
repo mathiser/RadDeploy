@@ -1,8 +1,7 @@
 import json
 from typing import Iterable
 
-from DicomFlowLib.data_structures.contexts import FlowContext
-from DicomFlowLib.data_structures.mq import MQEntrypointResult
+from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from .db import Database
@@ -20,7 +19,7 @@ class Janitor:
         self.database_path = database_path
         self.db = Database(logger=self.logger, database_path=self.database_path, file_storage=file_storage)
 
-    def mq_entrypoint(self, basic_deliver, body) -> Iterable[MQEntrypointResult]:
+    def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         context = FlowContext(**json.loads(body.decode()))
         context.file_metas = []
 
