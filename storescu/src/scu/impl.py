@@ -38,7 +38,7 @@ class SCU:
 
             self.logger.info("EXTRACTING FILE(S)", uid=self.uid, finished=True)
 
-            for port in context.flow.return_to_sender_on_port:
+            for port in context.flow.return_to_sender_on_ports:
                 self.logger.info(
                     f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}",
                     uid=self.uid, finished=False)

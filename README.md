@@ -87,11 +87,11 @@ models:
         CONTAINER_ORDER: 1
     gpu: True  # Request GPU support
     input_dir: /input/
-    output_dir: /output/ #
+    output_dir: /output/ 
     pull_before_exec: True  # Try to pull "busybox" from hub.docker.com before every execution. 
     timeout: 1800  # default timeout is 1800 seconds. If the container is running for longer, it will be terminated forcefully. This is to avoid hanging container jobs, which obstruct the queue.
     static_mounts: 
-      - "AwesomeModel1:/model"
+      - "AwesomeModel1:/model" # Will make AwesomeModel1 from static_storage available in container's /model
       - "AwesomeModel2:/model"# giving the container access to static model. 
                                              # Note "AwesomeModel2" must be mounted to the static_storage service to
                                              # "/opt/DicomFlow/static" as tar: "/opt/DicomFlow/static/AwesomeModel2.tar"
@@ -127,13 +127,15 @@ Note, that priority makes flows jump the queue, but NOT pause running flows.
 `optional_kwargs` is a dictionary that will follow the flow all the way. It can be used for custom services etc..
 
 ##### return_to_sender_on_port
-`return_to_sender_on_port` is a list of integer ports. Can beused to directly send back to the scu (sender) of the flow on a specific port. 
+`return_to_sender_on_port` is a list of integer ports. Can be used to directly send back to the scu (sender) of the flow on a specific port. 
 
 ### Full Flow example
 ```
 name: "FancyFlow"
 version: "1.02
 priority: 4
+return_to_sender_on_ports:
+  - 104
 triggers:
   - Modality: "CT" 
     SeriesDescription: "Head|Neck|Brain" 
@@ -159,7 +161,7 @@ models:
     output_dir: /output/
     pull_before_exec: True
     timeout: 1800
-    static_mount: "/home/DicomFlow/models/AwesomeModel1:/model:ro"
+    static_mounts: "AwesomeModel1:/model"
 destinations:
   - host: localhost
     port: 10001
@@ -167,18 +169,23 @@ destinations:
   - host: storage.some-system.org
     port: 104
     ae_title: FANCYSTORE
+optional_kwargs:
+  INTERESTING_PARAMETER: FooBar
+  USED_FOR_CUSTOM_SERVICE: Niiice
 ```
 
 ## Configuration of services
-All services in DicomFlow are extensively configurable, but is by default configured to work as is. 
+All services in DicomFlow are extensively configurable, but do only change something if you know what you do. 
 
 If you would like to change a configuration, you have two options. 
 - Mount a .yaml file with the desired variables into the containers directory `/opt/DicomFlow/conf.d`.
 - Set an environment variable in the docker compose file.
+
 Configs are (over)loaded in the order:
-- Defaults (found in `/opt/DicomFlow/conf.d/00_default_config.yaml`)
-- `/opt/DicomFlow/conf.d` (alphabetically)
-- Environment variables (order of occurence).
+- Alphabetically from yaml files in `/opt/DicomFlow/conf.d` (Defaults are in `00_default_config.yaml`)
+- Environment variables (order of occurrence).
+
+Configuration valiable names should be kept in capital letters to be able to easily identify them.
 
 ### Shared configurations
 RabbitMQ must be configured on all services using the following variables:
@@ -186,8 +193,6 @@ RabbitMQ must be configured on all services using the following variables:
 # RabbitMQ
 RABBIT_HOSTNAME: "localhost"
 RABBIT_PORT: 5672
-RABBIT_USERNAME: "guest"
-RABBIT_PASSWORD: "guest"
 ```
 
 Log level can be set with:
@@ -197,9 +202,11 @@ LOG_LEVEL: 20
 ```
 
 ### Service specific configurations
-In principle all variables in `/opt/DicomFlow/conf.d/00_default_config.yaml`, but probably should not. Below is a list of variables which should be adapted to the specific environment
+In principle all variables in `/opt/DicomFlow/conf.d/00_default_config.yaml`, but probably should not.
+Below is a list of variables which should be adapted to the specific environment
 
 #### STORESCP
+##### IP/Hostname and port of SCP 
 The DICOM receiver can be adapted with the following variables
 ```
 # SCP
@@ -208,16 +215,20 @@ AE_HOSTNAME: "localhost"
 AE_PORT: 10000
 PYNETDICOM_LOG_LEVEL: "standard"
 ```
-
-By default, the receiver writes dicom files into a flat directory, which is mounted into the containers input mountpoint. This is set with the default: `TAR_SUBDIR: []`, which will result in the following container input:
+##### TAR_SUBDIR
+By default, the receiver writes dicom files into a flat directory,
+which is mounted into the containers input mountpoint. 
+This is set with the default: `TAR_SUBDIR: []`, which will result in the following container input:
 - /input/
   - file1.dcm
   - file2.dcm
   - file3.dcm
   - file4.dcm
   - file5.dcm
+  - ...
 
-When models are operating on multi modal input data, it may be desirable to seperate files into a directory already when they are received. To do this, TAR_SUBDIR can contain a list of dicom tags, to be used as subfolders.
+When models are operating on multi-modal input data, it may be desirable to separate files into a directory
+already when they are received. To do this, `TAR_SUBDIR` can contain a list of dicom tags, to be used as sub-folders.
 As an example:
 ```
 TAR_SUBDIR: 
@@ -239,18 +250,22 @@ Which will results in something like:
       - MR1_T2.dcm
 
 #### Consumer
-`GPUS` is a list of physical GPUs that are at disposal for flow execution. For instance:
+`GPUS` is a list of physical GPUs that are at disposal for flow execution. 
+It is the GPU-index which can be found in `nvtop` or `nvidia-smi`
+For instance:
 ```
 GPUS: 
   - 0
 ```
-Defaults to an empty list.
 It can also be provided as a space seperated string in an environment variable like `GPUS=0 2 5`
 
+Defaults to an empty list.
+
 ## Dashboard
-If you want to set up the grafana dashboard, make sure that the grafana service has access to `janitor`'s `/opt/DicomFlow/database/database.sqlite` with the following two mounts:
-*flow_tracker*: `./mounts/flow_tracker:/opt/DicomFlow/database:rw`
-*dashboard*: `./mounts/flow_tracker:/var/lib/grafana/database:ro`
+If you want to set up the grafana dashboard, make sure that the grafana service has access to `janitor`'s
+`/opt/DicomFlow/database/database.sqlite` with the following two mounts:
+- **flow_tracker**: `./mounts/flow_tracker:/opt/DicomFlow/database:rw`
+- **dashboard**: `./mounts/flow_tracker:/var/lib/grafana/database:ro`
 
 You can then go to http://localhost:3000.
 When you setup a new datasource, use sqlite and set the path to the database to: Path `/var/lib/grafana/database/database.sqlite`

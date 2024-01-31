@@ -13,5 +13,5 @@ class Flow(BaseModel):
     destinations: List[Destination] = []
     triggers: List[Dict[str, str]] = []
     priority: int = 0
-    return_to_sender_on_port: List[int] = []
+    return_to_sender_on_ports: List[int] = []
     optional_kwargs: Dict = {}
