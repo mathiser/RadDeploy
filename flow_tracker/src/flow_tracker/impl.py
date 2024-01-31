@@ -22,7 +22,6 @@ class FlowTracker:
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         context = FlowContext(**json.loads(body.decode()))
-        print(context)
         self.update_dashboard_rows(basic_deliver, context)
         return []
 

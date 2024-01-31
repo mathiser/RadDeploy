@@ -36,11 +36,11 @@ class Main:
                         pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"])
 
     def start(self):
-        self.logger.debug("Starting Janitor", finished=False)
+        self.logger.debug("Starting FlowTracker", finished=False)
         self.running = True
         
         self.mq.start()
-        self.logger.debug("Starting Janitor", finished=True)
+        self.logger.debug("Starting FlowTracker", finished=True)
 
         while self.running:
             try:

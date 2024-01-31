@@ -31,7 +31,7 @@ services:
       - LOG_LEVEL=20
       - PYNETDICOM_LOG_LEVEL=standard
       - AE_PORT=10000
-      - AE_HOST=localhost
+      - AE_HOSTNAME=localhost
       - AE_TITLE=STORESCP
 
   fingerprinter:
