@@ -207,7 +207,6 @@ class MQBase(threading.Thread):
         self._channel.queue_delete(queue=queue, if_empty=if_empty)
 
     def process_event_data(self):
-        self.logger.debug("Processing event data")
         self._connection.process_data_events()
 
     def process_event_data_callback(self):

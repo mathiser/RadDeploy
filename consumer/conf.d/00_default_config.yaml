@@ -39,5 +39,4 @@ PUB_MODELS:
   - exchange: "consumer"
     exchange_type: "topic"
 
-
 GPUS: []

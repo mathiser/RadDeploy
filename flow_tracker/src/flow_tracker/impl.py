@@ -22,14 +22,14 @@ class FlowTracker:
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         context = FlowContext(**json.loads(body.decode()))
+        print(basic_deliver)
         self.update_dashboard_rows(basic_deliver, context)
         return []
 
     def update_dashboard_rows(self, basic_deliver, context: FlowContext):
-
         for rule in self.dashboard_rules:
-            if basic_deliver.exchange in [rule["on_exchange"], "#"]:
-                if basic_deliver.routing_key in [rule["on_routing_key"], "#"]:
+            if rule["on_exchange"] in [basic_deliver.exchange, "#"]:
+                if rule["on_routing_key"] in [basic_deliver.routing_key, "#"]:
                     self.db.maybe_insert_row(uid=context.flow_instance_uid,
                                              name=context.flow.name,
                                              patient=self.generate_pseudonym(context.file_metas[0]),

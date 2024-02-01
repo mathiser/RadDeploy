@@ -46,18 +46,13 @@ class DockerConsumer:
         self.uid = context.flow_instance_uid
 
         self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=False)
-        try:
-            tar = self.fs.get(context.input_file_uid)
-            for model in context.flow.models:
-                tar = self.exec_model(model, tar)
+        tar = self.fs.get(context.input_file_uid)
+        for model in context.flow.models:
+            tar = self.exec_model(model, tar)
 
-            context.output_file_uid = self.fs.post(tar)
-            self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=True)
-            return [PublishContext(body=context.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
-        except:
-            return [PublishContext(body=context.model_dump_json().encode(), routing_key=self.pub_routing_key_fail)]
-        finally:
-            self.uid = None
+        context.output_file_uid = self.fs.post(tar)
+        self.logger.info(f"RUNNING FLOW", uid=self.uid, finished=True)
+        return [PublishContext(body=context.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
 
 
     def exec_model(self,
