@@ -1,5 +1,5 @@
 import json
-from typing import Iterable
+from typing import Iterable, Dict, List
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.fs import FileStorageClient
@@ -11,11 +11,12 @@ class Janitor:
     def __init__(self,
                  file_storage: FileStorageClient,
                  logger: CollectiveLogger,
-                 database_path: str):
+                 database_path: str,
+                 file_delete_rules: List[Dict]):
         self.logger = logger
         self.engine = None
         self.database_url = None
-
+        self.file_delete_rules = file_delete_rules
         self.database_path = database_path
         self.db = Database(logger=self.logger, database_path=self.database_path, file_storage=file_storage)
 
@@ -31,10 +32,18 @@ class Janitor:
         return []
 
     def file_janitor(self, event):
-        if event.exchange == "storescu":
-            self.db.delete_files_by_id(id=event.id)
-        elif event.exchange == "fingerprinter" and event.routing_key == "success":
-            self.db.delete_all_files_by_kwargs(uid=event.uid, exchange="storescp")
-        elif event.routing_key == "fail":
-            self.db.delete_all_files_by_kwargs(id=event.id)
-
+        for rule in self.file_delete_rules:
+            if (event.exchange == rule["on_exchange"]) or (rule["on_exchange"] == "#"):
+                if (event.routing_key == rule["on_routing_key"]) or (rule["on_routing_key"] == "#"):
+                    kwargs = {}
+                    for k, v in rule["event_kwargs"].items():
+                        try:
+                            kwargs[k] = event.__dict__[v]
+                        except Exception as e:
+                            print(e)
+                            kwargs[k] = v
+                    print(kwargs)
+                    if rule["delete_input_file"]:
+                        self.db.delete_input_files_by_kwargs(**kwargs)
+                    if rule["delete_output_file"]:
+                        self.db.delete_output_files_by_kwargs(**kwargs)

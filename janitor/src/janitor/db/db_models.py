@@ -22,4 +22,3 @@ class Event(Base):
     output_file_deleted: Mapped[bool] = mapped_column(default=False)
     exchange: Mapped[str]
     routing_key: Mapped[str]
-    context_as_json: Mapped[str]

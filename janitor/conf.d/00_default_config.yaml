@@ -16,6 +16,28 @@ FILE_STORAGE_URL: "http://localhost:2244"
 # Janitor
 DATABASE_PATH: "/opt/DicomFlow/database/database.sqlite"
 
+FILE_DELETE_RULES:
+  - on_exchange: "storescu"
+    on_routing_key: "#"
+    delete_input_file: True
+    delete_output_file: True
+    event_kwargs:
+      id: id
+  - on_exchange: "fingerprinter"
+    on_routing_key: "#"
+    delete_input_file: True
+    delete_output_file: False
+    event_kwargs:
+      uid: uid
+      exchange: storescp
+
+  - on_exchange: "#"
+    on_routing_key: "fail"
+    delete_input_file: True
+    delete_output_file: True
+    event_kwargs:
+      id: id
+
 # MQSub
 PUB_ROUTING_KEY_ERROR: "error"
 SUB_QUEUE_KWARGS:
@@ -31,10 +53,7 @@ SUB_MODELS:
     routing_key: "#"
   - exchange: "fingerprinter"
     exchange_type: "topic"
-    routing_key: "#"
-  - exchange: "consumer"
-    exchange_type: "topic"
-    routing_key: "#"
+    routing_key: "success"
   - exchange: "storescu"
     exchange_type: "topic"
     routing_key: "#"

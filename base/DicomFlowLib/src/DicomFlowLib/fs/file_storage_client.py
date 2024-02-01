@@ -46,7 +46,7 @@ class FileStorageClient:
         elif res.status_code == 404:
             raise FileNotFoundError
         else:
-            self.logger.error(res.json())
+            self.logger.error(str(res.json()))
             res.raise_for_status()
 
     def get_hash(self, uid: str):
@@ -57,7 +57,7 @@ class FileStorageClient:
         elif res.status_code == 404:
             raise FileNotFoundError
         else:
-            self.logger.error(res.json())
+            self.logger.error(str(res.json()))
 
     def get(self, uid: str):
         self.logger.debug(f"Serving file with uid: {uid}", finished=False)
@@ -77,7 +77,7 @@ class FileStorageClient:
         elif res.status_code == 404:
             raise FileNotFoundError
         else:
-            self.logger.error(res.json())
+            self.logger.error(str(res.json()))
             res.raise_for_status()
 
     def delete(self, uid: str):
@@ -94,7 +94,7 @@ class FileStorageClient:
         elif res.status_code == 404:
             raise FileNotFoundError
         else:
-            self.logger.error(res.json())
+            self.logger.error(str(res.json()))
             res.raise_for_status()
 
     def get_file_path(self, uid):

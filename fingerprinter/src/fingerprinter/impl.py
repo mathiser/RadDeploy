@@ -36,7 +36,7 @@ class Fingerprinter:
                 context.add_flow(flow.model_copy(deep=True))
 
                 # Provide a link to the input file
-                context.input_file_uid = self.fs.clone(context.input_file_uid)
+                context.input_file_uid = self.fs.clone(org_context.input_file_uid)
 
                 # Publish the context
                 results.append(
