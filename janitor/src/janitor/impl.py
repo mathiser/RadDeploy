@@ -39,10 +39,9 @@ class Janitor:
                     for k, v in rule["event_kwargs"].items():
                         try:
                             kwargs[k] = event.__dict__[v]
-                        except Exception as e:
-                            print(e)
+                        except:
                             kwargs[k] = v
-                    print(kwargs)
+
                     if rule["delete_input_file"]:
                         self.db.delete_input_files_by_kwargs(**kwargs)
                     if rule["delete_output_file"]:
