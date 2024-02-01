@@ -33,8 +33,8 @@ class Janitor:
 
     def file_janitor(self, event):
         for rule in self.file_delete_rules:
-            if (event.exchange == rule["on_exchange"]) or (rule["on_exchange"] == "#"):
-                if (event.routing_key == rule["on_routing_key"]) or (rule["on_routing_key"] == "#"):
+            if rule["on_exchange"] in [event.exchange, "#"]:
+                if rule["on_routing_key"] in [event.routing_key, "#"]:
                     kwargs = {}
                     for k, v in rule["event_kwargs"].items():
                         try:
