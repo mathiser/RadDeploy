@@ -26,15 +26,16 @@ class FlowTracker:
         return []
 
     def update_dashboard_rows(self, basic_deliver, context):
-        self.db.maybe_insert_row(uid=context.flow_instance_uid,
-                                 name=context.flow.name,
-                                 patient=self.generate_pseudonym(context.file_metas[0]),
-                                 sender=context.sender.host,
-                                 priority=context.flow.priority)
 
         for rule in self.dashboard_rules:
             if basic_deliver.exchange in [rule["on_exchange"], "#"]:
                 if basic_deliver.routing_key in [rule["on_routing_key"], "#"]:
+                    self.db.maybe_insert_row(uid=context.flow_instance_uid,
+                                             name=context.flow.name,
+                                             patient=self.generate_pseudonym(context.file_metas[0]),
+                                             sender=context.sender.host,
+                                             priority=context.flow.priority)
+
                     self.db.set_status_of_row(context.flow_instance_uid, rule["status"])
 
     @staticmethod
