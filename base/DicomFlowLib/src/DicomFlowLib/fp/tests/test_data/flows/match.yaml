@@ -1,7 +1,7 @@
 name: "test"
 triggers:
   - Modality: ["MR"]
-    SeriesDescription: ["3D", "Tra"]
+    SeriesDescription: ["3D", '(?i)tra']
   - Modality: ["CT"]
 models: []
 destinations: []

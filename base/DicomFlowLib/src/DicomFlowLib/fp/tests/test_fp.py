@@ -27,7 +27,7 @@ class TestFP(unittest.TestCase):
         ds = parse_file_metas(file_metas)
         flows = parse_fingerprints("fp/tests/test_data/flows")
         for flow in flows:
-            self.assertEqual(fingerprint(ds, flow.triggers), flow.optional_kwargs["pass"])
+            self.assertEqual(flow.optional_kwargs["pass"], fingerprint(ds, flow.triggers))
 
 
 

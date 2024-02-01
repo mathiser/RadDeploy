@@ -62,13 +62,14 @@ triggers:
   - Modality: ["CT"]                                   # Matches if CT is contained in "Modality"
     SeriesDescription: ["Head|Neck|Brain", "Contrast"] # (Head or Neck or Brain) AND (Contrast) must be present in
                                                        # all CTs
-    StudyDescription: ["RT", "~FLAIR"]                 # Study description where (CT) and (Head or Neck or Brain) must
-                                                       # include "RT", but never "FLAIR"
+    StudyDescription: ["(?i)RT", "~FLAIR"]             # Study description where (CT) and (Head or Neck or Brain) must
+                                                       # include "RT" (insensitive to case), but never "FLAIR"
   - SOPClassUID: ["1.2.840.10008.5.1.4.1.1.4"]         # SOPClassUID for MRI
     StudyDescription: ["AutoSegProtocol"]              # Must include "AutoSegProtocol"
 ```
 
 Regex can be tricky, so go ahead and try out your patterns in a [regex tester](https://regex101.com/)
+
 
 #### models
 In `models` the actual docker containers are defined. `models` are a list of definitions which are executed in sequence with the output of one container being input for the next.
