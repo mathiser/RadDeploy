@@ -25,7 +25,8 @@ class Main:
                                     allow_get=True,
                                     allow_clone=False,
                                     allow_post=False,
-                                    allow_delete=False)
+                                    allow_delete=False,
+                                    delete_on_get=False)
 
     def start(self):
         self.fs.start()

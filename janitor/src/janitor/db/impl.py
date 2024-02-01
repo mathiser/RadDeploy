@@ -35,7 +35,6 @@ class Database:
                           flow_instance_uid=context.flow_instance_uid,
                           exchange=exchange,
                           routing_key=routing_key,
-                          context_as_json=context.model_dump_json(exclude={"file_metas"}),
                           input_file_uid=context.input_file_uid,
                           output_file_uid=context.output_file_uid)
             session.add(event)
@@ -57,33 +56,33 @@ class Database:
         with self.Session() as session:
             return session.query(Event).filter_by(**kwargs)
 
-    def delete_files_by_id(self, id):
-        event = self.get_objs_by_kwargs(id=id).first()
-        if not event.input_file_deleted:
-            try:
-                self.fs.delete(event.input_file_uid)
-                self.update_event(id=event.id, input_file_deleted=True)
-            except FileNotFoundError:
-                self.update_event(id=event.id, input_file_deleted=True)
-            except Exception as e:
-                self.logger.error(str(e))
-                raise e
-
-        if event.output_file_uid != "":
-            if not event.output_file_deleted:
+    def delete_input_files_by_kwargs(self, **kwargs):
+        events = self.get_objs_by_kwargs(**kwargs).all()
+        for event in events:
+            if not event.input_file_deleted:
                 try:
-                    self.fs.delete(event.output_file_uid)
-                    self.update_event(id=event.id, output_file_deleted=True)
+                    self.logger.info(f"Deleted files successfully for event with id: {event.id}")
+                    self.fs.delete(event.input_file_uid)
+                    self.update_event(id=event.id, input_file_deleted=True)
                 except FileNotFoundError:
-                    self.update_event(id=event.id, output_file_deleted=True)
+                    self.logger.info(f"File already deleted for event with id: {event.id}")
+                    self.update_event(id=event.id, input_file_deleted=True)
                 except Exception as e:
                     self.logger.error(str(e))
                     raise e
 
-    def delete_all_files_by_kwargs(self, **kwargs):
-        while True:
-            event = self.get_objs_by_kwargs(**kwargs).first()
-            if event:
-                self.delete_files_by_id(id=event.id)
-            else:
-                break
+    def delete_output_files_by_kwargs(self, **kwargs):
+        events = self.get_objs_by_kwargs(**kwargs).all()
+        for event in events:
+            if event.output_file_uid != "":
+                if not event.output_file_deleted:
+                    try:
+                        self.fs.delete(event.output_file_uid)
+                        self.update_event(id=event.id, output_file_deleted=True)
+                        self.logger.info(f"Deleted files successfully for event with id: {event.id}")
+                    except FileNotFoundError:
+                        self.update_event(id=event.id, output_file_deleted=True)
+                        self.logger.info(f"File already deleted for event with id: {event.id}")
+                    except Exception as e:
+                        self.logger.error(str(e))
+                        raise e

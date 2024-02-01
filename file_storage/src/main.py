@@ -21,7 +21,8 @@ class Main:
                                     host=config["FILE_STORAGE_HOST"],
                                     port=config["FILE_STORAGE_PORT"],
                                     base_dir=config["FILE_STORAGE_BASE_DIR"],
-                                    suffix=config["FILE_STORAGE_SUFFIX"])
+                                    suffix=config["FILE_STORAGE_SUFFIX"],
+                                    delete_on_get=False)
 
     def start(self):
         self.fs.start()

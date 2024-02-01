@@ -24,10 +24,7 @@ SUB_PREFETCH_COUNT: 1  # Should not be changed
 SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"
-    routing_key: "success"
-  - exchange: "fingerprinter"
-    exchange_type: "topic"
-    routing_key: "fetch"
+    routing_key: "#"
   - exchange: "consumer"
     exchange_type: "topic"
     routing_key: "#"
@@ -39,7 +36,7 @@ PUB_ROUTING_KEY_ERROR: "error"
 # Dashboard Rules:
 DASHBOARD_RULES:
   - on_exchange: "#"
-    on_routing_key: "fail"
+    on_routing_key: "error"
     status: 400
   - on_exchange: "fingerprinter"
     on_routing_key: "success"

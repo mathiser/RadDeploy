@@ -26,7 +26,8 @@ class Main:
 
         self.ft = Janitor(file_storage=self.fs,
                           logger=self.logger,
-                          database_path=config["DATABASE_PATH"])
+                          database_path=config["DATABASE_PATH"],
+                          file_delete_rules=config["FILE_DELETE_RULES"])
 
         self.mq = MQSub(logger=self.logger,
                         work_function=self.ft.mq_entrypoint,
