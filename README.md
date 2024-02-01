@@ -51,16 +51,21 @@ models:
 destinations: []
 ```
 #### triggers
-In `triggers` you can put dicom tags and regex patterns, all of which must be found among the incoming dicom files for the `models` to be executed.
-`triggers` is a list of dictionaries, where all dictionary elements must be matched in the same file.
-An example of a more complex triggers is given:
+`triggers` specify which dicom tags will initiate the `models`. Matching to dicom tags is done in two "dimensions":
+- Each trigger (dict in the `triggers` list) must be matched **somewhere in the received dicom files**
+- Regex patterns (the values for each dicom tag) must **all** match with in the trigger. "~" is used as exclusion pattern.
+If found, the flow wil never be triggered.
 
+An example of a more complex triggers is given:
 ```
 triggers:
-  - Modality: "CT" # Matches if CT is contained in "Modality"
-    SeriesDescription: "Head|Neck|Brain"  # Matches either Head, Neck or Brain in only the files with Modality: CT
-  - SOPClassUID: "1.2.840.10008.5.1.4.1.1.4" # SOPClassUID for MRI
-    StudyDescription: "AutoSegProtocol"
+  - Modality: ["CT"]                                   # Matches if CT is contained in "Modality"
+    SeriesDescription: ["Head|Neck|Brain", "Contrast"] # (Head or Neck or Brain) AND (Contrast) must be present in
+                                                       # all CTs
+    StudyDescription: ["RT", "~FLAIR"]                 # Study description where (CT) and (Head or Neck or Brain) must
+                                                       # include "RT", but never "FLAIR"
+  - SOPClassUID: ["1.2.840.10008.5.1.4.1.1.4"]         # SOPClassUID for MRI
+    StudyDescription: ["AutoSegProtocol"]              # Must include "AutoSegProtocol"
 ```
 
 Regex can be tricky, so go ahead and try out your patterns in a [regex tester](https://regex101.com/)
@@ -137,10 +142,10 @@ priority: 4
 return_to_sender_on_ports:
   - 104
 triggers:
-  - Modality: "CT" 
-    SeriesDescription: "Head|Neck|Brain" 
-  - SOPClassUID: "1.2.840.10008.5.1.4.1.1.4" 
-    StudyDescription: "AutoSegProtocol"
+  - Modality: ["CT"] 
+    SeriesDescription: ["Head|Neck|Brain"] 
+  - SOPClassUID: ["1.2.840.10008.5.1.4.1.1.4"] 
+    StudyDescription: ["AutoSegProtocol"]
 models:
   - docker_kwargs:
       image: busybox
@@ -185,7 +190,7 @@ Configs are (over)loaded in the order:
 - Alphabetically from yaml files in `/opt/DicomFlow/conf.d` (Defaults are in `00_default_config.yaml`)
 - Environment variables (order of occurrence).
 
-Configuration valiable names should be kept in capital letters to be able to easily identify them.
+Configuration variable names should be kept in capital letters to be able to easily identify them.
 
 ### Shared configurations
 RabbitMQ must be configured on all services using the following variables:
