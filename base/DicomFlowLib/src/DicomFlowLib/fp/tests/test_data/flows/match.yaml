@@ -1,0 +1,10 @@
+name: "test"
+triggers:
+  - Modality: ["MR"]
+    SeriesDescription: ["3D", "Tra"]
+  - Modality: ["CT"]
+models: []
+destinations: []
+optional_kwargs:
+  pass: True
+

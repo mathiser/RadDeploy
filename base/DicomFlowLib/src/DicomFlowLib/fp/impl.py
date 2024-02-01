@@ -26,9 +26,17 @@ def parse_file_metas(file_metas: List) -> pd.DataFrame:
 def fingerprint(ds: pd.DataFrame, triggers: List):
     for trigger in triggers:
         match = ds
-        for keyword, regex_pattern in trigger.items():
-            match = match[
-                match[keyword].str.contains(regex_pattern, regex=True)]  # Regex match. This is "recursive"
+        print(match.SeriesDescription)
+        for keyword, regex_patterns in trigger.items():
+            for regex_pattern in regex_patterns:
+                if regex_pattern.startswith("~"):
+                    exclude = match[match[keyword].str.contains(regex_pattern[1:], regex=True, na=False)]  # Regex NOT match. This is "recursive"
+                    print(exclude)
+                    print(bool(len(exclude)))
+                    if bool(len(exclude)):
+                        return False
+                else:
+                    match = match[match[keyword].str.contains(regex_pattern, regex=True, na=False)]  # Regex match. This is "recursive"
 
         if not bool(len(match)):
             return False
@@ -36,14 +44,15 @@ def fingerprint(ds: pd.DataFrame, triggers: List):
         return True
 
 
-def parse_fingerprints(flow_directory):
+def parse_fingerprints(flow_directory: str):
     for fol, subs, files in os.walk(flow_directory):
         for file in files:
+            if not file.endswith("yaml"):
+                continue
             fp_path = os.path.join(fol, file)
             try:
                 with open(fp_path) as r:
                     fp = yaml.safe_load(r)
                     yield Flow(**fp)
-
             except Exception as e:
                 raise e
