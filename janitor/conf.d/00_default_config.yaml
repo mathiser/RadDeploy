@@ -17,6 +17,7 @@ FILE_STORAGE_URL: "http://localhost:2244"
 DATABASE_PATH: "/opt/DicomFlow/database/database.sqlite"
 
 # MQSub
+PUB_ROUTING_KEY_ERROR: "error"
 SUB_QUEUE_KWARGS:
     queue: ""
     passive: False

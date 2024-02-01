@@ -20,6 +20,7 @@ class Janitor:
         self.db = Database(logger=self.logger, database_path=self.database_path, file_storage=file_storage)
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
+        self.logger.info(f"Received from {basic_deliver.exchange} on {basic_deliver.routing_key}")
         context = FlowContext(**json.loads(body.decode()))
         context.file_metas = []
 
