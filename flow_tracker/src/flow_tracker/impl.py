@@ -35,7 +35,7 @@ class FlowTracker:
                                              patient=self.generate_pseudonym(context.file_metas[0]),
                                              sender=context.sender.host,
                                              priority=context.flow.priority,
-                                             destinations=str([d.host for d in context.flow.destinations]))
+                                             destinations=", ".join([f"{d.ae_title} ({d.host})" for d in context.flow.destinations]))
 
                     self.db.set_status_of_row(context.flow_instance_uid, rule["status"])
 

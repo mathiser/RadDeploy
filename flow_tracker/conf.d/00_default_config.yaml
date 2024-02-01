@@ -38,6 +38,9 @@ DASHBOARD_RULES:
   - on_exchange: "#"
     on_routing_key: "error"
     status: 400
+  - on_exchange: "#"
+    on_routing_key: "fail"
+    status: 400
   - on_exchange: "fingerprinter"
     on_routing_key: "success"
     status: 0
