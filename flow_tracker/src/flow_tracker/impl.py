@@ -25,7 +25,7 @@ class FlowTracker:
         self.update_dashboard_rows(basic_deliver, context)
         return []
 
-    def update_dashboard_rows(self, basic_deliver, context):
+    def update_dashboard_rows(self, basic_deliver, context: FlowContext):
 
         for rule in self.dashboard_rules:
             if basic_deliver.exchange in [rule["on_exchange"], "#"]:
@@ -34,7 +34,8 @@ class FlowTracker:
                                              name=context.flow.name,
                                              patient=self.generate_pseudonym(context.file_metas[0]),
                                              sender=context.sender.host,
-                                             priority=context.flow.priority)
+                                             priority=context.flow.priority,
+                                             destinations=str([d.host for d in context.flow.destinations]))
 
                     self.db.set_status_of_row(context.flow_instance_uid, rule["status"])
 

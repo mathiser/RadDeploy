@@ -9,7 +9,7 @@ def _now():
 
 class Base(DeclarativeBase):
     id: Mapped[int] = mapped_column(unique=True, primary_key=True, autoincrement=True)
-    ts: Mapped[str] = mapped_column(default=_now)
+    Received: Mapped[str] = mapped_column(default=_now)
 
 
 class Row(Base):
@@ -19,6 +19,7 @@ class Row(Base):
     Patient: Mapped[str]
     Priority: Mapped[int]
     Sender: Mapped[str]
+    Destinations: Mapped[str]
     Dispatched: Mapped[str] = mapped_column(nullable=True, default=None)
     Finished: Mapped[str] = mapped_column(nullable=True, default=None)
     Sent: Mapped[str] = mapped_column(nullable=True, default=None)

@@ -27,7 +27,8 @@ class Database:
                          name: str,
                          patient: str,
                          sender: str,
-                         priority: int):
+                         priority: int,
+                         destinations: str):
 
         with self.Session() as session:
             row = session.query(Row).filter_by(UID=uid).first()
@@ -36,7 +37,8 @@ class Database:
                           Name=name,
                           Patient=patient,
                           Sender=sender,
-                          Priority=priority)
+                          Priority=priority,
+                          Destinations=destinations)
                 session.add(row)
                 session.commit()
                 session.refresh(row)
