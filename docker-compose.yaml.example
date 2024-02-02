@@ -7,36 +7,32 @@ services:
       context: "base"
       dockerfile: "Dockerfile"
 
-
   rabbit:
+    hostname: "rabbit"
     restart: always
     image: rabbitmq:3-management
-    network_mode: host
     volumes:
         - ./mounts/rabbit/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
 
   storescp:
+    hostname: "storescp"
     restart: always
     depends_on:
       - rabbit
       - base
+    ports:
+      - "10000:10000"
     build:
       context: "storescp"
       dockerfile: "Dockerfile"
       args:
         BASE_IMAGE: dicom_flow-base
-    network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=20
-      - PYNETDICOM_LOG_LEVEL=standard
-      - AE_PORT=10000
-      - AE_HOSTNAME=localhost
-      - AE_TITLE=STORESCP
 
   fingerprinter:
+    hostname: "fingerprinter"
     restart: always
-    network_mode: host
     depends_on:
       - rabbit
       - base
@@ -51,11 +47,11 @@ services:
       - ${FLOWS_DIR}:/opt/DicomFlow/flows
 
   consumer:
+    hostname: "consumer"
     restart: always
     deploy:
       mode: replicated
       replicas: 1
-    network_mode: host
     depends_on:
       - rabbit
       - base
@@ -72,8 +68,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   storescu:
+    hostname: "storescu"
     restart: always
-    network_mode: host
     depends_on:
       - rabbit
       - base
@@ -86,6 +82,7 @@ services:
       - PYTHONUNBUFFERED=1
 
   janitor:
+    hostname: "janitor"
     restart: always
     depends_on:
       - rabbit
@@ -94,12 +91,12 @@ services:
       dockerfile: "Dockerfile"
       args:
         BASE_IMAGE: dicom_flow-base
-    network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=20
+      - LOG_LEVEL=10
 
   flow_tracker:
+    hostname: "flow-tracker"
     restart: always
     depends_on:
       - rabbit
@@ -109,14 +106,13 @@ services:
       dockerfile: "Dockerfile"
       args:
         BASE_IMAGE: dicom_flow-base
-    network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=20
     volumes:
       - ${FLOWTRACKER_DIR}:/opt/DicomFlow/database:rw
 
   file_storage:
+    hostname: "file-storage"
     restart: always
     depends_on:
       - base
@@ -125,12 +121,11 @@ services:
       dockerfile: "Dockerfile"
       args:
         BASE_IMAGE: dicom_flow-base
-    network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=20
 
   static_storage:
+    hostname: "static-storage"
     restart: always
     depends_on:
       - base
@@ -139,10 +134,8 @@ services:
       dockerfile: "Dockerfile"
       args:
         BASE_IMAGE: dicom_flow-base
-    network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=10
     volumes:
       - ${STATIC_DIR}:/opt/DicomFlow/static:ro
 
@@ -158,6 +151,7 @@ services:
       - dashboard_home:/usr/share/grafana:rw
       - dashboard_data:/var/lib/grafana:rw
       - ${FLOWTRACKER_DIR}:/var/lib/grafana/database:ro
+
 volumes:
   dashboard_config:
   dashboard_home:

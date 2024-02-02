@@ -1,13 +1,10 @@
 import os
 import tarfile
 import tempfile
-
 from io import BytesIO
-from queue import Queue
 from typing import Dict, List
 
 from pynetdicom import AE, evt, StoragePresentationContexts, _config
-
 
 from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, PubModel
 from DicomFlowLib.data_structures.flow import Destination
@@ -43,7 +40,9 @@ class SCP:
                  logger: CollectiveLogger, pub_models: List[PubModel], pynetdicom_log_level: str, tar_subdir: List[str],
                  routing_key_success: str,
                  routing_key_fail: str,
-                 mq_pub: MQPub):
+                 mq_pub: MQPub,
+                 blacklisted_hosts: List[str] | None = None,
+                 whitelisted_hosts: List[str] | None = None):
         self.logger = logger
         self.fs = file_storage
         self.ae = None
@@ -60,11 +59,33 @@ class SCP:
         self.port = port
 
         self.assoc: Dict[AssocContext] = {}  # container for SCPContexts
+        if blacklisted_hosts:
+            self.blacklisted_hosts = blacklisted_hosts
+        else:
+            self.blacklisted_hosts = []
+        self.whitelisted_hosts = whitelisted_hosts
 
     def __del__(self):
         if self.ae is not None:
             self.ae.shutdown()
 
+    def validate_scu(self, sender: Destination):
+        self.logger.info(f"Validating sender {sender}")
+        # If in whitelist, it will always be let through
+        if self.whitelisted_hosts:
+            if sender.host not in self.whitelisted_hosts:
+                self.logger.error("SCU hostname is not whitelisted - shall not pass")
+                raise Exception("Not on whitelist")
+            else:
+                self.logger.info("SCU host validated - you shall pass!")
+                return
+        # If whitelist is not defined, storescu will come through if not on blacklist
+        if sender.host in self.blacklisted_hosts:
+            self.logger.error("SCU hostname is blacklisted - shall not pass")
+            raise Exception("On blacklisted")
+        else:
+            self.logger.info("SCU host validated - you shall pass!")
+            return
     def handle_established(self, event):
         # Association id unique to this transaction
         # Set up all the things
@@ -74,9 +95,13 @@ class SCP:
         self.logger.debug(f"HANDLE_ESTABLISHED", uid=ac.flow_context.uid, finished=False)
 
         # Unwrap sender info
-        ac.flow_context.sender = Destination(host=event.assoc.requestor.address,
-                                             port=event.assoc.requestor.port,
-                                             ae_title=event.assoc.requestor._ae_title)
+        sender = Destination(host=event.assoc.requestor.address,
+                             port=event.assoc.requestor.port,
+                             ae_title=event.assoc.requestor._ae_title)
+
+        self.validate_scu(sender)
+
+        ac.flow_context.sender = sender
         # Add to assocs dict
         self.assoc[assoc_id] = ac
         self.logger.debug(f"HANDLE_ESTABLISHED", uid=ac.flow_context.uid, finished=True)
@@ -171,7 +196,7 @@ class SCP:
         ]
 
         try:
-            self.logger.debug(
+            self.logger.info(
                 f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}",
                 finished=False)
 
@@ -180,7 +205,7 @@ class SCP:
             self.ae.supported_contexts = StoragePresentationContexts
             self.ae.maximum_pdu_size = 0
             self.ae.start_server((self.hostname, self.port), block=blocking, evt_handlers=handler)
-            self.logger.debug(
+            self.logger.info(
                 f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}",
                 finished=False)
         except OSError as ose:
