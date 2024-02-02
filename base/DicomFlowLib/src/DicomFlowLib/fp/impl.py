@@ -27,6 +27,9 @@ def fingerprint(ds: pd.DataFrame, triggers: List):
     for trigger in triggers:
         match = ds
         for keyword, regex_patterns in trigger.items():
+            if not keyword in match.columns:
+                return False
+
             for regex_pattern in regex_patterns:
                 if regex_pattern.startswith("~"):
                     exclude = match[match[keyword].str.contains(regex_pattern[1:], regex=True, na=False)]  # Regex NOT match. This is "recursive"
