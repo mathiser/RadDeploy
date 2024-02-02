@@ -4,7 +4,7 @@ import tempfile
 from io import BytesIO
 from typing import Dict, List
 
-from pynetdicom import AE, evt, StoragePresentationContexts, _config
+from pynetdicom import AE, evt, StoragePresentationContexts, _config, VerificationPresentationContexts
 
 from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, PubModel
 from DicomFlowLib.data_structures.flow import Destination
@@ -202,7 +202,8 @@ class SCP:
 
             # Create and run
             self.ae = AE(ae_title=self.ae_title)
-            self.ae.supported_contexts = StoragePresentationContexts
+            self.ae.supported_contexts = StoragePresentationContexts + VerificationPresentationContexts
+
             self.ae.maximum_pdu_size = 0
             self.ae.start_server((self.hostname, self.port), block=blocking, evt_handlers=handler)
             self.logger.info(

@@ -67,7 +67,7 @@ class Main:
 
 
 if __name__ == "__main__":
-    config = load_configs(os.environ["CONF_DIR"])
+    config = load_configs(os.environ["CONF_DIR"], os.environ["CURRENT_CONF"])
 
     m = Main(config=config)
     m.start()

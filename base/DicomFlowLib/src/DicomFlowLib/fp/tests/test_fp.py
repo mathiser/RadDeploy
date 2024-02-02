@@ -6,6 +6,7 @@ import pydicom
 
 from DicomFlowLib.data_structures.flow import Flow
 from ..impl import parse_file_metas, fingerprint, parse_fingerprints
+
 class TestFP(unittest.TestCase):
     def test_parse_file_metas(self):
         ds = pydicom.dcmread("fp/tests/test_data/scans/mr.dcm")
@@ -25,6 +26,7 @@ class TestFP(unittest.TestCase):
                 file_metas.append(ds)
 
         ds = parse_file_metas(file_metas)
+        print(ds["Modality"])
         flows = parse_fingerprints("fp/tests/test_data/flows")
         for flow in flows:
             self.assertEqual(flow.optional_kwargs["pass"], fingerprint(ds, flow.triggers))

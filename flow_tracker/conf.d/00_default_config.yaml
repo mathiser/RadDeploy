@@ -35,10 +35,16 @@ PUB_ROUTING_KEY_ERROR: "error"
 
 # Dashboard Rules:
 DASHBOARD_RULES:
-  - on_exchange: "#"
+  - on_exchange: "consumer"
     on_routing_key: "error"
     status: 400
-  - on_exchange: "#"
+  - on_exchange: "storescu"
+    on_routing_key: "error"
+    status: 400
+  - on_exchange: "consumer"
+    on_routing_key: "fail"
+    status: 400
+  - on_exchange: "storescu"
     on_routing_key: "fail"
     status: 400
   - on_exchange: "fingerprinter"
