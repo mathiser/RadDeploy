@@ -8,7 +8,7 @@ from io import BytesIO
 from typing import List, Iterable
 
 import docker
-from docker import types
+from docker import types, errors
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.data_structures.flow import Model
@@ -140,19 +140,15 @@ class DockerConsumer:
 
             counter = 0
             while counter < 5:
+                self.logger.debug(f"Attempting to remove container {container.short_id}", uid=self.uid, finished=False)
                 try:
-                    self.logger.debug(f"Attempting to remove container {container.short_id}",
-                                      uid=self.uid,
-                                      finished=False)
-                    container.remove(force=True)
-                    self.logger.debug(f"Attempting to remove container {container.short_id}",
-                                      uid=self.uid,
-                                      finished=True)
+                    c = self.cli.containers.get(container.short_id)
+                    c.remove(force=True)
                     break
-                except:
-                    self.logger.debug(f"Failed to remove {container.short_id}. Trying again in 5 sec...",
-                                      uid=self.uid,
-                                      finished=True)
+                except errors.NotFound:
+                    break
+                except Exception as e:
+                    self.logger.debug(f"Failed to remove {container.short_id}. Trying again in 5 sec...", uid=self.uid, finished=True)
                     counter += 1
                     time.sleep(5)
 
