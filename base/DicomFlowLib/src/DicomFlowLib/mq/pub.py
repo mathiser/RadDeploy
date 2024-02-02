@@ -10,9 +10,9 @@ from ..data_structures.contexts import PublishContext, PubModel
 
 class MQPub(MQBase):
     def __init__(self,
-                     rabbit_hostname: str,
-                     rabbit_port: int,
-                     logger):
+                 rabbit_hostname: str,
+                 rabbit_port: int,
+                 logger):
         super().__init__(logger=logger,
                          close_conn_on_exit=True,
                          rabbit_hostname=rabbit_hostname,
@@ -24,7 +24,6 @@ class MQPub(MQBase):
         self._acked = 0
         self._nacked = 0
         self._message_number = 0
-
 
     def __del__(self):
         self.stop()
@@ -49,7 +48,6 @@ class MQPub(MQBase):
 
         self._message_number += 1
         self._deliveries[self._message_number] = True
-        self.logger.debug('Published message # {}'.format(self._message_number))
 
     def run(self):
 
@@ -65,7 +63,6 @@ class MQPub(MQBase):
             self.logger.debug("Connecting")
             # self.logger.info('Enabling delivery confirmations')
             # self.enable_delivery_confirmations()
-
 
             self.logger.info('Starting publishing')
             while not self._stopping:
@@ -123,7 +120,7 @@ class MQPub(MQBase):
         delivery_tag = method_frame.method.delivery_tag
 
         self.logger.info('Received {} for delivery tag: {} (multiple: {})'.format(
-                         confirmation_type, delivery_tag, ack_multiple))
+            confirmation_type, delivery_tag, ack_multiple))
 
         if confirmation_type == 'ack':
             self._acked += 1
@@ -145,4 +142,4 @@ class MQPub(MQBase):
         self.logger.info(
             'Published {} messages, {} have yet to be confirmed, '
             '{} were acked and {} were nacked'.format(self._message_number,
-            len(self._deliveries), self._acked, self._nacked))
+                                                      len(self._deliveries), self._acked, self._nacked))

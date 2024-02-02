@@ -45,11 +45,11 @@ class MQBase(threading.Thread):
                      connection: connection.Connection,
                      channel: channel.Channel | None = None):
         if connection and channel:
-            self.logger.info('Using existing connection and connection')
+            self.logger.debug('Using existing connection and connection')
             self._connection = connection
             self._channel = channel
         elif connection and not channel:
-            self.logger.info('Using existing connection - opening new channel')
+            self.logger.debug('Using existing connection - opening new channel')
             self._connection = connection
             self._channel = self._connection.channel()
         return self
@@ -105,7 +105,8 @@ class MQBase(threading.Thread):
 
     def setup_exchange(self, exchange: str, exchange_type: str):
         if exchange in self._declared_exchanges:
-            self.logger.debug('Exchange {} type {} already exist'.format(exchange, exchange_type))
+            pass
+            #self.logger.debug('Exchange {} type {} already exist'.format(exchange, exchange_type))
         else:
             self.logger.debug('Declaring exchange {} type {}'.format(exchange, exchange_type))
             self._channel.exchange_declare(exchange=exchange,
@@ -185,8 +186,6 @@ class MQBase(threading.Thread):
 
     def basic_publish(self, exchange: str, routing_key: str, body: bytes, priority: int = 0,
                       reply_to: str | None = None):
-        self.logger.debug(f"Publishing with routing_key: {routing_key} on exchange: {exchange}")
-
         self._channel.basic_publish(
             exchange=exchange,
             routing_key=routing_key,

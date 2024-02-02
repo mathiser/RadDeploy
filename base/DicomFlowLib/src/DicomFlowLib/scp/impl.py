@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import Dict, List
 
 from pynetdicom import AE, evt, StoragePresentationContexts, _config, VerificationPresentationContexts
-
+from pynetdicom.events import Event
 from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, PubModel
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorageClient
@@ -69,47 +69,54 @@ class SCP:
         if self.ae is not None:
             self.ae.shutdown()
 
-    def validate_scu(self, sender: Destination):
-        self.logger.info(f"Validating sender {sender}")
+    def handle_established(self, event: Event):
+        sender = Destination(host=event.assoc.requestor.address,
+                             port=event.assoc.requestor.port,
+                             ae_title=event.assoc.requestor._ae_title)
+
+        self.logger.debug(f"Validating sender {sender}")
         # If in whitelist, it will always be let through
         if self.whitelisted_hosts:
             if sender.host not in self.whitelisted_hosts:
                 self.logger.error("SCU hostname is not whitelisted - shall not pass")
                 raise Exception("Not on whitelist")
             else:
-                self.logger.info("SCU host validated - you shall pass!")
-                return
+                self.logger.debug("SCU host validated - you shall pass!")
+                return 0x0000
+
         # If whitelist is not defined, storescu will come through if not on blacklist
         if sender.host in self.blacklisted_hosts:
             self.logger.error("SCU hostname is blacklisted - shall not pass")
             raise Exception("On blacklisted")
         else:
-            self.logger.info("SCU host validated - you shall pass!")
-            return
-    def handle_established(self, event):
+            self.logger.debug("SCU host validated - you shall pass!")
+            return 0x0000
+
+    def maybe_init_store(self, event):
         # Association id unique to this transaction
-        # Set up all the things
+        # Set up all the thing
         assoc_id = event.assoc.native_id
 
+        # Check if already created
+        if assoc_id in self.assoc.keys():
+            return
+
         ac = AssocContext()
-        self.logger.debug(f"HANDLE_ESTABLISHED", uid=ac.flow_context.uid, finished=False)
+        self.logger.debug(f"INIT_STORESCP", uid=ac.flow_context.uid, finished=False)
 
         # Unwrap sender info
         sender = Destination(host=event.assoc.requestor.address,
                              port=event.assoc.requestor.port,
                              ae_title=event.assoc.requestor._ae_title)
 
-        self.validate_scu(sender)
-
         ac.flow_context.sender = sender
         # Add to assocs dict
         self.assoc[assoc_id] = ac
-        self.logger.debug(f"HANDLE_ESTABLISHED", uid=ac.flow_context.uid, finished=True)
+        self.logger.debug(f"INIT_STORESCP", uid=ac.flow_context.uid, finished=True)
 
-        return 0x0000
 
     def handle_store(self, event):
-
+        self.maybe_init_store(event)
         """Handle EVT_C_STORE events."""
         assoc_id = event.assoc.native_id
         assoc_context = self.assoc[assoc_id]
@@ -139,27 +146,23 @@ class SCP:
         except Exception as e:
             self.logger.error(str(e))
             raise e
+
         self.logger.debug(f"HANDLE_STORE", uid=uid, finished=True)
 
         # Return a 'Success' status
         return 0x0000
 
-    def publish_main_context(self, assoc_context):
-        for pub_model in self.pub_models:
-            pub_context = PublishContext(
-                routing_key=self.routing_key_success,
-                exchange=pub_model.exchange,
-                body=assoc_context.flow_context.model_dump_json().encode())
 
-            self.mq_pub.add_publish_message(pub_model, pub_context)
 
-    def publish_file_context(self, assoc_context):
-        assoc_context.tar.close()
-        assoc_context.file.seek(0)
-        return self.fs.post(assoc_context.file)
+    def handle_release(self, event: Event):
+        self.maybe_release_storescp(event)
+        return 0x0000
 
-    def handle_release(self, event):
+    def maybe_release_storescp(self, event):
         assoc_id = event.assoc.native_id
+        if assoc_id not in self.assoc.keys():
+            return
+
         assoc_context = self.assoc[assoc_id]
         uid = assoc_context.flow_context.uid
         self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=False)
@@ -181,9 +184,21 @@ class SCP:
             del self.assoc[assoc_id]
 
     def handle_echo(self, event):
-        self.logger.info(f"Replying to ECHO", finished=True)
+        self.logger.debug(f"Replying to ECHO", finished=True)
         return 0x0000
+    def publish_main_context(self, assoc_context):
+        for pub_model in self.pub_models:
+            pub_context = PublishContext(
+                routing_key=self.routing_key_success,
+                exchange=pub_model.exchange,
+                body=assoc_context.flow_context.model_dump_json().encode())
 
+            self.mq_pub.add_publish_message(pub_model, pub_context)
+
+    def publish_file_context(self, assoc_context):
+        assoc_context.tar.close()
+        assoc_context.file.seek(0)
+        return self.fs.post(assoc_context.file)
     def stop(self, signalnum=None, stack_frame=None):
         self.ae.shutdown()
 
