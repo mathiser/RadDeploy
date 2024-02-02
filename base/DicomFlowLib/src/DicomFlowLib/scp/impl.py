@@ -68,15 +68,24 @@ class SCP:
     def __del__(self):
         if self.ae is not None:
             self.ae.shutdown()
+
     def validate_scu(self, sender: Destination):
+        self.logger.info(f"Validating sender {sender}")
+        # If in whitelist, it will always be let through
         if self.whitelisted_hosts:
             if sender.host not in self.whitelisted_hosts:
-                raise Exception("SCU hostname is not whitelisted")
-
+                self.logger.error("SCU hostname is not whitelisted - shall not pass")
+                raise Exception("Not on whitelist")
+            else:
+                self.logger.info("SCU host validated - you shall pass!")
+                return
+        # If whitelist is not defined, storescu will come through if not on blacklist
         if sender.host in self.blacklisted_hosts:
-            raise Exception("SCU hostname is blacklisted")
-
-
+            self.logger.error("SCU hostname is blacklisted - shall not pass")
+            raise Exception("On blacklisted")
+        else:
+            self.logger.info("SCU host validated - you shall pass!")
+            return
     def handle_established(self, event):
         # Association id unique to this transaction
         # Set up all the things
@@ -87,8 +96,11 @@ class SCP:
 
         # Unwrap sender info
         sender = Destination(host=event.assoc.requestor.address,
-                                             port=event.assoc.requestor.port,
-                                             ae_title=event.assoc.requestor._ae_title)
+                             port=event.assoc.requestor.port,
+                             ae_title=event.assoc.requestor._ae_title)
+
+        self.validate_scu(sender)
+
         ac.flow_context.sender = sender
         # Add to assocs dict
         self.assoc[assoc_id] = ac

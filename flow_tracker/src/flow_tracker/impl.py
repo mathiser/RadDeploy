@@ -32,6 +32,7 @@ class FlowTracker:
                 if rule["on_routing_key"] in [basic_deliver.routing_key, "#"]:
                     self.db.maybe_insert_row(uid=context.flow_instance_uid,
                                              name=context.flow.name,
+                                             version=context.flow.version,
                                              patient=self.generate_pseudonym(context.file_metas[0]),
                                              sender=context.sender.host,
                                              priority=context.flow.priority,

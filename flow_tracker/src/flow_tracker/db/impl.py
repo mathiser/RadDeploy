@@ -25,6 +25,7 @@ class Database:
     def maybe_insert_row(self,
                          uid: str,
                          name: str,
+                         version: str,
                          patient: str,
                          sender: str,
                          priority: int,
@@ -38,7 +39,8 @@ class Database:
                           Patient=patient,
                           Sender=sender,
                           Priority=priority,
-                          Destinations=destinations)
+                          Destinations=destinations,
+                          Version=version)
                 session.add(row)
                 session.commit()
                 session.refresh(row)

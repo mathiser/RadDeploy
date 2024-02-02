@@ -8,7 +8,7 @@ from DicomFlowLib.data_structures.contexts import PubModel
 from DicomFlowLib.fs.file_storage_client import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQPub
-from scp import SCP
+from DicomFlowLib.scp import SCP
 
 
 class Main:

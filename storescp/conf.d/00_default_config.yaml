@@ -11,11 +11,11 @@ LOG_PUB_MODELS:
   - exchange: logs
 
 # File Storage
-FILE_STORAGE_URL: "http://file-storage:2244"
+FILE_STORAGE_URL: "http://file-storage:80"
 
 # SCP
-AE_TITLE: "STORESCP"
-AE_HOSTNAME: "DICOMFLOW"
+AE_TITLE: "DICOM_FLOW"
+AE_HOSTNAME: "storescp"
 AE_PORT: 10000
 AE_BLACKLISTED_HOSTS: []
 AE_WHITELISTED_HOSTS: null

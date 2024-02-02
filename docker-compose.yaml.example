@@ -7,7 +7,6 @@ services:
       context: "base"
       dockerfile: "Dockerfile"
 
-
   rabbit:
     hostname: "rabbit"
     restart: always

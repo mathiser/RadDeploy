@@ -11,7 +11,7 @@ LOG_PUB_MODELS:
   - exchange: logs
 
 # File Storage
-FILE_STORAGE_URL: "http://file-storage:2244"
+FILE_STORAGE_URL: "http://file-storage:80"
 
 # Janitor
 DATABASE_PATH: "/opt/DicomFlow/database/database.sqlite"

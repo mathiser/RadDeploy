@@ -7,7 +7,7 @@ from DicomFlowLib.data_structures.contexts import PubModel, SubModel
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
-from scu import SCU
+from storescu import STORESCU
 
 
 class Main:
@@ -25,10 +25,10 @@ class Main:
         self.fs = FileStorageClient(logger=self.logger,
                                     file_storage_url=config["FILE_STORAGE_URL"])
 
-        self.scu = SCU(file_storage=self.fs,
-                       logger=self.logger,
-                       pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
-                       pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"])
+        self.scu = STORESCU(file_storage=self.fs,
+                            logger=self.logger,
+                            pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
+                            pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"])
 
         self.mq = MQSub(logger=self.logger,
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
@@ -43,7 +43,7 @@ class Main:
     def start(self):
         self.logger.debug("Starting SCU", finished=False)
         self.running = True
-        
+
         self.mq.start()
         self.logger.debug("Starting SCU", finished=True)
 
