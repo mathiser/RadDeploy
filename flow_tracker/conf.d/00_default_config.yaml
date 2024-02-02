@@ -1,5 +1,5 @@
 # RabbitMQ
-RABBIT_HOSTNAME: "localhost"
+RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging

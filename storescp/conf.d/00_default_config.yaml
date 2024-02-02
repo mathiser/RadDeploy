@@ -1,5 +1,5 @@
 # RabbitMQ
-RABBIT_HOSTNAME: "localhost"
+RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging
@@ -11,12 +11,14 @@ LOG_PUB_MODELS:
   - exchange: logs
 
 # File Storage
-FILE_STORAGE_URL: "http://localhost:2244"
+FILE_STORAGE_URL: "http://file-storage:2244"
 
 # SCP
 AE_TITLE: "STORESCP"
-AE_HOSTNAME: "localhost"
+AE_HOSTNAME: "DICOMFLOW"
 AE_PORT: 10000
+AE_BLACKLISTED_HOSTS: []
+AE_WHITELISTED_HOSTS: null
 PYNETDICOM_LOG_LEVEL: "standard"
 TAR_SUBDIR: []
 PUB_ROUTING_KEY_ERROR: "error"

@@ -1,5 +1,5 @@
 # RabbitMQ
-RABBIT_HOSTNAME: "localhost"
+RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging
@@ -11,7 +11,7 @@ LOG_PUB_MODELS:
   - exchange: logs
 
 # File Storage
-FILE_STORAGE_URL: "http://localhost:2244"
+FILE_STORAGE_URL: "http://file-storage:2244"
 
 # STORESCU
 SUB_QUEUE_KWARGS:
