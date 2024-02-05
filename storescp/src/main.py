@@ -4,7 +4,7 @@ import signal
 from typing import Dict
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts import PubModel
+from DicomFlowLib.mq import PubModel
 from DicomFlowLib.fs.file_storage_client import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQPub

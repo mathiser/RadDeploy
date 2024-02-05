@@ -3,6 +3,7 @@ import os
 import shutil
 import tarfile
 import tempfile
+import threading
 import time
 from io import BytesIO
 from typing import List, Iterable, Dict
@@ -72,7 +73,7 @@ class DockerConsumer:
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         fc = FlowContext(**json.loads(body.decode()))
-        model = fc.flow.models[fc.active_model]
+        model = fc.active_model
 
         self.logger.info(f"RUNNING FLOW", finished=False)
 
@@ -97,8 +98,7 @@ class DockerConsumer:
 
         # generate dummy binds for all mounts
         kwargs["volumes"] = []
-        for src_dst in {**model.input_mounts, **model.output_mounts, **model.static_mounts}:
-            src, dst = src_dst.split(":")
+        for src, dst in {**model.input_mounts, **model.output_mounts, **model.static_mounts}.items():
             kwargs["volumes"].append(f'{tempfile.mkdtemp()}:{dst}')
 
         # Allow GPU usage. If int, use as count, if str use as uuid
@@ -114,24 +114,20 @@ class DockerConsumer:
             container.reload()
 
             # Mount inputs
-            for uid_dst in model.remapped_input_mount_keys(mount_mapping):  # remap to use actual uid from the file_storage
-                uid, dst = uid_dst.split(":")
+            for uid, dst in model.remapped_input_mount_keys(mount_mapping).items():  # remap to use actual uid from the file_storage
                 container.put_archive(dst, self.fs.get(uid))
 
             # Mount statics
-            for uid_dst in model.static_mounts:
-                uid, dst = uid_dst.split(":")
+            for uid, dst in model.static_mounts.items():
                 container.put_archive(dst, self.ss.get(uid))  # Get static from static storage
 
             # Run the container
             container.start()
             result = container.wait(timeout=model.timeout)  # Blocks...
-            self.assert_container_status(result=result)
 
-            self.logger.info(container.logs().decode())
+            self.assert_container_status(container=container, result=result)
 
-            for src_dst in model.output_mounts:
-                src, dst = src_dst.split(":")
+            for src, dst in model.output_mounts.items():
                 tar = self.get_archive(container=container, path=dst)
                 uid = self.fs.post(tar)
                 mount_mapping[src] = uid
@@ -142,37 +138,43 @@ class DockerConsumer:
             self.logger.error(e)
             raise e
         finally:
-            self.remove_temp_dirs(kwargs["volumes"])
-            self.delete_container(container)
+            self.clean_up(container, kwargs)
 
-    def assert_container_status(self, result):
+    def assert_container_status(self, container, result):
         self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
+        self.logger.info(container.logs().decode())
+
         if result["StatusCode"] != 0:
             self.logger.error("Flow execution failed")
             raise Exception("Flow did not exit with code 0.")
         else:
             self.logger.info("Flow execution succeeded")
 
-    def delete_container(self, container):
+    def clean_up(self, container, kwargs):
+        threading.Thread(target=self.delete_container, args=(container.short_id, )).start()
+        threading.Thread(target=self.remove_temp_dirs, args=(kwargs["volumes"], )).start()
+
+    def delete_container(self, container_id):
         counter = 0
         while counter < 5:
-            self.logger.debug(f"Attempting to remove container {container.short_id}", finished=False)
+            self.logger.debug(f"Attempting to remove container {container_id}", finished=False)
             try:
-                c = self.cli.containers.get(container.short_id)
+                c = self.cli.containers.get(container_id)
                 c.remove(force=True)
-                break
+                self.logger.debug(f"Attempting to remove container {container_id}", finished=False)
+                return
             except errors.NotFound:
-                break
+                return
             except Exception as e:
-                self.logger.debug(f"Failed to remove {container.short_id}. Trying again in 5 sec...", uid=self.uid,
-                                  finished=True)
+                self.logger.debug(f"Failed to remove {container_id}. Trying again in 5 sec...", finished=True)
                 counter += 1
                 time.sleep(5)
+
 
     def remove_temp_dirs(self, volumes):
         # Delete dummy directories from mounts. These are empty, so no loss if this fails for some reason.
         for src_dst in volumes:
-            src, dst, perm = src_dst.split(":")
+            src, dst = src_dst.split(":")
             if os.path.exists(src):
                 shutil.rmtree(src)
 

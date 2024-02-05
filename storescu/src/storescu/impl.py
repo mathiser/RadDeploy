@@ -22,31 +22,32 @@ class STORESCU(SCU):
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
 
-        context = FlowContext(**json.loads(body.decode()))
-        self.uid = context.flow_instance_uid
+        fc\
+            = FlowContext(**json.loads(body.decode()))
+        self.uid = fc.uid
 
         self.logger.info("SCU", uid=self.uid, finished=False)
 
         self.logger.info("EXTRACTING FILE(S)", uid=self.uid, finished=False)
         with tempfile.TemporaryDirectory() as tmp_dir:
-            output_tar = self.fs.get(context.output_file_uid)
+            output_tar = self.fs.get(fc.mount_mapping["dst"])
             with tarfile.TarFile.open(fileobj=output_tar, mode="r:*") as tf:
                 tf.extractall(tmp_dir)
 
             self.logger.info("EXTRACTING FILE(S)", uid=self.uid, finished=True)
 
-            for port in context.flow.return_to_sender_on_ports:
+            for port in fc.flow.return_to_sender_on_ports:
                 self.logger.info(
-                    f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}",
+                    f"POSTING TO SENDER: {fc.sender.ae_title} ON: {fc.sender.host}:{fc.sender.port}",
                     uid=self.uid, finished=False)
-                sender = context.sender
+                sender = fc.sender
                 sender.port = port
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=sender)
                 self.logger.info(
-                    f"POSTING TO SENDER: {context.sender.ae_title} ON: {context.sender.host}:{context.sender.port}",
+                    f"POSTING TO SENDER: {fc.sender.ae_title} ON: {fc.sender.host}:{fc.sender.port}",
                     uid=self.uid, finished=True)
 
-            for dest in context.flow.destinations:
+            for dest in fc.flow.destinations:
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid,finished=False)
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid, finished=True)
@@ -55,4 +56,4 @@ class STORESCU(SCU):
         self.logger.info("SCU", uid=self.uid, finished=True)
         self.uid = None
 
-        return [PublishContext(body=context.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
+        return [PublishContext(body=fc.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]

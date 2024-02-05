@@ -5,7 +5,7 @@ import pandas as pd
 import pydicom
 
 from DicomFlowLib.data_structures.flow import Flow
-from ..impl import parse_file_metas, fingerprint, parse_fingerprints
+from .utils import parse_file_metas, fingerprint, parse_fingerprints
 
 class TestFP(unittest.TestCase):
     def test_parse_file_metas(self):

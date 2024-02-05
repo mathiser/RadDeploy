@@ -1,7 +1,7 @@
 import os
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts import PubModel
+from DicomFlowLib.mq import PubModel
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.fs import FileStorageServer
 

@@ -22,7 +22,7 @@ SUB_QUEUE_KWARGS:
     auto_delete: True
 SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
-  - exchange: "consumer"
+  - exchange: "scheduler"
     exchange_type: "topic"
     routing_key: "success"
     routing_key_fetch_echo: "fetch"

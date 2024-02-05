@@ -1,11 +1,11 @@
 import logging
 import os
 import queue
-import threading
+
 from typing import List
 
-from DicomFlowLib.data_structures.contexts import PublishContext, PubModel
-from DicomFlowLib.mq import MQPub
+from DicomFlowLib.data_structures.contexts import PublishContext
+from DicomFlowLib.mq import PubModel, MQPub
 
 
 class CollectiveLogger:

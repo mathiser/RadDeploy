@@ -4,7 +4,7 @@ import unittest
 import uuid
 
 import yaml
-from scheduler.impl import Scheduler
+from scheduler import Scheduler
 
 from DicomFlowLib.data_structures.contexts import FlowContext
 from DicomFlowLib.data_structures.flow import Flow

@@ -2,7 +2,7 @@ import os
 import signal
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts.pub_context import SubModel, PubModel
+from DicomFlowLib.mq import PubModel, SubModel
 from DicomFlowLib.fs import FileStorageClient
 
 from DicomFlowLib.log import CollectiveLogger

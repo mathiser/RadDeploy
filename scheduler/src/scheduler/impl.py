@@ -22,8 +22,11 @@ class Scheduler:
         self.dispatched_flows: Dict[str, List[int]] = {}
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
+        print(basic_deliver)
         fc = FlowContext(**json.loads(body.decode()))
+        print(basic_deliver, fc)
         for new_fc, routing_key in self.schedule_from_flow_context(fc):
+            print(routing_key, new_fc)
             yield PublishContext(body=new_fc.model_dump_json().encode(), routing_key=routing_key)
 
     def schedule_from_flow_context(self, fc: FlowContext) -> Iterable[Tuple[FlowContext, str]]:

@@ -32,7 +32,6 @@ SUB_MODELS:
     exchange_type: "topic"
     routing_key: "cpu"
     routing_key_fetch_echo: "fetch"
-
   - exchange: "scheduler"
     exchange_type: "topic"
     routing_key: "gpu"

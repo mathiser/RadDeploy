@@ -6,7 +6,7 @@ return_to_sender_on_port: [10002]
 models:
   - docker_kwargs:
       image: busybox
-      command: sh -c 'echo $HEST; cd /input; cp -r * /output/'
+      command: sh -c 'echo $HEST; cd /input; cp -r * /output/1; cp -r * /output/2'
     input_mounts:
       src: /input
     output_mounts:
@@ -32,7 +32,7 @@ models:
 
   - docker_kwargs:
       image: busybox
-      command: sh -c 'echo $HEST; cd /input; cp -r * /output/;'
+      command: sh -c 'echo $HEST; for fol in /struct /struct1 /ct; do cd $fol; cp -r * /output/; done'
     input_mounts:
       STRUCT_POSTPROCESS: /struct
       STRUCT_POSTPROCESS1: /struct1

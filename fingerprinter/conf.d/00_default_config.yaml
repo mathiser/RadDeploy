@@ -14,7 +14,7 @@ LOG_PUB_MODELS:
 FILE_STORAGE_URL: "http://file-storage:80"
 
 # FINGERPRINTER
-FLOW_DIRECTORY: "/opt/DicomFlow/flows.bak"
+FLOW_DIRECTORY: "/opt/DicomFlow/flows"
 SUB_QUEUE_KWARGS:
   queue: ""
   passive: False

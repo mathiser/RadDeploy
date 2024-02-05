@@ -4,7 +4,7 @@ from typing import Iterable
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext, SCPContext
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
-from DicomFlowLib.fp import parse_fingerprints, fingerprint, parse_file_metas
+from .fp_utils import parse_fingerprints, fingerprint, parse_file_metas
 
 
 class Fingerprinter:
