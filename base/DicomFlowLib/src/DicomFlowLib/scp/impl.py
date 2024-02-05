@@ -4,6 +4,7 @@ import tempfile
 from io import BytesIO
 from typing import Dict, List
 
+from pydicom.filewriter import write_file_meta_info
 from pynetdicom import AE, evt, StoragePresentationContexts, _config, VerificationPresentationContexts
 from pynetdicom.events import Event
 from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, PubModel
@@ -42,7 +43,10 @@ class SCP:
                  routing_key_fail: str,
                  mq_pub: MQPub,
                  blacklisted_hosts: List[str] | None = None,
-                 whitelisted_hosts: List[str] | None = None):
+                 whitelisted_hosts: List[str] | None = None,
+                 maximum_pdu_size: int = 0):
+
+        self.maximum_pdu_size = maximum_pdu_size
         self.logger = logger
         self.fs = file_storage
         self.ae = None
@@ -110,10 +114,10 @@ class SCP:
                              ae_title=event.assoc.requestor._ae_title)
 
         ac.flow_context.sender = sender
+
         # Add to assocs dict
         self.assoc[assoc_id] = ac
         self.logger.debug(f"INIT_STORESCP", uid=ac.flow_context.uid, finished=True)
-
 
     def handle_store(self, event):
         self.maybe_init_store(event)
@@ -138,21 +142,16 @@ class SCP:
         path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
 
         self.logger.debug(f"Writing dicom to path {path_in_tar}")
-
-        try:
-            with tempfile.TemporaryFile() as tf:
-                ds.save_as(tf, write_like_original=False)
-                assoc_context.add_file_to_tar(path_in_tar, tf)  ## does not need to seek(0)
-        except Exception as e:
-            self.logger.error(str(e))
-            raise e
-
+        with tempfile.TemporaryFile() as f:
+            f.write(b'\x00' * 128)  # Write the preamble
+            f.write(b'DICM')  # Write prefix
+            write_file_meta_info(f, event.file_meta)  # Encode and write the File Meta Information
+            f.write(event.request.DataSet.getvalue())  # Write the encoded dataset
+            assoc_context.add_file_to_tar(path_in_tar, f)  ## does not need to seek(0)
         self.logger.debug(f"HANDLE_STORE", uid=uid, finished=True)
 
         # Return a 'Success' status
         return 0x0000
-
-
 
     def handle_release(self, event: Event):
         self.maybe_release_storescp(event)
@@ -186,6 +185,7 @@ class SCP:
     def handle_echo(self, event):
         self.logger.debug(f"Replying to ECHO", finished=True)
         return 0x0000
+
     def publish_main_context(self, assoc_context):
         for pub_model in self.pub_models:
             pub_context = PublishContext(
@@ -199,6 +199,7 @@ class SCP:
         assoc_context.tar.close()
         assoc_context.file.seek(0)
         return self.fs.post(assoc_context.file)
+
     def stop(self, signalnum=None, stack_frame=None):
         self.ae.shutdown()
 
@@ -219,7 +220,7 @@ class SCP:
             self.ae = AE(ae_title=self.ae_title)
             self.ae.supported_contexts = StoragePresentationContexts + VerificationPresentationContexts
 
-            self.ae.maximum_pdu_size = 0
+            self.ae.maximum_pdu_size = self.maximum_pdu_size
             self.ae.start_server((self.hostname, self.port), block=blocking, evt_handlers=handler)
             self.logger.info(
                 f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}",
