@@ -3,7 +3,7 @@ RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging
-LOG_NAME: "FINGERPRINTER"
+LOG_NAME: "CONSUMER"
 LOG_DIR: "/opt/DicomFlow/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
@@ -13,17 +13,12 @@ LOG_PUB_MODELS:
 # File Storage
 FILE_STORAGE_URL: "http://file-storage:80"
 
-# FINGERPRINTER
-FLOW_DIRECTORY: "/opt/DicomFlow/flows.bak"
-SUB_QUEUE_KWARGS:
-  queue: ""
-  passive: False
-  durable: False
-  exclusive: False
-  auto_delete: True
+# Static Storage
+STATIC_STORAGE_URL: "http://static-storage:80"
+
 SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
-  - exchange: "storescp"
+  - exchange: "fingerprinter"
     exchange_type: "topic"
     routing_key: "success"
     routing_key_fetch_echo: "fetch"
@@ -31,8 +26,6 @@ SUB_MODELS:
 PUB_ROUTING_KEY_ERROR: "error"
 PUB_ROUTING_KEY_SUCCESS: "success"
 PUB_ROUTING_KEY_FAIL: "fail"
-PUB_MODELS:
-  - exchange: "fingerprinter"
-    exchange_type: "topic"
-
+PUB_ROUTING_KEY_GPU: "gpu"
+PUB_ROUTING_KEY_CPU: "cpu"
 

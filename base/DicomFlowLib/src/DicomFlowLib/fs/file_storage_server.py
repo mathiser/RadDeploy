@@ -45,50 +45,60 @@ class FileStorageServer(FastAPI):
         def clone(uid: str):
             if not self.allow_clone:
                 raise HTTPException(status_code=405, detail="Method not allowed")
+            if not self.file_exists(uid):
+                raise HTTPException(404, "FileNotFoundError")
             return self.clone_file(uid)
 
         @self.delete("/")
         def delete(uid: str):
             if not self.allow_delete:
                 raise HTTPException(status_code=405, detail="Method not allowed")
+            if not self.file_exists(uid):
+                raise HTTPException(404, "FileNotFoundError")
             return self.delete_file(uid)
 
         @self.get("/")
         def get(uid: str) -> FileResponse:
             if not self.allow_get:
                 raise HTTPException(status_code=405, detail="Method not allowed")
-            return self.get_file(uid)
+            if not self.file_exists(uid):
+                raise HTTPException(404, "FileNotFoundError")
+            return FileResponse(self.get_file(uid))
 
         @self.get("/hash")
-        def get_hash(uid: str) -> str:
+        def get_hash(uid: str):
             if not self.allow_get:
                 raise HTTPException(status_code=405, detail="Method not allowed")
+            if not self.file_exists(uid):
+                raise HTTPException(404, "FileNotFoundError")
             return self.get_hash(uid)
+        
+        @self.get("/exists")
+        def exists(uid: str):
+            if not self.allow_get:
+                raise HTTPException(status_code=405, detail="Method not allowed")
+            return self.file_exists(uid)
 
     def get_hash(self, uid: str):
         self.logger.debug(f"Serving hash of: {uid}", finished=False)
-        assert self.file_exists(uid)
         return hash_file(self.get_file_path(uid))
 
     def get_file(self, uid: str):
         self.logger.debug(f"Serving file with uid: {uid}", finished=False)
-        assert self.file_exists(uid)
         try:
-            return FileResponse(self.get_file_path(uid))
+            return self.get_file_path(uid)
         finally:
             if self.delete_on_get:
                 self.delete_file(uid)
 
     def delete_file(self, uid: str):
         self.logger.debug(f"Deleting file with uid: {uid}", finished=False)
-        assert self.file_exists(uid)
         os.remove(self.get_file_path(uid))
         return "success"
 
     def clone_file(self, uid: str):
         new_uid = str(uuid.uuid4())
         self.logger.debug(f"Clone file on uid: {uid} to new uid: {new_uid}", finished=False)
-        assert self.file_exists(uid)
         os.link(self.get_file_path(uid), self.get_file_path(new_uid))
         return new_uid
 
@@ -108,10 +118,7 @@ class FileStorageServer(FastAPI):
         return os.path.join(self.base_dir, uid + self.suffix)
 
     def file_exists(self, uid):
-        b = os.path.isfile(self.get_file_path(uid))
-        if not b:
-            raise HTTPException(404, "FileNotFoundError")
-        return b
-
+        return os.path.isfile(self.get_file_path(uid))
+       
     def start(self):
         uvicorn.run(app=self, host=self.host, port=self.port)

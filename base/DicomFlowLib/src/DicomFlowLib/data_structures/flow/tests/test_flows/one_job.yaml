@@ -1,0 +1,37 @@
+name: "dag_flow.yaml"
+triggers:
+  - Modality: ["MR"]
+
+models:
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $HEST; cd /input; cp -r * /output/'
+    input_mounts:
+      src: /input
+    output_mounts:
+      CT: /output1
+      STRUCT: /output2
+      S: /output3
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $HEST; cd /input; cp -r * /output/'
+    input_mounts:
+      STRUCT: /input
+      S: /asfd
+    output_mounts:
+      STRUCT_POSTPROCESS: /output
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $HEST; cd /input; cp -r * /output/;'
+    input_mounts:
+      STRUCT_POSTPROCESS: /struct
+      CT: /ct
+    output_mounts:
+      dst: /output
+
+
+destinations: []
+
+priority: 1

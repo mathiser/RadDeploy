@@ -1,0 +1,46 @@
+name: "dag_flow.yaml"
+triggers:
+  - Modality: ["MR"]
+return_to_sender_on_port: [10002]
+
+models:
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $HEST; cd /input; cp -r * /output/'
+    input_mounts:
+      src: /input
+    output_mounts:
+      CT: /output1
+      STRUCT: /output2
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $HEST; cd /input; cp -r * /output/'
+    input_mounts:
+      STRUCT: /input
+    output_mounts:
+      STRUCT_POSTPROCESS1: /output
+    gpu: True
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $HEST; cd /input; cp -r * /output/'
+    input_mounts:
+      STRUCT: /input
+    output_mounts:
+      STRUCT_POSTPROCESS: /output
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'echo $HEST; cd /input; cp -r * /output/;'
+    input_mounts:
+      STRUCT_POSTPROCESS: /struct
+      STRUCT_POSTPROCESS1: /struct1
+      CT: /ct
+    output_mounts:
+      dst: /output
+
+
+destinations: []
+
+priority: 1

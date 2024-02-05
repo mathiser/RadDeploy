@@ -19,17 +19,23 @@ STATIC_STORAGE_CACHE_DIR: "/opt/DicomFlow/static"
 
 # CONSUMER
 SUB_QUEUE_KWARGS:
-  queue: "FINGERPRINTER.SUCCESS"
+  queue: "SCHEDULED"
   passive: False
   durable: False
   exclusive: False
   auto_delete: False
 
+
 SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
-  - exchange: "fingerprinter"
+  - exchange: "scheduler"
     exchange_type: "topic"
-    routing_key: "success"
+    routing_key: "cpu"
+    routing_key_fetch_echo: "fetch"
+
+  - exchange: "scheduler"
+    exchange_type: "topic"
+    routing_key: "gpu"
     routing_key_fetch_echo: "fetch"
 
 PUB_ROUTING_KEY_ERROR: "error"

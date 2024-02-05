@@ -1,7 +1,7 @@
 import json
 from typing import Iterable
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
+from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext, SCPContext
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.fp import parse_fingerprints, fingerprint, parse_file_metas
@@ -24,24 +24,21 @@ class Fingerprinter:
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         results = []
-        org_context = FlowContext(**json.loads(body.decode()))
-        self.uid = org_context.uid
+        scp_context = SCPContext(**json.loads(body.decode()))
+        self.uid = scp_context.uid
 
-        ds = parse_file_metas(org_context.file_metas)
+        ds = parse_file_metas(scp_context.file_metas)
 
         for flow in parse_fingerprints(self.flow_directory):
             if fingerprint(ds, flow.triggers):
                 self.logger.info(f"MATCHING FLOW", uid=self.uid, finished=True)
-                context = org_context.model_copy(deep=True)
-                context.add_flow(flow.model_copy(deep=True))
-
-                # Provide a link to the input file
-                context.input_file_uid = self.fs.clone(org_context.input_file_uid)
+                flow_context = FlowContext(flow=flow.copy(deep=True),
+                                           src_uid=self.fs.clone(scp_context.input_file_uid))
 
                 # Publish the context
                 results.append(
                     PublishContext(routing_key=self.routing_key_success,
-                                   body=context.model_dump_json().encode(),
+                                   body=flow_context.model_dump_json().encode(),
                                    priority=flow.priority)
                 )
 
@@ -49,8 +46,7 @@ class Fingerprinter:
                 self.logger.info(f"NOT MATCHING FLOW", uid=self.uid, finished=True)
                 results.append(
                     PublishContext(routing_key=self.routing_key_fail,
-                                   body=org_context.model_dump_json().encode(),
-                                   priority=flow.priority)
-                )
+                                   body=scp_context.model_dump_json().encode(),
+                                   priority=flow.priority))
         self.uid = None
         return results

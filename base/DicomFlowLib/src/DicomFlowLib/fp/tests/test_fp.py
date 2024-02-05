@@ -14,7 +14,7 @@ class TestFP(unittest.TestCase):
         self.assertEqual(type(df), pd.DataFrame)
 
     def test_parse_fingerprints(self):
-        flows = parse_fingerprints("fp/tests/test_data/flows/")
+        flows = parse_fingerprints("fp/tests/test_data/flows.bak/")
         for flow in flows:
             self.assertEqual(type(flow), Flow)
 
@@ -27,7 +27,7 @@ class TestFP(unittest.TestCase):
 
         ds = parse_file_metas(file_metas)
         print(ds["Modality"])
-        flows = parse_fingerprints("fp/tests/test_data/flows")
+        flows = parse_fingerprints("fp/tests/test_data/flows.bak")
         for flow in flows:
             self.assertEqual(flow.optional_kwargs["pass"], fingerprint(ds, flow.triggers))
 
