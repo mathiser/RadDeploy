@@ -20,19 +20,11 @@ SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"
-    routing_key: "success"
+    routing_keys: ["success"]
     routing_key_fetch_echo: "fetch"
   - exchange: "consumer"
     exchange_type: "topic"
-    routing_key: "success"
-    routing_key_fetch_echo: "fetch"
-  - exchange: "consumer"
-    exchange_type: "topic"
-    routing_key: "error"
-    routing_key_fetch_echo: "fetch"
-  - exchange: "consumer"
-    exchange_type: "topic"
-    routing_key: "fail"
+    routing_keys: ["success", "error", "fail"]
     routing_key_fetch_echo: "fetch"
 
 

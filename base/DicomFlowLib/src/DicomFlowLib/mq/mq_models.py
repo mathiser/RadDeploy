@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel
 
 
@@ -7,6 +9,6 @@ class PubModel(BaseModel):
 
 
 class SubModel(PubModel):
-    routing_key: str
+    routing_keys: List[str]
     routing_key_fetch_echo: str | None = None
 

@@ -57,8 +57,8 @@ class MQSub(MQBase):
         self._thread_lock = threading.Lock()
         self._threads = []
 
-        self.sub_models = sub_models
-        self.pub_models = pub_models
+        self.sub_models = {sm.exchange: sm for sm in sub_models}
+        self.pub_models = {pm.exchange: pm for pm in pub_models}
         self.pub_routing_key_error = pub_routing_key_error
         self.sub_queue_kwargs = sub_queue_kwargs
         self.queue = None
@@ -69,7 +69,7 @@ class MQSub(MQBase):
         self.queue = self.setup_queue(**self.sub_queue_kwargs)
 
         # Declare exchange
-        for sub in self.sub_models:
+        for sub in self.sub_models.values():
             self.setup_exchange(exchange=sub.exchange, exchange_type=sub.exchange_type)
 
             for rk in sub.routing_keys:
@@ -87,16 +87,14 @@ class MQSub(MQBase):
         self._channel.start_consuming()
 
     def fetch_echo(self, basic_deliver, body):
-        for sub_model in self.sub_models:
-            if sub_model.exchange == basic_deliver.exchange and sub_model.routing_key == basic_deliver.routing_key:
-                self.basic_publish_callback(exchange=sub_model.exchange,
-                                            routing_key=sub_model.routing_key_fetch_echo,
-                                            body=body)
-            self.process_event_data()
+        self.basic_publish_callback(exchange=basic_deliver.exchange,
+                                    routing_key=self.sub_models[basic_deliver.exchange].routing_key_fetch_echo,
+                                    body=body)
+        self.process_event_data()
 
     def publish_on_all_pub_models(self,
                                   result: PublishContext):
-        for pub_model in self.pub_models:
+        for pub_model in self.pub_models.values():
             self.logger.debug(f"publishing on exchange: {pub_model.exchange} with routing key: {result.routing_key}")
 
             self.basic_publish_callback(exchange=pub_model.exchange,

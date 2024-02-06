@@ -30,7 +30,7 @@ class Scheduler:
             yield PublishContext(body=new_fc.model_dump_json().encode(), routing_key=routing_key)
 
     def schedule_from_flow_context(self, fc: FlowContext) -> Iterable[Tuple[FlowContext, str]]:
-        self.update_mount_mapping(fc)
+        fc = self.update_mount_mapping(fc)
         if self.check_flow_finished(fc):
             yield fc, self.pub_routing_key_success
             del self.mount_mapping[fc.uid]
@@ -46,6 +46,8 @@ class Scheduler:
             self.mount_mapping[fc.uid] = {}
 
         self.mount_mapping[fc.uid] = {**self.mount_mapping[fc.uid], **fc.mount_mapping}
+        fc.mount_mapping = self.mount_mapping[fc.uid]
+        return fc
 
     def get_mapping_by_uid(self, flow_context_uid: str):
         return self.mount_mapping[flow_context_uid]
