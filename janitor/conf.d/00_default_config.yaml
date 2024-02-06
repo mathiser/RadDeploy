@@ -50,10 +50,10 @@ SUB_PREFETCH_COUNT: 10
 SUB_MODELS:
   - exchange: "storescp"
     exchange_type: "topic"
-    routing_key: "#"
+    routing_keys: ["#"]
   - exchange: "fingerprinter"
     exchange_type: "topic"
-    routing_key: "success"
+    routing_keys: ["#"]
   - exchange: "storescu"
     exchange_type: "topic"
-    routing_key: "#"
+    routing_keys: ["#"]

@@ -72,8 +72,9 @@ class MQSub(MQBase):
         for sub in self.sub_models:
             self.setup_exchange(exchange=sub.exchange, exchange_type=sub.exchange_type)
 
-            # Declare queue
-            self.bind_queue(queue=self.queue, exchange=sub.exchange, routing_key=sub.routing_key)
+            for rk in sub.routing_keys:
+                # Declare queue
+                self.bind_queue(queue=self.queue, exchange=sub.exchange, routing_key=rk)
 
             self.logger.debug(f"Setting up sub model {sub}", finished=True)
         # Set prefetch value

@@ -24,7 +24,7 @@ SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
   - exchange: "scheduler"
     exchange_type: "topic"
-    routing_key: "success"
+    routing_keys: ["success"]
     routing_key_fetch_echo: "fetch"
 PUB_ROUTING_KEY_ERROR: "error"
 PUB_ROUTING_KEY_SUCCESS: "success"

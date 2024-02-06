@@ -45,5 +45,5 @@ class FlowTracker:
         ds = pydicom.Dataset.from_json(file_meta)
         cpr = str(ds.PatientID)[:4]
         full_name = str(ds.PatientName).split("^")
-        name = [name[0] for names in reversed(full_name) for name in names.split(" ")]
+        name = [name[0] for names in full_name for name in names.split(" ")]
         return cpr + "".join(name)
