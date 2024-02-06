@@ -56,7 +56,7 @@ class Database:
 
             if status == 0:
                 pass
-            elif status == 2:
+            elif status == 1:
                 row.Dispatched = _now()
             elif status == 3:
                 row.Finished = _now()
