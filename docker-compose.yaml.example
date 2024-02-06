@@ -7,16 +7,19 @@ services:
       context: "base"
       dockerfile: "Dockerfile"
 
+
   rabbit:
     hostname: "rabbit"
     restart: always
     image: rabbitmq:3-management
+    ports:
+      - 15672:15672
     volumes:
         - ./mounts/rabbit/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
     healthcheck:
       test: rabbitmq-diagnostics -q ping
-      interval: 15s
-      timeout: 15s
+      interval: 30s
+      timeout: 30s
       retries: 3
 
   storescp:
@@ -34,6 +37,7 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=10
 
   fingerprinter:
     hostname: "fingerprinter"
@@ -51,12 +55,27 @@ services:
     volumes:
       - ${FLOWS_DIR}:/opt/DicomFlow/flows
 
-  consumer:
+  scheduler:
+    hostname: "scheduler"
+    restart: always
+    depends_on:
+      - rabbit
+      - base
+    build:
+      context: "scheduler"
+      dockerfile: "Dockerfile"
+      args:
+        BASE_IMAGE: dicom_flow-base
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=10
+
+  cpu_consumer:
     hostname: "consumer"
     restart: always
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 3
     depends_on:
       - rabbit
       - base
@@ -72,6 +91,27 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
+#  gpu_consumer:
+#    hostname: "consumer"
+#    restart: always
+#    deploy:
+#      mode: replicated
+#      replicas: 1
+#    depends_on:
+#      - rabbit
+#      - base
+#    build:
+#      context: "consumer"
+#      dockerfile: "Dockerfile"
+#      args:
+#        BASE_IMAGE: dicom_flow-base
+#    environment:
+#      - PYTHONUNBUFFERED=1
+#      - LOG_LEVEL=20
+#      - GPUS=0
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+
   storescu:
     hostname: "storescu"
     restart: always
@@ -85,20 +125,6 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
-
-  janitor:
-    hostname: "janitor"
-    restart: always
-    depends_on:
-      - rabbit
-    build:
-      context: "janitor"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=10
 
   flow_tracker:
     hostname: "flow-tracker"
@@ -128,6 +154,7 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=10
 
   static_storage:
     hostname: "static-storage"
@@ -148,7 +175,7 @@ services:
     restart: always
     image: grafana/grafana-enterprise
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - "GF_INSTALL_PLUGINS=frser-sqlite-datasource,cloudspout-button-panel"
     volumes:
