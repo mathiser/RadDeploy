@@ -22,7 +22,7 @@ class STORESCU(SCU):
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
 
-        fc\
+        fc \
             = FlowContext(**json.loads(body.decode()))
         self.uid = fc.uid
 
@@ -48,10 +48,10 @@ class STORESCU(SCU):
                     uid=self.uid, finished=True)
 
             for dest in fc.flow.destinations:
-                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid,finished=False)
+                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid,
+                                 finished=False)
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}", uid=self.uid, finished=True)
-
 
         self.logger.info("SCU", uid=self.uid, finished=True)
         self.uid = None

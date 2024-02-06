@@ -28,10 +28,12 @@ class Flow(BaseModel):
     def is_valid_dag(self):
         inputs = set()
         outputs = set()
+        all_output_mounts = []
         G = networkx.MultiDiGraph()
         G.add_nodes_from([i for i, m in enumerate(self.models)])
 
         for i in range(len(self.models)):
+            all_output_mounts += self.models[i].output_mounts.keys()
             for u in range(len(self.models)):
                 outputs_i = set(self.models[i].output_mounts.keys())
                 outputs = outputs.union(outputs_i)
@@ -41,17 +43,23 @@ class Flow(BaseModel):
                 edges = outputs_i.intersection(inputs_u)
                 for e in edges:
                     G.add_edge(i, u, name=e)
-        if "dst" in inputs:
-            raise Exception("'dst' may not be used as input - use only for outputs only")
-        if "src" in outputs:
-            raise Exception("'src' may not be used output - use only for inputs only")
-        if not networkx.is_directed_acyclic_graph(G):
-            raise Exception("is not directed and acyclic")
-        if not inputs.symmetric_difference(outputs) == {"src", "dst"}:
-            resid = inputs.symmetric_difference(outputs)
-            resid.remove("src")
-            resid.remove("dst")
-            raise Exception(f"Invalid mapping - don't know what to do with {resid}")
+        try:
+            if all_output_mounts.count("dst") != 1:
+                raise Exception(f"'dst' must be used only once! Found outputs: {all_output_mounts}")
+            if "dst" in inputs:
+                raise Exception("'dst' may not be used as input - use only for outputs only")
+            if "src" in outputs:
+                raise Exception("'src' may not be used output - use only for inputs only")
+            if not networkx.is_directed_acyclic_graph(G):
+                raise Exception("is not directed and acyclic")
+            if not inputs.symmetric_difference(outputs) == {"src", "dst"}:
+                resid = inputs.symmetric_difference(outputs)
+                resid.remove("src")
+                resid.remove("dst")
+                raise Exception(f"Invalid mapping - don't know what to do with {resid}")
+        except Exception as e:
+            print(self.name, self.models)
+            raise e
         return True
 
 if __name__ == "__main__":

@@ -72,37 +72,79 @@ Regex can be tricky, so go ahead and try out your patterns in a [regex tester](h
 
 
 #### models
-In `models` the actual docker containers are defined. `models` are a list of definitions which are executed in sequence with the output of one container being input for the next.
-Below is a more comprehensive definition of `models`, where input is copied to output twice, while the environment variable "CONTAINER_ORDER" is echoed in each, and GPU is used in the second container only.
+In `models` the actual docker containers are defined. `models` implements a DAG workflow, where two keywords are reserved:
+"src" denotes the received file from the storescp, and "dst" denotes everything that should be sent on to the defined
+destinations. Where "src" may be used multiple time, "dst" can only be used once. Below is a more comprehensive definition of `models`, 
+where five containers (folds of a segmentation model, for instance) are run in parallel across the available consumers, and
+finally merged in a container, which takes the output of the five containers as input. Furthermore, `timeout`, `pull_before_exec` 
+and `static_mounts`. Timeout is the allow runtime of a container. If `pull_before_exec` is set, the image is tried pulled from
+docker hub before each execution. `static_mounts` is a dictionary of files provided by `static_storage`-service, and can be used
+to put sensitive files in containers, which are not build into the container image.
 
 ```
 models:
-  - docker_kwargs:  # All variables in `docker_kwargs` are actually configured through the containers.run interface of [docker-py](https://docker-py.readthedocs.io/en/stable/containers.html), and thus almost any value can be used (some are not allowed per design)
+  - docker_kwargs: # All variables in `docker_kwargs` are actually configured through the containers.run interface of 
+                   # docker-py (https://docker-py.readthedocs.io/en/stable/containers.html), and thus almost any value
+                   # can be used (some are not allowed per design)      
       image: busybox
-      command: sh -c 'echo $CONTAINER_ORDER; cp -r /input /output/'
-      environment:
-        CONTAINER_ORDER: 0
-    gpu: False
-    input_dir: /input/  # This is already default
-    output_dir: /output/  # This is already default
-    
+      command: sh -c 'touch /output/SEG_0'
+    input_mounts:
+      src: /input
+    output_mounts:
+      seg0: /output
+
   - docker_kwargs:
       image: busybox
-      command: sh -c 'echo $CONTAINER_ORDER; cp -r /input /output/'
-      environment:
-        CONTAINER_ORDER: 1
-    gpu: True  # Request GPU support
-    input_dir: /input/
-    output_dir: /output/ 
+      command: sh -c 'touch /output/SEG_1'
+    input_mounts:
+      src: /input
+    output_mounts:
+      seg1: /output
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'touch /output/SEG_2'
+    input_mounts:
+      src: /input
+    output_mounts:
+      seg2: /output
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'touch /output/SEG_3'
+    input_mounts:
+      src: /input
+    output_mounts:
+      seg3: /output
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'touch /output/SEG_4'
+    input_mounts:
+      src: /input
+    output_mounts:
+      seg4: /output
+
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'cp /input*/* /output/; ls -la /output; sleep 10'
+    input_mounts:
+      seg0: /input0
+      seg1: /input1
+      seg2: /input2
+      seg3: /input3
+      seg4: /input4
+    output_mounts:
+      dst: /output
     pull_before_exec: True  # Try to pull "busybox" from hub.docker.com before every execution. 
     timeout: 1800  # default timeout is 1800 seconds. If the container is running for longer, it will be terminated forcefully. This is to avoid hanging container jobs, which obstruct the queue.
     static_mounts: 
       - "AwesomeModel1:/model" # Will make AwesomeModel1 from static_storage available in container's /model
-      - "AwesomeModel2:/model"# giving the container access to static model. 
-                                             # Note "AwesomeModel2" must be mounted to the static_storage service to
-                                             # "/opt/DicomFlow/static" as tar: "/opt/DicomFlow/static/AwesomeModel2.tar"
-                                             # Note that you cannot specify "ro" or "rw" - only one colon should be in the string
-                                             # splitting src_filename:dst_in_container
+      - "AwesomeModel2:/model" # giving the container access to static model. 
+                               # Note "AwesomeModel2" must be mounted to the static_storage service to
+                               # "/opt/DicomFlow/static" as tar: "/opt/DicomFlow/static/AwesomeModel2.tar"
+                               # Note that you cannot specify "ro" or "rw" - only one colon should be in the string
+                               # splitting src_filename:dst_in_container
 
 ```
 #### destinations
@@ -154,8 +196,10 @@ models:
       environment:
         CONTAINER_ORDER: 0
     gpu: False
-    input_dir: /input/
-    output_dir: /output/
+    input_mounts:
+      src: /input
+    output_mounts:
+      first: /output
     
   - docker_kwargs:
       image: busybox
@@ -163,8 +207,10 @@ models:
       environment:
         CONTAINER_ORDER: 1
     gpu: True
-    input_dir: /input/
-    output_dir: /output/
+    input_mounts:
+      first: /input
+    output_mounts:
+      dst: /output
     pull_before_exec: True
     timeout: 1800
     static_mounts: "AwesomeModel1:/model"
@@ -216,7 +262,7 @@ Below is a list of variables which should be adapted to the specific environment
 The DICOM receiver can be adapted with the following variables
 ```
 # SCP
-AE_TITLE: "STORESCP"
+AE_TITLE: "DICOM_FLOW"
 AE_HOSTNAME: "localhost"
 AE_PORT: 10000
 PYNETDICOM_LOG_LEVEL: "standard"

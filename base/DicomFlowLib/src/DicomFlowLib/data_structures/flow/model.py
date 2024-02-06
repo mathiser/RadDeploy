@@ -15,8 +15,8 @@ ALLOWED_KWARGS: List = ["image", "command", "environment", "ports",
 class Model(BaseModel):
     docker_kwargs: Dict
     gpu: str | bool = False
-    input_mounts: Dict[str, str] = {}
-    output_mounts: Dict[str, str] = {}
+    input_mounts: Dict[str, str] = {"src": "/input"}
+    output_mounts: Dict[str, str] = {"dst": "/output"}
     static_mounts: Dict[str, str] = {}
 
     pull_before_exec: bool = True
