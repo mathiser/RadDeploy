@@ -24,13 +24,13 @@ SUB_PREFETCH_COUNT: 1  # Should not be changed
 SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"
-    routing_key: "#"
+    routing_keys: ["#"]
   - exchange: "consumer"
     exchange_type: "topic"
-    routing_key: "#"
+    routing_keys: ["#"]
   - exchange: "storescu"
     exchange_type: "topic"
-    routing_key: "#"
+    routing_keys: ["#"]
 PUB_ROUTING_KEY_ERROR: "error"
 
 # Dashboard Rules:
