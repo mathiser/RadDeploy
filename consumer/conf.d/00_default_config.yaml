@@ -27,10 +27,15 @@ SUB_QUEUE_KWARGS:
 
 
 SUB_PREFETCH_COUNT: 1
-SUB_MODELS:
+CPU_SUB_MODELS:  # Will be used by default.
   - exchange: "scheduler"
     exchange_type: "topic"
-    routing_keys: ["cpu", "gpu"]
+    routing_keys: ["cpu"]
+    routing_key_fetch_echo: "fetch"
+GPU_SUB_MODELS:  # Will be used if GPUS is set
+  - exchange: "scheduler"
+    exchange_type: "topic"
+    routing_keys: ["gpu"]
     routing_key_fetch_echo: "fetch"
 
 PUB_ROUTING_KEY_ERROR: "error"

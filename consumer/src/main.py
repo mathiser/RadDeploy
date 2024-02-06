@@ -32,6 +32,7 @@ class Main:
                                         local_cache=config["STATIC_STORAGE_CACHE_DIR"])
         else:
             self.ss = None
+
         self.consumer = DockerConsumer(logger=self.logger,
                                        file_storage=self.fs,
                                        static_storage=self.ss,
@@ -39,21 +40,25 @@ class Main:
                                        pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
                                        pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"])
 
+        if len(self.consumer.gpus) > 0:
+            self.logger.info("GPUS are set. Changing sub_model routing_key to listen for GPU jobs only")
+            sub_models = config["GPU_SUB_MODELS"]
+        else:
+            sub_models = config["CPU_SUB_MODELS"]
+
         self.mq = MQSub(logger=self.logger,
                         work_function=self.consumer.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
-                        sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
+                        sub_models=[SubModel(**sm) for sm in sub_models],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
                         sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
                         pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"],
-                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
-                        )
+                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]])
 
     def start(self):
         self.running = True
 
-        
         self.mq.start()
         while self.running:
             try:

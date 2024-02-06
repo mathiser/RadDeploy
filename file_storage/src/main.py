@@ -4,6 +4,7 @@ from DicomFlowLib.conf import load_configs
 from DicomFlowLib.mq import PubModel
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.fs import FileStorageServer
+from file_janitor import FileJanitor
 
 
 class Main:
@@ -24,9 +25,13 @@ class Main:
                                     suffix=config["FILE_STORAGE_SUFFIX"],
                                     delete_on_get=False)
 
+        self.fj = FileJanitor(file_storage=self.fs,
+                              logger=self.logger,
+                              delete_files_after=int(config["FILE_JANITOR_DELETE_FILES_AFTER"]),
+                              run_inteval=int(config["FILE_JANITOR_RUN_INTERVAL"]))
     def start(self):
+        self.fj.start()
         self.fs.start()
-
 
 if __name__ == "__main__":
     config = load_configs(os.environ["CONF_DIR"], os.environ["CURRENT_CONF"])

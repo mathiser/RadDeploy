@@ -7,11 +7,10 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import FileResponse
 
 from DicomFlowLib.fs.utils import hash_file
-from DicomFlowLib.log import CollectiveLogger
 
 
 class FileStorageServer(FastAPI):
-    def __init__(self, logger: CollectiveLogger,
+    def __init__(self, logger,
                  base_dir: str,
                  host: str,
                  port: int,
@@ -116,6 +115,8 @@ class FileStorageServer(FastAPI):
 
     def get_file_path(self, uid):
         return os.path.join(self.base_dir, uid + self.suffix)
+    def get_uid_from_path(self, path: str):
+        return path.replace(self.suffix, "").replace(self.base_dir, "").strip("/")
 
     def file_exists(self, uid):
         return os.path.isfile(self.get_file_path(uid))
