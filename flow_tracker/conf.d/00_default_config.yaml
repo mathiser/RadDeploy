@@ -24,6 +24,9 @@ SUB_PREFETCH_COUNT: 1  # Should not be changed
 SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"
+    routing_keys: ["success"]
+  - exchange: "scheduler"
+    exchange_type: "topic"
     routing_keys: ["#"]
   - exchange: "consumer"
     exchange_type: "topic"
@@ -31,34 +34,36 @@ SUB_MODELS:
   - exchange: "storescu"
     exchange_type: "topic"
     routing_keys: ["#"]
+
 PUB_ROUTING_KEY_ERROR: "error"
 
 # Dashboard Rules:
 DASHBOARD_RULES:
-  - on_exchange: "consumer"
-    on_routing_key: "error"
-    status: 400
-  - on_exchange: "storescu"
-    on_routing_key: "error"
+  - on_exchange: "scheduler"
+    on_routing_keys: ["error", "fail"]
     status: 400
   - on_exchange: "consumer"
-    on_routing_key: "fail"
+    on_routing_keys: [ "error", "fail" ]
     status: 400
   - on_exchange: "storescu"
-    on_routing_key: "fail"
+    on_routing_keys: ["error", "fail"]
     status: 400
+
   - on_exchange: "fingerprinter"
-    on_routing_key: "success"
+    on_routing_keys: ["success"]
     status: 0
   - on_exchange: "fingerprinter"
-    on_routing_key: "fetch"
+    on_routing_keys: ["fetch"]
     status: 1
-  - on_exchange: "consumer"
-    on_routing_key: "success"
+  - on_exchange: "scheduler"
+    on_routing_keys: ["fetch"]
     status: 2
-  - on_exchange: "storescu"
-    on_routing_key: "fetch"
+  - on_exchange: "scheduler"
+    on_routing_keys: [ "success" ]
     status: 3
   - on_exchange: "storescu"
-    on_routing_key: "success"
+    on_routing_keys: ["fetch"]
     status: 4
+  - on_exchange: "storescu"
+    on_routing_keys: ["success"]
+    status: 5

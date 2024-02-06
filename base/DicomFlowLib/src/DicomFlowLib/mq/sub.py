@@ -87,10 +87,11 @@ class MQSub(MQBase):
         self._channel.start_consuming()
 
     def fetch_echo(self, basic_deliver, body):
-        self.basic_publish_callback(exchange=basic_deliver.exchange,
-                                    routing_key=self.sub_models[basic_deliver.exchange].routing_key_fetch_echo,
-                                    body=body)
-        self.process_event_data()
+        if self.sub_models[basic_deliver.exchange].routing_key_fetch_echo:
+            self.basic_publish_callback(exchange=basic_deliver.exchange,
+                                        routing_key=self.sub_models[basic_deliver.exchange].routing_key_fetch_echo,
+                                        body=body)
+            self.process_event_data()
 
     def publish_on_all_pub_models(self,
                                   result: PublishContext):
@@ -114,7 +115,8 @@ class MQSub(MQBase):
     def work_function_wrapper(self, basic_deliver, body):
         try:
             result: PublishContext
-            for result in self.work_function(basic_deliver, body):
+            results = self.work_function(basic_deliver, body)
+            for result in results:
                 self.publish_on_all_pub_models(result=result)  # Routing key on success
 
         except Exception as e:

@@ -1,6 +1,7 @@
 import json
 from typing import Iterable, Dict, List
 
+import pandas as pd
 import pydicom
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
@@ -29,21 +30,21 @@ class FlowTracker:
     def update_dashboard_rows(self, basic_deliver, context: FlowContext):
         for rule in self.dashboard_rules:
             if rule["on_exchange"] in [basic_deliver.exchange, "#"]:
-                if rule["on_routing_key"] in [basic_deliver.routing_key, "#"]:
-                    self.db.maybe_insert_row(uid=context.flow_instance_uid,
+                if basic_deliver.routing_key in rule["on_routing_keys"] or "#" in rule["on_routing_keys"]:
+                    self.db.maybe_insert_row(uid=context.uid,
                                              name=context.flow.name,
                                              version=context.flow.version,
-                                             patient=self.generate_pseudonym(context.file_metas[0]),
+                                             patient=self.generate_pseudonym(context.dataframe),
                                              sender=context.sender.host,
                                              priority=context.flow.priority,
                                              destinations=", ".join([f"{d.ae_title} ({d.host})" for d in context.flow.destinations]))
 
-                    self.db.set_status_of_row(context.flow_instance_uid, rule["status"])
+                    self.db.set_status_of_row(context.uid, rule["status"])
 
     @staticmethod
-    def generate_pseudonym(file_meta: str):
-        ds = pydicom.Dataset.from_json(file_meta)
-        cpr = str(ds.PatientID)[:4]
-        full_name = str(ds.PatientName).split("^")
+    def generate_pseudonym(ds: pd.DataFrame):
+        row = ds.iloc[0]
+        cpr = str(row["PatientID"])[:4]
+        full_name = str(row["PatientName"]).split("^")
         name = [name[0] for names in full_name for name in names.split(" ")]
         return cpr + "".join(name)

@@ -48,7 +48,10 @@ class Flow(BaseModel):
         if not networkx.is_directed_acyclic_graph(G):
             raise Exception("is not directed and acyclic")
         if not inputs.symmetric_difference(outputs) == {"src", "dst"}:
-            raise Exception("Make sure inputs and outputs match, and that 'src' and 'dst' is defined")
+            resid = inputs.symmetric_difference(outputs)
+            resid.remove("src")
+            resid.remove("dst")
+            raise Exception(f"Invalid mapping - don't know what to do with {resid}")
         return True
 
 if __name__ == "__main__":

@@ -11,7 +11,8 @@
         "pydantic",
         "pyyaml",
         "requests",
-        "networkx"
+        "networkx",
+        "pandas"
 
     ]
     classifiers = []

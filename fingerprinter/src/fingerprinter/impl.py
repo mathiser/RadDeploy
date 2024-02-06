@@ -33,7 +33,9 @@ class Fingerprinter:
             if fingerprint(ds, flow.triggers):
                 self.logger.info(f"MATCHING FLOW", uid=self.uid, finished=True)
                 flow_context = FlowContext(flow=flow.copy(deep=True),
-                                           src_uid=self.fs.clone(scp_context.input_file_uid))
+                                           src_uid=self.fs.clone(scp_context.input_file_uid),
+                                           dataframe_json=ds.to_json(),
+                                           sender=scp_context.sender)
 
                 # Publish the context
                 results.append(

@@ -2,7 +2,7 @@ import os
 import signal
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts import SubModel, PubModel
+from DicomFlowLib.mq import SubModel, PubModel
 from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from flow_tracker import FlowTracker
@@ -59,7 +59,6 @@ class Main:
         self.logger.stop()
 
         self.mq.join()
-        self.ft.join()
         self.logger.debug("Stopping FlowTracker", finished=True)
 
 
