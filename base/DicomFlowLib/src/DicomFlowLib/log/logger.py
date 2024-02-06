@@ -1,11 +1,11 @@
 import logging
 import os
 import queue
-import threading
+
 from typing import List
 
-from DicomFlowLib.data_structures.contexts import PublishContext, PubModel
-from DicomFlowLib.mq import MQPub
+from DicomFlowLib.data_structures.contexts import PublishContext
+from DicomFlowLib.mq import PubModel, MQPub
 
 
 class CollectiveLogger:
@@ -43,6 +43,7 @@ class CollectiveLogger:
         else:
             self.pub_models = pub_models
 
+        self.mq = None
         if rabbit_hostname and rabbit_port:
             self.mq = MQPub(rabbit_hostname=rabbit_hostname,
                             rabbit_port=rabbit_port,
@@ -64,11 +65,13 @@ class CollectiveLogger:
 
     def log(self, log_obj):
         self.logger.log(level=log_obj["level"], msg=log_obj["msg"])
-        for pub_model in self.pub_models:
-            pub_context = PublishContext(routing_key=str(log_obj["level"]),
-                                         body=log_obj["msg"].encode())
+        if self.mq:
+            for pub_model in self.pub_models:
+                pub_context = PublishContext(routing_key=str(log_obj["level"]),
+                                             body=log_obj["msg"].encode())
 
-            self.mq.add_publish_message(pub_model, pub_context)
+
+                self.mq.add_publish_message(pub_model, pub_context)
 
     def stop(self, signalnum=None, stack_frame=None):
         self.stopping = True

@@ -7,7 +7,8 @@ from typing import Dict, List
 from pydicom.filewriter import write_file_meta_info
 from pynetdicom import AE, evt, StoragePresentationContexts, _config, VerificationPresentationContexts
 from pynetdicom.events import Event
-from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext, PubModel
+from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext
+from DicomFlowLib.mq import PubModel
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger

@@ -2,7 +2,7 @@ import os
 import signal
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts import PubModel, SubModel
+from DicomFlowLib.mq import PubModel, SubModel
 
 from DicomFlowLib.fs import FileStorageClient
 from DicomFlowLib.log import CollectiveLogger
@@ -26,12 +26,10 @@ class Main:
         self.fs = FileStorageClient(logger=self.logger,
                                     file_storage_url=config["FILE_STORAGE_URL"])
 
-        if config["STATIC_STORAGE_URL"] and config["STATIC_STORAGE_CACHE_DIR"]:
-            self.ss = FileStorageClient(logger=self.logger,
-                                        file_storage_url=config["STATIC_STORAGE_URL"],
-                                        local_cache=config["STATIC_STORAGE_CACHE_DIR"])
-        else:
-            self.ss = None
+        self.ss = FileStorageClient(logger=self.logger,
+                                    file_storage_url=config["STATIC_STORAGE_URL"],
+                                    local_cache=config["STATIC_STORAGE_CACHE_DIR"])
+
         self.consumer = DockerConsumer(logger=self.logger,
                                        file_storage=self.fs,
                                        static_storage=self.ss,
@@ -39,21 +37,27 @@ class Main:
                                        pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
                                        pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"])
 
+        if len(self.consumer.gpus) > 0:
+            self.logger.info("GPUS are set. Changing sub_model routing_key to listen for GPU jobs only")
+            sub_models = config["GPU_SUB_MODELS"]
+            sub_queue_kwargs = config["GPU_SUB_QUEUE_KWARGS"]
+        else:
+            sub_models = config["CPU_SUB_MODELS"]
+            sub_queue_kwargs = config["CPU_SUB_QUEUE_KWARGS"]
+
         self.mq = MQSub(logger=self.logger,
                         work_function=self.consumer.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
-                        sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
+                        sub_models=[SubModel(**sm) for sm in sub_models],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
+                        sub_queue_kwargs=sub_queue_kwargs,
                         pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"],
-                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
-                        )
+                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]])
 
     def start(self):
         self.running = True
 
-        
         self.mq.start()
         while self.running:
             try:

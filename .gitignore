@@ -3,7 +3,7 @@
 **/logs/**
 **/config/config.yaml
 mounts/**
-!mounts/flows/**
+!mounts/flows.bak/**
 !mounts/rabbit/**
 docker-compose.yaml
 .env

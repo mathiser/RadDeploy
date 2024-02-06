@@ -11,6 +11,9 @@
         "pydantic",
         "pyyaml",
         "requests",
+        "networkx",
+        "pandas"
+
     ]
     classifiers = []
     keywords = []

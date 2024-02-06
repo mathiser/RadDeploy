@@ -1,1 +1,0 @@
-docker build . -t mathiser/dicom_flow-janitor:latest

@@ -2,10 +2,10 @@ import functools
 import queue
 import time
 import traceback
-from queue import Queue
 
+from .mq_models import PubModel
 from .base import MQBase
-from ..data_structures.contexts import PublishContext, PubModel
+from ..data_structures.contexts import PublishContext
 
 
 class MQPub(MQBase):

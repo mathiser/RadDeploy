@@ -5,7 +5,8 @@ import traceback
 from typing import List, Dict
 
 from .base import MQBase
-from ..data_structures.contexts import PubModel, SubModel, PublishContext
+from ..data_structures.contexts import PublishContext
+from .mq_models import PubModel, SubModel
 
 
 class MQSub(MQBase):
@@ -75,6 +76,7 @@ class MQSub(MQBase):
                 # Declare queue
                 self.bind_queue(queue=self.queue, exchange=sub.exchange, routing_key=rk)
 
+            self.logger.debug(f"Setting up sub model {sub}", finished=True)
         # Set prefetch value
         self._channel.basic_qos(prefetch_count=self.sub_prefetch_value)
 
@@ -84,16 +86,18 @@ class MQSub(MQBase):
         self.logger.info(' [*] Waiting for messages')
         self._channel.start_consuming()
 
-    def fetch_echo(self, exchange, body):
-        if self.sub_models[exchange].routing_key_fetch_echo:
-            self.basic_publish_callback(exchange=exchange,
-                                        routing_key=self.sub_models[exchange].routing_key_fetch_echo,
+    def fetch_echo(self, basic_deliver, body):
+        if self.sub_models[basic_deliver.exchange].routing_key_fetch_echo:
+            self.basic_publish_callback(exchange=basic_deliver.exchange,
+                                        routing_key=self.sub_models[basic_deliver.exchange].routing_key_fetch_echo,
                                         body=body)
             self.process_event_data()
 
     def publish_on_all_pub_models(self,
                                   result: PublishContext):
         for pub_model in self.pub_models.values():
+            self.logger.debug(f"publishing on exchange: {pub_model.exchange} with routing key: {result.routing_key}")
+
             self.basic_publish_callback(exchange=pub_model.exchange,
                                         routing_key=result.routing_key,
                                         body=result.body,
@@ -102,7 +106,7 @@ class MQSub(MQBase):
     def on_message(self, _unused_channel, basic_deliver, properties, body):
         self.logger.debug('Received message # {} from {}'.format(basic_deliver.delivery_tag, properties.app_id))
 
-        self.fetch_echo(exchange=basic_deliver.exchange, body=body)
+        self.fetch_echo(basic_deliver=basic_deliver, body=body)
 
         t = threading.Thread(target=self.work_function_wrapper,
                              args=(basic_deliver, body))
@@ -111,7 +115,8 @@ class MQSub(MQBase):
     def work_function_wrapper(self, basic_deliver, body):
         try:
             result: PublishContext
-            for result in self.work_function(basic_deliver, body):
+            results = self.work_function(basic_deliver, body)
+            for result in results:
                 self.publish_on_all_pub_models(result=result)  # Routing key on success
 
         except Exception as e:

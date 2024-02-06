@@ -18,20 +18,32 @@ STATIC_STORAGE_URL: "http://static-storage:80"
 STATIC_STORAGE_CACHE_DIR: "/opt/DicomFlow/static"
 
 # CONSUMER
-SUB_QUEUE_KWARGS:
-  queue: "FINGERPRINTER.SUCCESS"
+SUB_PREFETCH_COUNT: 1
+########################### Will be used if GPUS is NOT set ####################3
+CPU_SUB_MODELS:  # Will be used by default.
+  - exchange: "scheduler"
+    exchange_type: "topic"
+    routing_keys: ["CPU"]
+    routing_key_fetch_echo: "fetch"
+CPU_SUB_QUEUE_KWARGS:
+  queue: "SCHEDULED_CPU"
   passive: False
   durable: False
   exclusive: False
   auto_delete: False
-
-SUB_PREFETCH_COUNT: 1
-SUB_MODELS:
-  - exchange: "fingerprinter"
+########################### Will be used if GPUS is set ####################3
+GPU_SUB_MODELS:
+  - exchange: "scheduler"
     exchange_type: "topic"
-    routing_keys: ["success"]
+    routing_keys: ["GPU"]
     routing_key_fetch_echo: "fetch"
-
+GPU_SUB_QUEUE_KWARGS:
+  queue: "SCHEDULED_GPU"
+  passive: False
+  durable: False
+  exclusive: False
+  auto_delete: False
+##########################
 PUB_ROUTING_KEY_ERROR: "error"
 PUB_ROUTING_KEY_SUCCESS: "success"
 PUB_ROUTING_KEY_FAIL: "fail"

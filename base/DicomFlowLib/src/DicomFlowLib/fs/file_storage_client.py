@@ -59,6 +59,13 @@ class FileStorageClient:
         else:
             self.logger.error(str(res.json()))
 
+    def exists(self, uid: str) -> bool:
+        res = requests.get(urllib.parse.urljoin(self.url, "exists"), params={"uid": uid})
+        if res.ok:
+            return res.json()
+        else:
+            self.logger.error(str(res.json()))
+
     def get(self, uid: str):
         self.logger.debug(f"Serving file with uid: {uid}", finished=False)
 

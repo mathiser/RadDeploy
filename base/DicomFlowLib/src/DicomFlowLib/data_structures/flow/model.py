@@ -14,13 +14,10 @@ ALLOWED_KWARGS: List = ["image", "command", "environment", "ports",
 
 class Model(BaseModel):
     docker_kwargs: Dict
-
-    gpu: str | bool
-
-    input_dir: str | None = None
-    output_dir: str | None = None
-
-    static_mounts: List[str] = []
+    gpu: str | bool = False
+    input_mounts: Dict[str, str] = {}
+    output_mounts: Dict[str, str] = {}
+    static_mounts: Dict[str, str] = {}
 
     pull_before_exec: bool = True
     timeout: int = 1800
@@ -29,3 +26,20 @@ class Model(BaseModel):
         assert "image" in self.docker_kwargs.keys()
         for key in self.docker_kwargs.keys():
             assert key in ALLOWED_KWARGS
+
+    def get_dynamic_mounts(self):
+        return {**self.input_mounts, **self.output_mounts}
+
+    @property
+    def input_mount_keys(self):
+        return set(self.input_mounts.keys())
+    @property
+    def output_mount_keys(self):
+        return set(self.output_mounts.keys())
+
+    @property
+    def static_mount_keys(self):
+        return set(self.static_mounts.keys())
+
+    def remapped_input_mount_keys(self, mapping: Dict):
+        return {mapping[k]: v for k, v in self.input_mounts.items()}
