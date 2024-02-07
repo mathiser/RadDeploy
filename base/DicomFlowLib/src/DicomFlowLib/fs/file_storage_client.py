@@ -1,3 +1,4 @@
+import logging
 import os
 from io import BytesIO
 
@@ -5,17 +6,19 @@ import requests
 import urllib.parse
 
 from DicomFlowLib.fs.utils import hash_file
-from DicomFlowLib.log import CollectiveLogger
 
 
 class FileStorageClient:
-    def __init__(self, logger: CollectiveLogger,
+    def __init__(self,
                  file_storage_url: str,
                  local_cache: str | None = None,
-                 suffix: str = ".tar"):
-        super().__init__()
+                 suffix: str = ".tar",
+                 log_level: int = 20):
+
         self.suffix = suffix
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
+
         self.url = file_storage_url
         self.local_cache = local_cache
         if self.local_cache:
@@ -35,10 +38,10 @@ class FileStorageClient:
             res.raise_for_status()
 
     def clone(self, uid):
-        self.logger.debug(f"Clone file on uid: {uid}", finished=False)
+        self.logger.debug(f"Clone file on uid: {uid}")
         res = requests.put(self.url, params={"uid": uid})
         if res.ok:
-            self.logger.debug(f"Clone file on uid: {uid}", finished=True)
+            self.logger.debug(f"Clone file on uid: {uid}")
             new_uid = res.json()
             if self.local_cache:
                 os.link(self.get_file_path(uid), self.get_file_path(new_uid))
@@ -52,7 +55,7 @@ class FileStorageClient:
     def get_hash(self, uid: str):
         res = requests.get(urllib.parse.urljoin(self.url, "hash"), params={"uid": uid})
         if res.ok:
-            self.logger.debug(f"Serving hash of file: {uid}", finished=True)
+            self.logger.debug(f"Serving hash of file: {uid}")
             return res.json()
         elif res.status_code == 404:
             raise FileNotFoundError
@@ -67,7 +70,7 @@ class FileStorageClient:
             self.logger.error(str(res.json()))
 
     def get(self, uid: str):
-        self.logger.debug(f"Serving file with uid: {uid}", finished=False)
+        self.logger.debug(f"Serving file with uid: {uid}")
 
         if self.local_cache:
             if self.file_exists(uid):
@@ -76,7 +79,7 @@ class FileStorageClient:
 
         res = requests.get(self.url, params={"uid": uid})
         if res.ok:
-            self.logger.debug(f"Serving file with uid: {uid}", finished=True)
+            self.logger.debug(f"Serving file with uid: {uid}")
             file = BytesIO(res.content)
             if self.local_cache:
                 self.write_file_to_disk(uid, file)
@@ -88,7 +91,7 @@ class FileStorageClient:
             res.raise_for_status()
 
     def delete(self, uid: str):
-        self.logger.debug(f"Deleting file with uid: {uid}", finished=False)
+        self.logger.debug(f"Deleting file with uid: {uid}")
         res = requests.delete(self.url, params={"uid": uid})
 
         if self.local_cache:
@@ -96,7 +99,7 @@ class FileStorageClient:
                 os.remove(self.get_file_path(uid))
 
         if res.ok:
-            self.logger.debug(f"Deleting file with uid: {uid}", finished=True)
+            self.logger.debug(f"Deleting file with uid: {uid}")
             return res.json()
         elif res.status_code == 404:
             raise FileNotFoundError
@@ -115,11 +118,11 @@ class FileStorageClient:
         return b
 
     def remote_local_match(self, uid):
-        self.logger.debug(f"Checking for a newer file remote", finished=False)
+        self.logger.debug(f"Checking for a newer file remote")
         remote_hash = self.get_hash(uid)
-        self.logger.debug(f"Remote hash: {remote_hash}", finished=True)
+        self.logger.debug(f"Remote hash: {remote_hash}")
         local_hash = hash_file(self.get_file_path(uid))
-        self.logger.debug(f"local hash: {local_hash}", finished=True)
+        self.logger.debug(f"local hash: {local_hash}")
 
         return remote_hash == local_hash
 
@@ -127,8 +130,8 @@ class FileStorageClient:
         p = self.get_file_path(uid)
         file.seek(0)
         with open(p, "wb") as writer:
-            self.logger.debug(f"Writing file with uid: {uid} to path: {p}", finished=False)
+            self.logger.debug(f"Writing file with uid: {uid} to path: {p}")
             writer.write(file.read())
-            self.logger.debug(f"Writing file with uid: {uid} to path: {p}", finished=True)
+            self.logger.debug(f"Writing file with uid: {uid} to path: {p}")
         file.seek(0)
         return p

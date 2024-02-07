@@ -1,31 +1,35 @@
 import json
+import logging
 from typing import Iterable, Dict, List
 
 import pandas as pd
 import pydicom
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
-from DicomFlowLib.log import CollectiveLogger
 from .db import Database
 
 
 class FlowTracker:
     def __init__(self,
-                 logger: CollectiveLogger,
                  database_path: str,
-                 dashboard_rules: List[Dict]):
-        self.logger = logger
+                 dashboard_rules: List[Dict],
+                 log_level: int = 20):
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
         self.engine = None
         self.database_url = None
         self.dashboard_rules = dashboard_rules
         self.database_path = database_path
-        self.db = Database(logger=self.logger, database_path=self.database_path)
+        self.db = Database(database_path=self.database_path, log_level=log_level)
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
-        context = FlowContext(**json.loads(body.decode()))
-
-        self.update_dashboard_rows(basic_deliver, context)
-        return []
+        if basic_deliver.exchange == "logs":
+            self.db.insert_log_row(json.loads(body.decode()))
+            return []
+        else:
+            context = FlowContext(**json.loads(body.decode()))
+            self.update_dashboard_rows(basic_deliver, context)
+            return []
 
     def update_dashboard_rows(self, basic_deliver, context: FlowContext):
         for rule in self.dashboard_rules:

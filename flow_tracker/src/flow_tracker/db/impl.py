@@ -1,13 +1,14 @@
+import logging
 import os
 
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-from .db_models import Base, Row, _now
+from .db_models import Base, Row, _now, Log
 
 
 class Database:
-    def __init__(self, logger, database_path: str):
+    def __init__(self, database_path: str, log_level: int = str):
         self.database_path = database_path
         os.makedirs(os.path.dirname(self.database_path), exist_ok=True)
 
@@ -21,7 +22,9 @@ class Database:
         self.session_maker = sessionmaker(bind=self.engine, expire_on_commit=False)
         self.Session = scoped_session(self.session_maker)
 
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
+
     def maybe_insert_row(self,
                          uid: str,
                          name: str,
@@ -44,7 +47,7 @@ class Database:
                 session.add(row)
                 session.commit()
                 session.refresh(row)
-                self.logger.info(f"Inserted row: {row.__dict__}")
+
                 return row
             else:
                 return row
@@ -72,3 +75,15 @@ class Database:
             session.commit()
             session.refresh(row)
             return row
+
+    def insert_log_row(self,
+                        json_log):
+
+        with self.Session() as session:
+            session.add(Log(msg=json_log["msg"],
+                            hostname=json_log["hostname"],
+                            levelname=json_log["levelname"],
+                            pathname=json_log["pathname"],
+                            funcName=json_log["funcName"],
+                            created=json_log["created"]))
+            session.commit()

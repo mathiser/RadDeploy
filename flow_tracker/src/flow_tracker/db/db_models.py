@@ -10,7 +10,6 @@ def _now():
 class Base(DeclarativeBase):
     pass
 
-
 class Row(Base):
     __tablename__ = "rows"
     id: Mapped[int] = mapped_column(unique=True, primary_key=True, autoincrement=True)
@@ -26,3 +25,15 @@ class Row(Base):
     Finished: Mapped[str] = mapped_column(nullable=True, default=None)
     Sent: Mapped[str] = mapped_column(nullable=True, default=None)
     Status: Mapped[int] = mapped_column(default=0)
+
+
+class Log(Base):
+    __tablename__ = "logs"
+    id: Mapped[int] = mapped_column(unique=True, primary_key=True, autoincrement=True)
+    ts: Mapped[str] = mapped_column(default=_now)
+    hostname: Mapped[str]
+    levelname: Mapped[str]
+    msg: Mapped[str]
+    pathname: Mapped[str]
+    funcName: Mapped[str]
+    created: Mapped[int]

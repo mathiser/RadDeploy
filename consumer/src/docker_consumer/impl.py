@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 import tarfile
@@ -14,7 +15,6 @@ from docker import types, errors
 from DicomFlowLib.data_structures.contexts import PublishContext, FlowContext
 from DicomFlowLib.data_structures.flow import Model
 from DicomFlowLib.fs import FileStorageClient
-from DicomFlowLib.log import CollectiveLogger
 
 
 def postprocess_output_tar(output_dir: str, tarf: BytesIO):
@@ -48,14 +48,13 @@ def postprocess_output_tar(output_dir: str, tarf: BytesIO):
 
 class DockerConsumer:
     def __init__(self,
-                 logger: CollectiveLogger,
                  file_storage: FileStorageClient,
                  static_storage: FileStorageClient | None,
                  gpus: List | str,
                  pub_routing_key_success: str,
                  pub_routing_key_fail: str):
         self.pub_declared = False
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
         self.fs = file_storage
         self.ss = static_storage
         self.pub_routing_key_success = pub_routing_key_success
@@ -75,11 +74,11 @@ class DockerConsumer:
         fc = FlowContext(**json.loads(body.decode()))
         model = fc.active_model
 
-        self.logger.info(f"RUNNING FLOW", finished=False)
+        self.logger.info(f"RUNNING FLOW")
 
         fc.mount_mapping = self.exec_model(model, fc.mount_mapping)
 
-        self.logger.info(f"RUNNING FLOW", finished=True)
+        self.logger.info(f"RUNNING FLOW")
         return [PublishContext(body=fc.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
 
     def exec_model(self,
@@ -92,7 +91,7 @@ class DockerConsumer:
             except Exception as e:
                 self.logger.error("Could not pull container - does it exist on docker hub?")
                 raise e
-        self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}", finished=False)
+        self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}")
 
         kwargs = model.docker_kwargs
 
@@ -135,7 +134,7 @@ class DockerConsumer:
             return mount_mapping
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(str(e))
             raise e
         finally:
             self.clean_up(container, kwargs)
@@ -157,16 +156,16 @@ class DockerConsumer:
     def delete_container(self, container_id):
         counter = 0
         while counter < 5:
-            self.logger.debug(f"Attempting to remove container {container_id}", finished=False)
+            self.logger.debug(f"Attempting to remove container {container_id}")
             try:
                 c = self.cli.containers.get(container_id)
                 c.remove(force=True)
-                self.logger.debug(f"Attempting to remove container {container_id}", finished=False)
+                self.logger.debug(f"Attempting to remove container {container_id}")
                 return
             except errors.NotFound:
                 return
             except Exception as e:
-                self.logger.debug(f"Failed to remove {container_id}. Trying again in 5 sec...", finished=True)
+                self.logger.debug(f"Failed to remove {container_id}. Trying again in 5 sec...")
                 counter += 1
                 time.sleep(5)
 

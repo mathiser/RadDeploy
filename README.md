@@ -265,7 +265,7 @@ The DICOM receiver can be adapted with the following variables
 AE_TITLE: "DICOM_FLOW"
 AE_HOSTNAME: "localhost"
 AE_PORT: 10000
-PYNETDICOM_LOG_LEVEL: "standard"
+PYNETDICOM_LOG_LEVEL: 20
 ```
 ##### TAR_SUBDIR
 By default, the receiver writes dicom files into a flat directory,
