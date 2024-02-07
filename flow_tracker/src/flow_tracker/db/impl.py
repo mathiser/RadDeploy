@@ -4,7 +4,7 @@ import os
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-from .db_models import Base, Row, _now
+from .db_models import Base, Row, _now, Log
 
 
 class Database:
@@ -47,7 +47,7 @@ class Database:
                 session.add(row)
                 session.commit()
                 session.refresh(row)
-                self.logger.info(f"Inserted row: {row.__dict__}")
+
                 return row
             else:
                 return row
@@ -75,3 +75,14 @@ class Database:
             session.commit()
             session.refresh(row)
             return row
+
+    def insert_log_row(self,
+                        json_log):
+
+        with self.Session() as session:
+            session.add(Log(msg=json_log["msg"],
+                            levelname=json_log["levelname"],
+                            pathname=json_log["pathname"],
+                            funcName=json_log["funcName"],
+                            created=json_log["created"]))
+            session.commit()

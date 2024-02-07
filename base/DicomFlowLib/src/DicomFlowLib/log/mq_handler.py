@@ -1,5 +1,7 @@
+import json
 import signal
 from logging import StreamHandler
+from logging import Formatter
 from typing import List
 
 from DicomFlowLib.data_structures.contexts import PublishContext
@@ -13,6 +15,7 @@ class MQHandler(StreamHandler):
                  pub_models: List[PubModel],
                  ):
         signal.signal(signal.SIGTERM, self.stop)
+
         super().__init__()
         self.mq = MQPub(rabbit_hostname=rabbit_hostname,
                         rabbit_port=rabbit_port)
@@ -20,11 +23,10 @@ class MQHandler(StreamHandler):
         self.mq.start()
 
     def emit(self, record):
-        msg = self.format(record)
         for pub_model in self.pub_models:
             self.mq.add_publish_message(pub_model,
-                                             PublishContext(body=msg.encode(),
-                                                            routing_key=f"{record.name}.{record.levelname}"))
+                                        PublishContext(body=json.dumps(record.__dict__),
+                                                       routing_key=f"{record.name}.{record.levelname}"))
 
     def stop(self, signalnum=None, stack_frame=None):
         self.mq.stop()

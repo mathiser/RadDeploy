@@ -28,7 +28,11 @@ class Row(Base):
     Sent: Mapped[str] = mapped_column(nullable=True, default=None)
     Status: Mapped[int] = mapped_column(default=0)
 
+
 class Log(Base):
     __tablename__ = "logs"
-
-    pass
+    msg: Mapped[str]
+    levelname: Mapped[str]
+    pathname: Mapped[str]
+    funcName: Mapped[str]
+    created: Mapped[int]

@@ -23,9 +23,8 @@ class FlowTracker:
         self.db = Database(database_path=self.database_path, log_level=log_level)
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
-        print(basic_deliver)
         if basic_deliver.exchange == "logs":
-            print(body.decode())
+            self.db.insert_log_row(json.loads(body.decode()))
             return []
         else:
             context = FlowContext(**json.loads(body.decode()))
