@@ -8,7 +8,7 @@ from .db_models import Base, Row, _now
 
 
 class Database:
-    def __init__(self, database_path: str):
+    def __init__(self, database_path: str, log_level: int = str):
         self.database_path = database_path
         os.makedirs(os.path.dirname(self.database_path), exist_ok=True)
 
@@ -23,6 +23,7 @@ class Database:
         self.Session = scoped_session(self.session_maker)
 
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
 
     def maybe_insert_row(self,
                          uid: str,

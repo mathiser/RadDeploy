@@ -12,13 +12,15 @@ from .db import Database
 class FlowTracker:
     def __init__(self,
                  database_path: str,
-                 dashboard_rules: List[Dict]):
+                 dashboard_rules: List[Dict],
+                 log_level: int = 20):
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
         self.engine = None
         self.database_url = None
         self.dashboard_rules = dashboard_rules
         self.database_path = database_path
-        self.db = Database(database_path=self.database_path)
+        self.db = Database(database_path=self.database_path, log_level=log_level)
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         print(basic_deliver)

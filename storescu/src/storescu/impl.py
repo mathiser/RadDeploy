@@ -16,11 +16,13 @@ from DicomFlowLib.fs import FileStorageClient
 
 class STORESCU:
     def __init__(self, file_storage: FileStorageClient, pub_routing_key_success: str,
-                 pub_routing_key_fail: str):
+                 pub_routing_key_fail: str,
+                 log_level: int = 20):
         self.pub_routing_key_success = pub_routing_key_success
         self.pub_routing_key_fail = pub_routing_key_fail
 
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
         self.fs = file_storage
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:

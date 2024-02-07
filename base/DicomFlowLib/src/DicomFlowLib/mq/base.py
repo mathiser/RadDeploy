@@ -11,12 +11,14 @@ class MQBase(threading.Thread):
     def __init__(self,
                  close_conn_on_exit: bool = False,
                  rabbit_hostname: str | None = None,
-                 rabbit_port: int | None = None):
+                 rabbit_port: int | None = None,
+                 log_level: int = 20):
         super().__init__()
 
         logging.getLogger("pika").setLevel(logging.WARNING)
 
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
         self._hostname = rabbit_hostname
         self._port = rabbit_port
         self._connection: pika.connection.Connection | None = None

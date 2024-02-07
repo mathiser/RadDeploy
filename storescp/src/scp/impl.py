@@ -50,8 +50,11 @@ class SCP:
                  mq_pub: MQPub,
                  blacklisted_hosts: List[str] | None = None,
                  whitelisted_hosts: List[str] | None = None,
-                 maximum_pdu_size: int = 0):
+                 maximum_pdu_size: int = 0,
+                 log_level: int = 20):
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
+
         logging.getLogger("pynetdicom").setLevel(pynetdicom_log_level)
 
         self.maximum_pdu_size = maximum_pdu_size

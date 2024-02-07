@@ -12,9 +12,11 @@ class Fingerprinter:
                  file_storage: FileStorageClient,
                  flow_directory: str,
                  routing_key_success: str,
-                 routing_key_fail: str
-                 ):
+                 routing_key_fail: str,
+                 log_level: int = 20):
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
+
         self.flow_directory = flow_directory
         self.fs = file_storage
         self.uid = None

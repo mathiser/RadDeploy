@@ -25,14 +25,15 @@ class Main:
                     pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
-        self.logger.info(self.logger.name)
-        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"])
+
+        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"],
+                                    log_level=int(config["LOG_LEVEL"]))
 
         self.fp = Fingerprinter(file_storage=self.fs,
                                 flow_directory=config["FLOW_DIRECTORY"],
                                 routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
-                                routing_key_fail=config["PUB_ROUTING_KEY_FAIL"]
-                                )
+                                routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
+                                log_level=int(config["LOG_LEVEL"]))
 
         self.mq = MQSub(work_function=self.fp.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
@@ -41,7 +42,8 @@ class Main:
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
                         sub_queue_kwargs=config["SUB_QUEUE_KWARGS"],
-                        pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"])
+                        pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"],
+                        log_level=int(config["LOG_LEVEL"]))
 
     def start(self):
         self.mq.start()

@@ -24,15 +24,9 @@ class MQSub(MQBase):
 
     """
 
-    def __init__(self,
-                 rabbit_hostname: str,
-                 rabbit_port: int,
-                 sub_models: List[SubModel],
-                 pub_models: List[PubModel],
-                 work_function: callable,
-                 sub_prefetch_value: int,
-                 sub_queue_kwargs: Dict,
-                 pub_routing_key_error: str):
+    def __init__(self, rabbit_hostname: str, rabbit_port: int, sub_models: List[SubModel], pub_models: List[PubModel],
+                 work_function: callable, sub_prefetch_value: int, sub_queue_kwargs: Dict, pub_routing_key_error: str,
+                 log_level: int = 20):
 
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
@@ -42,7 +36,8 @@ class MQSub(MQBase):
         """
         super().__init__(close_conn_on_exit=True,
                          rabbit_hostname=rabbit_hostname,
-                         rabbit_port=rabbit_port)
+                         rabbit_port=rabbit_port,
+                         log_level=log_level)
 
         self.logger = logging.getLogger(__name__)
 

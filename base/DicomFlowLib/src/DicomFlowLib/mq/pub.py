@@ -11,10 +11,12 @@ from ..data_structures.contexts import PublishContext
 class MQPub(MQBase):
     def __init__(self,
                  rabbit_hostname: str,
-                 rabbit_port: int):
+                 rabbit_port: int,
+                 log_level: int = 20):
         super().__init__(close_conn_on_exit=True,
                          rabbit_hostname=rabbit_hostname,
-                         rabbit_port=rabbit_port)
+                         rabbit_port=rabbit_port,
+                         log_level=log_level)
 
         self.publish_queue = queue.Queue()
 

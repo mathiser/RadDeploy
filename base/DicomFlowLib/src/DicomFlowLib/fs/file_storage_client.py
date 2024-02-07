@@ -12,10 +12,13 @@ class FileStorageClient:
     def __init__(self,
                  file_storage_url: str,
                  local_cache: str | None = None,
-                 suffix: str = ".tar"):
+                 suffix: str = ".tar",
+                 log_level: int = 20):
 
         self.suffix = suffix
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
+
         self.url = file_storage_url
         self.local_cache = local_cache
         if self.local_cache:

@@ -10,9 +10,11 @@ class Scheduler:
                  pub_routing_key_success: str,
                  pub_routing_key_fail: str,
                  pub_routing_key_gpu: str,
-                 pub_routing_key_cpu: str):
+                 pub_routing_key_cpu: str,
+                 log_level: int = 20):
         self.pub_declared = False
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
 
         self.pub_routing_key_gpu = pub_routing_key_gpu
         self.pub_routing_key_cpu = pub_routing_key_cpu

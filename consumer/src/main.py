@@ -44,14 +44,11 @@ class Main:
             sub_models = config["CPU_SUB_MODELS"]
             sub_queue_kwargs = config["CPU_SUB_QUEUE_KWARGS"]
 
-        self.mq = MQSub(work_function=self.consumer.mq_entrypoint,
-                        rabbit_hostname=config["RABBIT_HOSTNAME"],
-                        rabbit_port=int(config["RABBIT_PORT"]),
+        self.mq = MQSub(rabbit_hostname=config["RABBIT_HOSTNAME"], rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**sm) for sm in sub_models],
-                        sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_kwargs=sub_queue_kwargs,
-                        pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"],
-                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]])
+                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
+                        work_function=self.consumer.mq_entrypoint, sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
+                        sub_queue_kwargs=sub_queue_kwargs, pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"])
 
     def start(self):
         self.running = True

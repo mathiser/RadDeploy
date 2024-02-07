@@ -19,12 +19,14 @@ class FileStorageServer(FastAPI):
                  allow_get: bool = True,
                  allow_clone: bool = True,
                  allow_delete: bool = True,
-                 delete_on_get: bool = False):
+                 delete_on_get: bool = False,
+                 log_level: int = 20):
         super().__init__()
 
         self.base_dir = base_dir
         os.makedirs(self.base_dir, exist_ok=True)
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
         self.suffix = suffix
         self.host = host
         self.port = port

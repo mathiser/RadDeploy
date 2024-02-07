@@ -7,9 +7,11 @@ from DicomFlowLib.fs import FileStorageServer
 
 
 class FileJanitor(threading.Thread):
-    def __init__(self, file_storage: FileStorageServer, delete_files_after: int, run_inteval: int = 60):
+    def __init__(self, file_storage: FileStorageServer, delete_files_after: int, run_inteval: int = 60,
+                 log_level: int = 20):
         super().__init__()
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
         self.fs = file_storage
         self.base_dir = file_storage.base_dir
         self.delete_files_after = delete_files_after
