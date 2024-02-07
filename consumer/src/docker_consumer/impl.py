@@ -134,7 +134,7 @@ class DockerConsumer:
             return mount_mapping
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(str(e))
             raise e
         finally:
             self.clean_up(container, kwargs)
