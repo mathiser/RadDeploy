@@ -1,6 +1,5 @@
 .idea
 **/__pycache__/**
-**/logs/**
 **/config/config.yaml
 mounts/**
 !mounts/flows.bak/**
