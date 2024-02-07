@@ -34,6 +34,9 @@ SUB_MODELS:
   - exchange: "storescu"
     exchange_type: "topic"
     routing_keys: ["#"]
+  - exchange: "logs"
+    exchange_type: "topic"
+    routing_keys: [ "#" ]
 
 PUB_ROUTING_KEY_ERROR: "error"
 

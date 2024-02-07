@@ -1,3 +1,4 @@
+import logging
 import os
 import tarfile
 import tempfile
@@ -11,7 +12,6 @@ from DicomFlowLib.data_structures.contexts import SCPContext, PublishContext
 from DicomFlowLib.mq import PubModel
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.fs import FileStorageClient
-from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQPub
 
 
@@ -38,17 +38,23 @@ class AssocContext:
 
 
 class SCP:
-    def __init__(self, file_storage: FileStorageClient, ae_title: str, hostname: str, port: int,
-                 logger: CollectiveLogger, pub_models: List[PubModel], pynetdicom_log_level: str, tar_subdir: List[str],
+    def __init__(self, file_storage: FileStorageClient,
+                 ae_title: str,
+                 hostname: str,
+                 port: int,
+                 pub_models: List[PubModel],
+                 pynetdicom_log_level: int,
+                 tar_subdir: List[str],
                  routing_key_success: str,
                  routing_key_fail: str,
                  mq_pub: MQPub,
                  blacklisted_hosts: List[str] | None = None,
                  whitelisted_hosts: List[str] | None = None,
                  maximum_pdu_size: int = 0):
+        self.logger = logging.getLogger(__name__)
+        logging.getLogger("pynetdicom").setLevel(pynetdicom_log_level)
 
         self.maximum_pdu_size = maximum_pdu_size
-        self.logger = logger
         self.fs = file_storage
         self.ae = None
         self.mq_pub = mq_pub
@@ -107,7 +113,7 @@ class SCP:
             return
 
         ac = AssocContext()
-        self.logger.debug(f"INIT_STORESCP", uid=ac.flow_context.uid, finished=False)
+        self.logger.info(f"Receiving dicom files")
 
         # Unwrap sender info
         sender = Destination(host=event.assoc.requestor.address,
@@ -118,16 +124,14 @@ class SCP:
 
         # Add to assocs dict
         self.assoc[assoc_id] = ac
-        self.logger.debug(f"INIT_STORESCP", uid=ac.flow_context.uid, finished=True)
 
     def handle_store(self, event):
         self.maybe_init_store(event)
         """Handle EVT_C_STORE events."""
         assoc_id = event.assoc.native_id
         assoc_context = self.assoc[assoc_id]
-        uid = assoc_context.flow_context.uid
 
-        self.logger.debug(f"HANDLE_STORE", uid=uid, finished=False)
+        self.logger.debug(f"HANDLE_STORE")
 
         # Get data set from event
         ds = event.dataset
@@ -149,7 +153,6 @@ class SCP:
             write_file_meta_info(f, event.file_meta)  # Encode and write the File Meta Information
             f.write(event.request.DataSet.getvalue())  # Write the encoded dataset
             assoc_context.add_file_to_tar(path_in_tar, f)  ## does not need to seek(0)
-        self.logger.debug(f"HANDLE_STORE", uid=uid, finished=True)
 
         # Return a 'Success' status
         return 0x0000
@@ -165,18 +168,18 @@ class SCP:
 
         assoc_context = self.assoc[assoc_id]
         uid = assoc_context.flow_context.uid
-        self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=False)
+        self.logger.debug(f"HANDLE_RELEASE: {assoc_id}")
 
         try:
-            self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=False)
+            self.logger.info(f"STORESCP PUBLISH CONTEXT")
 
             input_file_uid = self.publish_file_context(assoc_context=assoc_context)
             self.assoc[assoc_id].flow_context.input_file_uid = input_file_uid
 
             self.publish_main_context(assoc_context=assoc_context)
 
-            self.logger.info(f"STORESCP PUBLISH CONTEXT", uid=uid, finished=True)
-            self.logger.debug(f"HANDLE_RELEASE: {assoc_id}", finished=True)
+            self.logger.info(f"STORESCP PUBLISH CONTEXT", )
+            self.logger.debug(f"HANDLE_RELEASE: {assoc_id}")
         except Exception as e:
             self.logger.error(str(e))
             raise e
@@ -184,7 +187,7 @@ class SCP:
             del self.assoc[assoc_id]
 
     def handle_echo(self, event):
-        self.logger.debug(f"Replying to ECHO", finished=True)
+        self.logger.debug(f"Replying to ECHO")
         return 0x0000
 
     def publish_main_context(self, assoc_context):
@@ -195,6 +198,7 @@ class SCP:
                 body=assoc_context.flow_context.model_dump_json().encode())
 
             self.mq_pub.add_publish_message(pub_model, pub_context)
+            #self.mq_pub.publish_message_callback(pub_model, pub_context)
 
     def publish_file_context(self, assoc_context):
         assoc_context.tar.close()
@@ -214,8 +218,7 @@ class SCP:
 
         try:
             self.logger.info(
-                f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}",
-                finished=False)
+                f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}")
 
             # Create and run
             self.ae = AE(ae_title=self.ae_title)
@@ -224,8 +227,7 @@ class SCP:
             self.ae.maximum_pdu_size = self.maximum_pdu_size
             self.ae.start_server((self.hostname, self.port), block=blocking, evt_handlers=handler)
             self.logger.info(
-                f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}",
-                finished=False)
+                f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}")
         except OSError as ose:
             self.logger.error(f'Cannot start Association Entity servers')
             raise ose

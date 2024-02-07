@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0111,C0103,R0205
+import logging
 import threading
 import traceback
 from typing import List, Dict
@@ -30,7 +31,6 @@ class MQSub(MQBase):
                  pub_models: List[PubModel],
                  work_function: callable,
                  sub_prefetch_value: int,
-                 logger,
                  sub_queue_kwargs: Dict,
                  pub_routing_key_error: str):
 
@@ -40,12 +40,11 @@ class MQSub(MQBase):
         :param str amqp_url: The AMQP url to connect with
 
         """
-        super().__init__(logger=logger,
-                         close_conn_on_exit=True,
+        super().__init__(close_conn_on_exit=True,
                          rabbit_hostname=rabbit_hostname,
                          rabbit_port=rabbit_port)
 
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
 
         self.should_reconnect = False
         self.was_consuming = False
@@ -76,7 +75,7 @@ class MQSub(MQBase):
                 # Declare queue
                 self.bind_queue(queue=self.queue, exchange=sub.exchange, routing_key=rk)
 
-            self.logger.debug(f"Setting up sub model {sub}", finished=True)
+            self.logger.debug(f"Setting up sub model {sub}")
         # Set prefetch value
         self._channel.basic_qos(prefetch_count=self.sub_prefetch_value)
 

@@ -1,11 +1,12 @@
+import logging
 import os
 import signal
 
 from DicomFlowLib.conf import load_configs
+from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import PubModel, SubModel
 from DicomFlowLib.fs import FileStorageClient
 
-from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from fingerprinter import Fingerprinter
 
@@ -16,26 +17,24 @@ class Main:
 
         self.running = True
 
-        self.logger = CollectiveLogger(name=config["LOG_NAME"],
-                                       log_level=int(config["LOG_LEVEL"]),
-                                       log_format=config["LOG_FORMAT"],
-                                       log_dir=config["LOG_DIR"],
-                                       rabbit_hostname=config["RABBIT_HOSTNAME"],
-                                       rabbit_port=int(config["RABBIT_PORT"]),
-                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+        init_logger(name=config["LOG_NAME"],
+                    log_format=config["LOG_FORMAT"],
+                    log_dir=config["LOG_DIR"],
+                    rabbit_hostname=config["RABBIT_HOSTNAME"],
+                    rabbit_port=int(config["RABBIT_PORT"]),
+                    pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(int(config["LOG_LEVEL"]))
+        self.logger.info(self.logger.name)
+        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"])
 
-        self.fs = FileStorageClient(logger=self.logger,
-                                    file_storage_url=config["FILE_STORAGE_URL"])
-
-        self.fp = Fingerprinter(logger=self.logger,
-                                file_storage=self.fs,
+        self.fp = Fingerprinter(file_storage=self.fs,
                                 flow_directory=config["FLOW_DIRECTORY"],
                                 routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
                                 routing_key_fail=config["PUB_ROUTING_KEY_FAIL"]
                                 )
 
-        self.mq = MQSub(logger=self.logger,
-                        work_function=self.fp.mq_entrypoint,
+        self.mq = MQSub(work_function=self.fp.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
                         pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
@@ -45,7 +44,6 @@ class Main:
                         pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"])
 
     def start(self):
-        
         self.mq.start()
         while self.running:
             try:
@@ -60,7 +58,7 @@ class Main:
     def stop(self, signalnum=None, stack_frame=None):
         self.running = False
         self.mq.stop()
-        self.logger.stop()
+        self.mq.join()
 
 
 if __name__ == "__main__":

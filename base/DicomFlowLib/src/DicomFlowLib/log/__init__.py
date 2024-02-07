@@ -1,1 +1,1 @@
-from .logger import CollectiveLogger
+from .logging_initiation import init_logger

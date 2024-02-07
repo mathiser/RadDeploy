@@ -1,10 +1,11 @@
+import logging
 import os
 import signal
 
 from DicomFlowLib.conf import load_configs
+from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import PubModel, SubModel
 from DicomFlowLib.fs import FileStorageClient
-from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from storescu import STORESCU
 
@@ -13,24 +14,22 @@ class Main:
     def __init__(self, config):
         signal.signal(signal.SIGTERM, self.stop)
         self.running = False
-        self.logger = CollectiveLogger(name=config["LOG_NAME"],
-                                       log_level=int(config["LOG_LEVEL"]),
-                                       log_format=config["LOG_FORMAT"],
-                                       log_dir=config["LOG_DIR"],
-                                       rabbit_hostname=config["RABBIT_HOSTNAME"],
-                                       rabbit_port=int(config["RABBIT_PORT"]),
-                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+        init_logger(name=config["LOG_NAME"],
+                                         log_format=config["LOG_FORMAT"],
+                                         log_dir=config["LOG_DIR"],
+                                         rabbit_hostname=config["RABBIT_HOSTNAME"],
+                                         rabbit_port=int(config["RABBIT_PORT"]),
+                                         pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(int(config["LOG_LEVEL"]))
 
-        self.fs = FileStorageClient(logger=self.logger,
-                                    file_storage_url=config["FILE_STORAGE_URL"])
+        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"])
 
         self.scu = STORESCU(file_storage=self.fs,
-                            logger=self.logger,
                             pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
                             pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"])
 
-        self.mq = MQSub(logger=self.logger,
-                        sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
+        self.mq = MQSub(sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
                         pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                         sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
                         work_function=self.scu.mq_entrypoint,
@@ -40,11 +39,11 @@ class Main:
                         pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"])
 
     def start(self):
-        self.logger.debug("Starting SCU", finished=False)
+        self.logger.debug("Starting SCU")
         self.running = True
 
         self.mq.start()
-        self.logger.debug("Starting SCU", finished=True)
+        self.logger.debug("Starting SCU")
 
         while self.running:
             try:
@@ -57,13 +56,11 @@ class Main:
                 self.stop()
 
     def stop(self, signalnum=None, stack_frame=None):
-        self.logger.debug("Stopping SCU", finished=False)
+        self.logger.debug("Stopping SCU")
         self.running = False
         self.mq.stop()
-        self.logger.stop()
-
         self.mq.join()
-        self.logger.debug("Stopping SCU", finished=True)
+        self.logger.debug("Stopping SCU")
 
 
 if __name__ == "__main__":

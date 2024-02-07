@@ -1,11 +1,12 @@
+import logging
 import os
 import signal
 
 from DicomFlowLib.conf import load_configs
+from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import PubModel, SubModel
 
 from DicomFlowLib.fs import FileStorageClient
-from DicomFlowLib.log import CollectiveLogger
 from DicomFlowLib.mq import MQSub
 from docker_consumer.impl import DockerConsumer
 
@@ -15,23 +16,21 @@ class Main:
         signal.signal(signal.SIGTERM, self.stop)
 
         self.running = None
-        self.logger = CollectiveLogger(name=config["LOG_NAME"],
-                                       log_level=int(config["LOG_LEVEL"]),
-                                       log_format=config["LOG_FORMAT"],
-                                       log_dir=config["LOG_DIR"],
-                                       rabbit_hostname=config["RABBIT_HOSTNAME"],
-                                       rabbit_port=int(config["RABBIT_PORT"]),
-                                       pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+        init_logger(name=config["LOG_NAME"],
+                                         log_format=config["LOG_FORMAT"],
+                                         log_dir=config["LOG_DIR"],
+                                         rabbit_hostname=config["RABBIT_HOSTNAME"],
+                                         rabbit_port=int(config["RABBIT_PORT"]),
+                                         pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(int(config["LOG_LEVEL"]))
 
-        self.fs = FileStorageClient(logger=self.logger,
-                                    file_storage_url=config["FILE_STORAGE_URL"])
+        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"])
 
-        self.ss = FileStorageClient(logger=self.logger,
-                                    file_storage_url=config["STATIC_STORAGE_URL"],
+        self.ss = FileStorageClient(file_storage_url=config["STATIC_STORAGE_URL"],
                                     local_cache=config["STATIC_STORAGE_CACHE_DIR"])
 
-        self.consumer = DockerConsumer(logger=self.logger,
-                                       file_storage=self.fs,
+        self.consumer = DockerConsumer(file_storage=self.fs,
                                        static_storage=self.ss,
                                        gpus=config["GPUS"],
                                        pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
@@ -45,8 +44,7 @@ class Main:
             sub_models = config["CPU_SUB_MODELS"]
             sub_queue_kwargs = config["CPU_SUB_QUEUE_KWARGS"]
 
-        self.mq = MQSub(logger=self.logger,
-                        work_function=self.consumer.mq_entrypoint,
+        self.mq = MQSub(work_function=self.consumer.mq_entrypoint,
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**sm) for sm in sub_models],
@@ -72,8 +70,6 @@ class Main:
     def stop(self, signalnum=None, stack_frame=None):
         self.running = False
         self.mq.stop()
-        self.logger.stop()
-
         self.mq.join()
 
 

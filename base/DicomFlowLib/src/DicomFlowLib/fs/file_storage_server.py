@@ -1,4 +1,4 @@
-import hashlib
+import logging
 import os
 import uuid
 
@@ -10,7 +10,7 @@ from DicomFlowLib.fs.utils import hash_file
 
 
 class FileStorageServer(FastAPI):
-    def __init__(self, logger,
+    def __init__(self,
                  base_dir: str,
                  host: str,
                  port: int,
@@ -24,7 +24,7 @@ class FileStorageServer(FastAPI):
 
         self.base_dir = base_dir
         os.makedirs(self.base_dir, exist_ok=True)
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
         self.suffix = suffix
         self.host = host
         self.port = port
@@ -79,11 +79,11 @@ class FileStorageServer(FastAPI):
             return self.file_exists(uid)
 
     def get_hash(self, uid: str):
-        self.logger.debug(f"Serving hash of: {uid}", finished=False)
+        self.logger.debug(f"Serving hash of: {uid}")
         return hash_file(self.get_file_path(uid))
 
     def get_file(self, uid: str):
-        self.logger.debug(f"Serving file with uid: {uid}", finished=False)
+        self.logger.debug(f"Serving file with uid: {uid}")
         try:
             return self.get_file_path(uid)
         finally:
@@ -91,23 +91,23 @@ class FileStorageServer(FastAPI):
                 self.delete_file(uid)
 
     def delete_file(self, uid: str):
-        self.logger.debug(f"Deleting file with uid: {uid}", finished=False)
+        self.logger.debug(f"Deleting file with uid: {uid}")
         os.remove(self.get_file_path(uid))
         return "success"
 
     def clone_file(self, uid: str):
         new_uid = str(uuid.uuid4())
-        self.logger.debug(f"Clone file on uid: {uid} to new uid: {new_uid}", finished=False)
+        self.logger.debug(f"Clone file on uid: {uid} to new uid: {new_uid}")
         os.link(self.get_file_path(uid), self.get_file_path(new_uid))
         return new_uid
 
     def post_file(self, tar_file):
         uid = str(uuid.uuid4())
-        self.logger.debug(f"Putting file on uid: {uid}", finished=False)
+        self.logger.debug(f"Putting file on uid: {uid}")
 
         p = self.get_file_path(uid)
         with open(p, "wb") as writer:
-            self.logger.debug(f"Writing file with uid: {uid} to path: {p}", finished=False)
+            self.logger.debug(f"Writing file with uid: {uid} to path: {p}")
             writer.write(tar_file.file.read())
 
         tar_file.file.close()

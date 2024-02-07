@@ -1,3 +1,4 @@
+import logging
 import os
 
 import sqlalchemy
@@ -7,7 +8,7 @@ from .db_models import Base, Row, _now
 
 
 class Database:
-    def __init__(self, logger, database_path: str):
+    def __init__(self, database_path: str):
         self.database_path = database_path
         os.makedirs(os.path.dirname(self.database_path), exist_ok=True)
 
@@ -21,7 +22,8 @@ class Database:
         self.session_maker = sessionmaker(bind=self.engine, expire_on_commit=False)
         self.Session = scoped_session(self.session_maker)
 
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
+
     def maybe_insert_row(self,
                          uid: str,
                          name: str,

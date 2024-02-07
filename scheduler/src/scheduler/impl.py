@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Iterable, Dict, Tuple, List
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
@@ -9,10 +10,9 @@ class Scheduler:
                  pub_routing_key_success: str,
                  pub_routing_key_fail: str,
                  pub_routing_key_gpu: str,
-                 pub_routing_key_cpu: str,
-                 logger):
+                 pub_routing_key_cpu: str):
         self.pub_declared = False
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
 
         self.pub_routing_key_gpu = pub_routing_key_gpu
         self.pub_routing_key_cpu = pub_routing_key_cpu

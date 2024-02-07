@@ -1,5 +1,7 @@
 import functools
+import logging
 import threading
+import time
 
 import pika
 from pika import channel, connection
@@ -7,12 +9,14 @@ from pika import channel, connection
 
 class MQBase(threading.Thread):
     def __init__(self,
-                 logger,
                  close_conn_on_exit: bool = False,
                  rabbit_hostname: str | None = None,
                  rabbit_port: int | None = None):
         super().__init__()
-        self.logger = logger
+
+        logging.getLogger("pika").setLevel(logging.WARNING)
+
+        self.logger = logging.getLogger(__name__)
         self._hostname = rabbit_hostname
         self._port = rabbit_port
         self._connection: pika.connection.Connection | None = None
@@ -34,7 +38,6 @@ class MQBase(threading.Thread):
         return self._connection._impl.params.heartbeat
 
     def connect_like(self, connection: pika.connection.Connection):
-        self.logger.info('Connecting to {}:{}'.format(self._hostname, self._port))
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=connection._impl.params.host, port=connection._impl.params.port)
         )
@@ -56,10 +59,10 @@ class MQBase(threading.Thread):
 
     def connect(self):
         assert self._hostname and self._port
-        self.logger.info('Connecting to {}:{}'.format(self._hostname, self._port))
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=self._hostname, port=self._port))
         self._channel = self._connection.channel()
-
+        while not self._connection:
+            time.sleep(1)
         return self
 
     def stop(self, signalnum=None, stack_frame=None):

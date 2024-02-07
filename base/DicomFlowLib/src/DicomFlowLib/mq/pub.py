@@ -11,10 +11,8 @@ from ..data_structures.contexts import PublishContext
 class MQPub(MQBase):
     def __init__(self,
                  rabbit_hostname: str,
-                 rabbit_port: int,
-                 logger):
-        super().__init__(logger=logger,
-                         close_conn_on_exit=True,
+                 rabbit_port: int):
+        super().__init__(close_conn_on_exit=True,
                          rabbit_hostname=rabbit_hostname,
                          rabbit_port=rabbit_port)
 
@@ -33,7 +31,7 @@ class MQPub(MQBase):
 
     def publish_message_callback(self, pub_model: PubModel, pub_context: PublishContext):
         cb = functools.partial(self.publish_message, pub_model=pub_model, pub_context=pub_context)
-        self._connection.add_callback_theadsafe(cb)
+        self._connection.add_callback_threadsafe(cb)
 
     def publish_message(self, pub_model: PubModel, pub_context: PublishContext):
         # Declare Exchanges
@@ -49,8 +47,8 @@ class MQPub(MQBase):
         self._message_number += 1
         self._deliveries[self._message_number] = True
 
-    def run(self):
 
+    def run(self):
         while not self._stopping:
             self._deliveries = {}
             self._acked = 0
@@ -82,6 +80,7 @@ class MQPub(MQBase):
                         self.logger.error(str(e))
                         self.logger.error(traceback.format_exc())
                         raise e
+                    self.process_event_data()
 
                 if not self._stopping and self._connection:
                     self.process_event_data()
