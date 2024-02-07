@@ -123,6 +123,8 @@ class DockerConsumer:
             # Run the container
             container.start()
             result = container.wait(timeout=model.timeout)  # Blocks...
+            self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
+            self.logger.info(str(container.logs().decode()))
 
             self.assert_container_status(container=container, result=result)
 
@@ -134,14 +136,16 @@ class DockerConsumer:
             return mount_mapping
 
         except Exception as e:
+            self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
+            self.logger.info(str(container.logs().decode()))
             self.logger.error(str(e))
             raise e
         finally:
             self.clean_up(container, kwargs)
 
     def assert_container_status(self, container, result):
-        self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
-        self.logger.info(container.logs().decode())
+        #self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
+       # self.logger.info(str(container.logs().decode()))
 
         if result["StatusCode"] != 0:
             self.logger.error("Flow execution failed")
