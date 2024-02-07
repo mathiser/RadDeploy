@@ -71,7 +71,7 @@ class STORESCU:
         ae.requested_contexts = StoragePresentationContexts
 
         assoc = ae.associate(destination.host, destination.port, ae_title=destination.ae_title,
-                             bind_address=(self.ae_host, self.ae_port))
+                             bind_address=(self.ae_hostname, self.ae_port))
         if assoc.is_established:
             # Use the C-STORE service to send the dataset
             # returns the response status as a pydicom Dataset
