@@ -13,6 +13,10 @@ LOG_PUB_MODELS:
 # File Storage
 FILE_STORAGE_URL: "http://file-storage:80"
 
+AE_HOSTNAME: ""
+AE_PORT: 0
+AE_TITLE: DICOM_FLOW
+
 # STORESCU
 SUB_QUEUE_KWARGS:
     queue: ""

@@ -17,6 +17,9 @@ from DicomFlowLib.fs import FileStorageClient
 class STORESCU:
     def __init__(self, file_storage: FileStorageClient, pub_routing_key_success: str,
                  pub_routing_key_fail: str,
+                 ae_title: str,
+                 ae_port: int,
+                 ae_hostname: str,
                  log_level: int = 20):
         self.pub_routing_key_success = pub_routing_key_success
         self.pub_routing_key_fail = pub_routing_key_fail
@@ -24,7 +27,9 @@ class STORESCU:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
         self.fs = file_storage
-
+        self.ae_title = ae_title
+        self.ae_port = ae_port
+        self.ae_hostname = ae_hostname
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
 
         fc = FlowContext(**json.loads(body.decode()))
@@ -62,10 +67,11 @@ class STORESCU:
         return [PublishContext(body=fc.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:
-        ae = AE()
+        ae = AE(ae_title=self.ae_title)
         ae.requested_contexts = StoragePresentationContexts
 
-        assoc = ae.associate(destination.host, destination.port, ae_title=destination.ae_title)
+        assoc = ae.associate(destination.host, destination.port, ae_title=destination.ae_title,
+                             bind_address=(self.ae_host, self.ae_port))
         if assoc.is_established:
             # Use the C-STORE service to send the dataset
             # returns the response status as a pydicom Dataset

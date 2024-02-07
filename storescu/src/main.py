@@ -30,6 +30,9 @@ class Main:
         self.scu = STORESCU(file_storage=self.fs,
                             pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
                             pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
+                            ae_title=config["AE_TITLE"],
+                            ae_port=config["AE_PORT"],
+                            ae_hostname=config["AE_HOSTNAME"],
                             log_level=int(config["LOG_LEVEL"]))
 
         self.mq = MQSub(rabbit_hostname=config["RABBIT_HOSTNAME"], rabbit_port=int(config["RABBIT_PORT"]),
