@@ -1,8 +1,8 @@
 import json
 import signal
 from logging import StreamHandler
-from logging import Formatter
 from typing import List
+import socket
 
 from DicomFlowLib.data_structures.contexts import PublishContext
 from DicomFlowLib.mq import MQPub, PubModel
@@ -23,10 +23,12 @@ class MQHandler(StreamHandler):
         self.mq.start()
 
     def emit(self, record):
+        record = record.__dict__
+        record["hostname"] = socket.gethostname()
         for pub_model in self.pub_models:
             self.mq.add_publish_message(pub_model,
-                                        PublishContext(body=json.dumps(record.__dict__),
-                                                       routing_key=f"{record.name}.{record.levelname}"))
+                                        PublishContext(body=json.dumps(record),
+                                                       routing_key=f"{record["hostname"]}.{record["levelname"]}"))
 
     def stop(self, signalnum=None, stack_frame=None):
         self.mq.stop()

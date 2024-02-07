@@ -81,6 +81,7 @@ class Database:
 
         with self.Session() as session:
             session.add(Log(msg=json_log["msg"],
+                            hostname=json_log["hostname"],
                             levelname=json_log["levelname"],
                             pathname=json_log["pathname"],
                             funcName=json_log["funcName"],

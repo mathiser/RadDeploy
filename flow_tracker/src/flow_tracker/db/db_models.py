@@ -8,9 +8,7 @@ def _now():
 
 
 class Base(DeclarativeBase):
-    id: Mapped[int] = mapped_column(unique=True, primary_key=True, autoincrement=True)
-    ts: Mapped[str] = mapped_column(default=_now)
-
+    pass
 
 class Row(Base):
     __tablename__ = "rows"
@@ -31,8 +29,11 @@ class Row(Base):
 
 class Log(Base):
     __tablename__ = "logs"
-    msg: Mapped[str]
+    id: Mapped[int] = mapped_column(unique=True, primary_key=True, autoincrement=True)
+    ts: Mapped[str] = mapped_column(default=_now)
+    hostname: Mapped[str]
     levelname: Mapped[str]
+    msg: Mapped[str]
     pathname: Mapped[str]
     funcName: Mapped[str]
     created: Mapped[int]
