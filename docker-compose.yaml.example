@@ -37,7 +37,7 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=10
+      - LOG_LEVEL=20
 
   fingerprinter:
     hostname: "fingerprinter"
@@ -154,7 +154,7 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=10
+      - LOG_LEVEL=20
 
   static_storage:
     hostname: "static-storage"
