@@ -17,24 +17,29 @@ class Main:
 
         self.running = None
         init_logger(name=config["LOG_NAME"],
-                                         log_format=config["LOG_FORMAT"],
-                                         log_dir=config["LOG_DIR"],
-                                         rabbit_hostname=config["RABBIT_HOSTNAME"],
-                                         rabbit_port=int(config["RABBIT_PORT"]),
-                                         pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+                    log_format=config["LOG_FORMAT"],
+                    log_dir=config["LOG_DIR"],
+                    rabbit_hostname=config["RABBIT_HOSTNAME"],
+                    rabbit_port=int(config["RABBIT_PORT"]),
+                    pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
 
-        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"])
+        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"],
+                                    log_level=int(config["LOG_LEVEL"]))
 
         self.ss = FileStorageClient(file_storage_url=config["STATIC_STORAGE_URL"],
-                                    local_cache=config["STATIC_STORAGE_CACHE_DIR"])
+                                    local_cache=config["STATIC_STORAGE_CACHE_DIR"],
+                                    log_level=int(config["LOG_LEVEL"])
+                                    )
 
         self.consumer = DockerConsumer(file_storage=self.fs,
                                        static_storage=self.ss,
                                        gpus=config["GPUS"],
                                        pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
-                                       pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"])
+                                       pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
+                                       log_level=int(config["LOG_LEVEL"])
+                                       )
 
         if len(self.consumer.gpus) > 0:
             self.logger.info("GPUS are set. Changing sub_model routing_key to listen for GPU jobs only")
@@ -48,7 +53,9 @@ class Main:
                         sub_models=[SubModel(**sm) for sm in sub_models],
                         pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                         work_function=self.consumer.mq_entrypoint, sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
-                        sub_queue_kwargs=sub_queue_kwargs, pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"])
+                        sub_queue_kwargs=sub_queue_kwargs, pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"],
+                        log_level=int(config["LOG_LEVEL"])
+                        )
 
     def start(self):
         self.running = True

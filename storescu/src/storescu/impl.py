@@ -52,14 +52,11 @@ class STORESCU:
                 sender = fc.sender
                 sender.port = port
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=sender)
-                self.logger.info(
-                    f"POSTING TO SENDER: {fc.sender.ae_title} ON: {fc.sender.host}:{fc.sender.port}",
-                )
+
 
             for dest in fc.flow.destinations:
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}")
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
-                self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}")
 
         self.logger.info("SCU")
         self.uid = None
@@ -86,15 +83,14 @@ class STORESCU:
                             # If the storage request succeeded this will be 0x0000
                             self.logger.debug('C-STORE request status: 0x{0:04x}'.format(status.Status))
                         else:
-                            self.logger.info('Connection timed out, was aborted or received invalid response',
-                                             )
-
+                            self.logger.info('Connection timed out, was aborted or received invalid response')
                     except InvalidDicomError as e:
                         pass
                     except Exception as e:
-                        self.logger.error(str(e))
+                        self.logger.error(f"{p}, {str(e)}")
 
             # Release the association
+            self.logger.debug('Releasing Association')
             assoc.release()
             return True
         else:

@@ -6,6 +6,8 @@ from DicomFlowLib.log.mq_handler import MQHandler
 from DicomFlowLib.mq import PubModel
 
 
+
+
 def init_logger(name: str,
                 log_dir: str,
                 log_format: str,
@@ -13,6 +15,7 @@ def init_logger(name: str,
                 rabbit_hostname: str | None = None,
                 rabbit_port: int | None = None):
     logger = logging.getLogger()
+
     formatter = logging.Formatter(log_format)
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)

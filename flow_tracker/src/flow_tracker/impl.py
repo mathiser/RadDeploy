@@ -3,7 +3,6 @@ import logging
 from typing import Iterable, Dict, List
 
 import pandas as pd
-import pydicom
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from .db import Database
@@ -24,6 +23,7 @@ class FlowTracker:
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         if basic_deliver.exchange == "logs":
+
             self.db.insert_log_row(json.loads(body.decode()))
             return []
         else:

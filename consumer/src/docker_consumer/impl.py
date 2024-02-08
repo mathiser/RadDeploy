@@ -52,9 +52,11 @@ class DockerConsumer:
                  static_storage: FileStorageClient | None,
                  gpus: List | str,
                  pub_routing_key_success: str,
-                 pub_routing_key_fail: str):
+                 pub_routing_key_fail: str,
+                 log_level: int = 20):
         self.pub_declared = False
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
         self.fs = file_storage
         self.ss = static_storage
         self.pub_routing_key_success = pub_routing_key_success
@@ -76,12 +78,13 @@ class DockerConsumer:
 
         self.logger.info(f"RUNNING FLOW")
 
-        fc.mount_mapping = self.exec_model(model, fc.mount_mapping)
+        fc.mount_mapping = self.exec_model(uid=fc.uid, model=model, mount_mapping=fc.mount_mapping)
 
         self.logger.info(f"RUNNING FLOW")
         return [PublishContext(body=fc.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
 
     def exec_model(self,
+                   uid: str,
                    model: Model,
                    mount_mapping: Dict) -> Dict:
 
@@ -91,7 +94,7 @@ class DockerConsumer:
             except Exception as e:
                 self.logger.error("Could not pull container - does it exist on docker hub?")
                 raise e
-        self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}")
+        self.logger.info(f"UID={uid} ; RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}")
 
         kwargs = model.docker_kwargs
 
@@ -104,6 +107,9 @@ class DockerConsumer:
         if len(self.gpus) > 0:
             kwargs["ipc_mode"] = "host"
             kwargs["device_requests"] = [types.DeviceRequest(device_ids=self.gpus, capabilities=[['gpu']])]
+
+        # So logs can be pulled
+        kwargs["detach"] = True
 
         # Create container
         container = self.cli.containers.create(**kwargs)
@@ -122,11 +128,12 @@ class DockerConsumer:
 
             # Run the container
             container.start()
-            result = container.wait(timeout=model.timeout)  # Blocks...
-            self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
-            self.logger.info(str(container.logs().decode()))
+            for line in container.logs(stream=True):
+                self.logger.info(f"UID={uid} ; CONTAINER_ID={container.short_id} ; {line.decode()}")
 
-            self.assert_container_status(container=container, result=result)
+            result = container.wait(timeout=model.timeout)  # Blocks...
+
+            self.assert_container_status(uid=uid, container=container, result=result)
 
             for src, dst in model.output_mounts.items():
                 tar = self.get_archive(container=container, path=dst)
@@ -136,22 +143,18 @@ class DockerConsumer:
             return mount_mapping
 
         except Exception as e:
-            self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
-            self.logger.info(str(container.logs().decode()))
             self.logger.error(str(e))
             raise e
         finally:
             self.clean_up(container, kwargs)
 
-    def assert_container_status(self, container, result):
-        #self.logger.info(f"####### CONTAINER LOG ########## STATUS CODE: {result['StatusCode']}")
-       # self.logger.info(str(container.logs().decode()))
-
+    def assert_container_status(self, uid, container, result):
+        self.logger.info(f"UID={uid} ; CONTAINER_ID={container.short_id} ; EXITCODE={result['StatusCode']}")
         if result["StatusCode"] != 0:
-            self.logger.error("Flow execution failed")
-            raise Exception("Flow did not exit with code 0.")
+            self.logger.error(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow execution failed")
+            raise Exception(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow did not exit with code 0.")
         else:
-            self.logger.info("Flow execution succeeded")
+            self.logger.info(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow execution succeeded")
 
     def clean_up(self, container, kwargs):
         threading.Thread(target=self.delete_container, args=(container.short_id, )).start()

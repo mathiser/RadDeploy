@@ -4,7 +4,7 @@ import os
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-from .db_models import Base, Row, _now, Log
+from .db_models import Base, Row, _now, Log, ContainerLog
 
 
 class Database:
@@ -77,13 +77,31 @@ class Database:
             return row
 
     def insert_log_row(self,
-                        json_log):
+                       json_log):
+        if "UID=" in json_log["msg"] and "CONTAINER_ID" in json_log["msg"]:
+            with self.Session() as session:
+                for elem in json_log["msg"].split(" "):
+                    if "UID=" in elem:
+                        uid = elem.split("=")[1]
+                    if "CONTAINER_ID=" in elem:
+                        container_id = elem.split("=")[1]
 
-        with self.Session() as session:
-            session.add(Log(msg=json_log["msg"],
-                            hostname=json_log["hostname"],
-                            levelname=json_log["levelname"],
-                            pathname=json_log["pathname"],
-                            funcName=json_log["funcName"],
-                            created=json_log["created"]))
-            session.commit()
+                session.add(ContainerLog(uid=uid,
+                                         container_id=container_id,
+                                         msg=json_log["msg"],
+                                         hostname=json_log["hostname"],
+                                         levelname=json_log["levelname"],
+                                         pathname=json_log["pathname"],
+                                         funcName=json_log["funcName"],
+                                         created=json_log["created"]))
+                session.commit()
+
+        else:
+            with self.Session() as session:
+                session.add(Log(msg=json_log["msg"],
+                                hostname=json_log["hostname"],
+                                levelname=json_log["levelname"],
+                                pathname=json_log["pathname"],
+                                funcName=json_log["funcName"],
+                                created=json_log["created"]))
+                session.commit()
