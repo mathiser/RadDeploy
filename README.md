@@ -326,10 +326,15 @@ You can use the SQL query: `SELECT * FROM rows` and format ts, Dispatched, Finis
 
 ### Status
 - 0: Pending Flow (waiting to be executed)
-- 1: Running Flow
-- 2: Finished Flow (but not yet sent to destinations)
-- 3: Sending output files
-- 4: Sent output files
+- 1: Flow is being scheduled
+- 2: Flow is running
+- 3: Flow finished (but not yet sent to destinations)
+- 4: Sending output files
+- 5: Sent output files
 - 400: Failed
 
 In the table settings, these status codes can be mapped to human readable strings.
+
+# Firewall
+If you are using a firewall, you should make sure that the SCP and SCU ports are open.
+By defaults they are 10000 and 10005
