@@ -52,7 +52,7 @@ class Database:
             else:
                 return row
 
-    def set_status_of_row(self, uid: str, status: int):
+    def git set_status_of_row(self, uid: str, status: int):
         with self.Session() as session:
             row = session.query(Row).filter_by(UID=uid).first()
             assert row
