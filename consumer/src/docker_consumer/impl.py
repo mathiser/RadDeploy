@@ -129,7 +129,7 @@ class DockerConsumer:
             # Run the container
             container.start()
             for line in container.logs(stream=True):
-                self.logger.info(f"UID={uid} ; CONTAINER_ID={container.short_id} ; {line.decode()}")
+                self.logger.debug(f"UID={uid} ; CONTAINER_ID={container.short_id} ; {line.decode()}")
 
             result = container.wait(timeout=model.timeout)  # Blocks...
 
