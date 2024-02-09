@@ -1,1 +1,1 @@
-docker build . -t mathiser/dicom_flow-consumer:latest
+docker build . -t mathiser/dicom_flow-scheduler:latest

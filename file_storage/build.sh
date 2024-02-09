@@ -1,1 +1,1 @@
-docker build . -t mathiser/dicom_flow-janitor:latest
+docker build . -t mathiser/dicom_flow-file_storage:latest
