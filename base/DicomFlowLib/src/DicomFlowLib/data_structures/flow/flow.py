@@ -2,7 +2,7 @@ from typing import Dict, List, Any
 
 import networkx
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from DicomFlowLib.data_structures.flow.model import Model
 from DicomFlowLib.data_structures.flow.destination import Destination
@@ -11,7 +11,7 @@ from DicomFlowLib.data_structures.flow.destination import Destination
 class Flow(BaseModel):
     name: str = ""
     version: str = ""
-    priority: int = 0
+    priority: int = Field(default=0, ge=0, le=4, description="Priority must be in the range 0-4")
     triggers: List[Dict[str, List[str]]] = []
 
     models: List[Model] = []

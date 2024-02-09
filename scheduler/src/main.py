@@ -28,7 +28,9 @@ class Main:
                                    pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
                                    pub_routing_key_gpu=config["PUB_ROUTING_KEY_GPU"],
                                    pub_routing_key_cpu=config["PUB_ROUTING_KEY_CPU"],
-                                   log_level=int(config["LOG_LEVEL"]))
+                                   log_level=int(config["LOG_LEVEL"]),
+                                   consumer_exchange=config["SUB_CONSUMER_EXCHANGE"],
+                                   reschedule_priority=config["SUB_RESCHEDULE_PRIORITY"])
 
         self.mq = MQSub(rabbit_hostname=config["RABBIT_HOSTNAME"], rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],

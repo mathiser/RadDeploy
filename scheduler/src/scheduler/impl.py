@@ -2,6 +2,8 @@ import json
 import logging
 from typing import Iterable, Dict, Tuple, List
 
+import pika.spec
+
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 
 
@@ -11,10 +13,15 @@ class Scheduler:
                  pub_routing_key_fail: str,
                  pub_routing_key_gpu: str,
                  pub_routing_key_cpu: str,
+                 reschedule_priority: int,
+                 consumer_exchange: str,
                  log_level: int = 20):
         self.pub_declared = False
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
+
+        self.reschedule_priority = reschedule_priority
+        self.consumer_exchange = consumer_exchange
 
         self.pub_routing_key_gpu = pub_routing_key_gpu
         self.pub_routing_key_cpu = pub_routing_key_cpu
@@ -25,8 +32,20 @@ class Scheduler:
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         fc = FlowContext(**json.loads(body.decode()))
+
+        priority = self.determine_priority(fc, basic_deliver)
+        self.logger.debug(f"Setting priority from {fc.flow.priority} to {priority}")
+
         for new_fc, routing_key in self.schedule_from_flow_context(fc):
-            yield PublishContext(body=new_fc.model_dump_json().encode(), routing_key=routing_key)
+            yield PublishContext(body=new_fc.model_dump_json().encode(),
+                                 routing_key=routing_key,
+                                 priority=priority)
+
+    def determine_priority(self, flow_context: FlowContext, basic_deliver: pika.spec.Basic.Deliver):
+        if basic_deliver.exchange == self.consumer_exchange and basic_deliver.routing_key:
+            return self.reschedule_priority
+        else:
+            return flow_context.flow.priority
 
     def schedule_from_flow_context(self, fc: FlowContext) -> Iterable[Tuple[FlowContext, str]]:
         fc = self.update_mount_mapping(fc)
@@ -61,10 +80,9 @@ class Scheduler:
     def yield_eligible_models_as_publish_contexts(self, fc: FlowContext) -> Iterable[FlowContext]:
         uid = fc.uid
         for i, model in enumerate(fc.flow.models):
-            if uid not in self.dispatched_flows.keys():
-                self.dispatched_flows[uid] = []
 
-            if i in self.dispatched_flows[uid]:
+            # Checks if this task has already been dispatched
+            if self.is_already_scheduled(i, uid):
                 continue
 
             if model.input_mount_keys.issubset(self.get_mapping_keys_by_uid(uid)):
@@ -74,3 +92,9 @@ class Scheduler:
                     self.dispatched_flows[uid].append(i)
                     yield new_fc
 
+    def is_already_scheduled(self, i, uid):
+        if uid not in self.dispatched_flows.keys():
+            self.dispatched_flows[uid] = []
+            return False
+
+        return i in self.dispatched_flows[uid]

@@ -7,7 +7,7 @@ import yaml
 from scheduler import Scheduler
 
 from DicomFlowLib.data_structures.contexts import FlowContext
-from DicomFlowLib.data_structures.flow import Flow
+from DicomFlowLib.data_structures.flow import Flow, Destination
 
 
 class MyTestCase(unittest.TestCase):
@@ -16,14 +16,16 @@ class MyTestCase(unittest.TestCase):
         with open(file) as r:
             fp = yaml.safe_load(r)
         flow = Flow(**fp)
-        logger = logging.getLogger("Scheduler")
-        self.scheduler = Scheduler(logger=logger,
-                                   pub_routing_key_success="success",
+        self.scheduler = Scheduler(pub_routing_key_success="success",
                                    pub_routing_key_fail="fail",
                                    pub_routing_key_gpu="gpu",
-                                   pub_routing_key_cpu="cpu")
+                                   pub_routing_key_cpu="cpu",
+                                   consumer_exchange="consumer",
+                                   reschedule_priority=5
+                                   )
         flow.is_valid_dag()
-        self.fc = FlowContext(src_uid="asdfasdfasdf", flow=flow)
+        self.fc = FlowContext(src_uid="asdfasdfasdf", flow=flow, dataframe_json="a",
+                              sender=Destination(host="asdf", port=1121, ae_title="SomeAE"))
 
     def test_check_flow_finished_false(self):
         self.assertFalse(self.scheduler.check_flow_finished(self.fc))

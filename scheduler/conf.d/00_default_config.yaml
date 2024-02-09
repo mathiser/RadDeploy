@@ -17,12 +17,14 @@ SUB_QUEUE_KWARGS:
   exclusive: False
   auto_delete: True
 SUB_PREFETCH_COUNT: 1
+SUB_CONSUMER_EXCHANGE: &SUB_CONSUMER_EXCHANGE "consumer"
+SUB_RESCHEDULE_PRIORITY: 5
 SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"
     routing_keys: ["success"]
     routing_key_fetch_echo: "fetch"
-  - exchange: "consumer"
+  - exchange: *SUB_CONSUMER_EXCHANGE
     exchange_type: "topic"
     routing_keys: ["success", "error", "fail"]
     routing_key_fetch_echo: "fetch"
