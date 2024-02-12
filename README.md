@@ -29,8 +29,7 @@ Now you should have a DICOM receiver running by default on `localhost:10000` wit
 
 ### Docker compose mounts
 The `fingerprinter`-service should have a folder container flow-definitions (see next section) mounted. By defaults this this mount is: `./mounts/flows:/opt/DicomFlow/flows`
-The `static_storage`-service should have static tars mounted to `/opt/DicomFlow/static`. It is not mandatory to have
-the `static_storage` running if you do not have any static content for your docker containers. See how to configure below.
+The `file_storage`-service may have static tars mounted to `/opt/DicomFlow/static`.
 
 In all services, logs are put in `/opt/DicomFlow/logs`, and can be mounted to a permanent dir if needed.
 
@@ -139,8 +138,8 @@ models:
     pull_before_exec: True  # Try to pull "busybox" from hub.docker.com before every execution. 
     timeout: 1800  # default timeout is 1800 seconds. If the container is running for longer, it will be terminated forcefully. This is to avoid hanging container jobs, which obstruct the queue.
     static_mounts: 
-      - "AwesomeModel1:/model" # Will make AwesomeModel1 from static_storage available in container's /model
-      - "AwesomeModel2:/model" # giving the container access to static model. 
+      - "AwesomeModel1:/model1" # Will make AwesomeModel1 from static_storage available in container's /model
+      - "AwesomeModel2:/model2" # giving the container access to static model. 
                                # Note "AwesomeModel2" must be mounted to the static_storage service to
                                # "/opt/DicomFlow/static" as tar: "/opt/DicomFlow/static/AwesomeModel2.tar"
                                # Note that you cannot specify "ro" or "rw" - only one colon should be in the string
@@ -171,8 +170,8 @@ Furhtermore the following variables can be set in the flow definition
 `priority` can be set to an integer between 0 and 5, where 5 is highest priority. 0 is default. When consumers are receiving a new flow to be run, the available flow with highest priority with run. 
 Note, that priority makes flows jump the queue, but NOT pause running flows.
 
-##### optional_kwargs
-`optional_kwargs` is a dictionary that will follow the flow all the way. It can be used for custom services etc..
+##### extra
+`extra` is a dictionary that will follow the flow all the way. It can be used for custom services etc..
 
 ##### return_to_sender_on_port
 `return_to_sender_on_port` is a list of integer ports. Can be used to directly send back to the scu (sender) of the flow on a specific port. 
@@ -221,7 +220,7 @@ destinations:
   - host: storage.some-system.org
     port: 104
     ae_title: FANCYSTORE
-optional_kwargs:
+extra:
   INTERESTING_PARAMETER: FooBar
   USED_FOR_CUSTOM_SERVICE: Niiice
 ```
@@ -262,7 +261,7 @@ Below is a list of variables which should be adapted to the specific environment
 The DICOM receiver can be adapted with the following variables
 ```
 # SCP
-AE_TITLE: "DICOM_FLOW"
+AE_TITLE: "DICOMFLOW"
 AE_HOSTNAME: "localhost"
 AE_PORT: 10000
 PYNETDICOM_LOG_LEVEL: 20
@@ -302,19 +301,21 @@ Which will results in something like:
       - MR1_T2.dcm
 
 #### Consumer
+`CPUS` is a count of CPU-threads DicomFLow. Should be an integer
+
 `GPUS` is a list of physical GPUs that are at disposal for flow execution. 
 It is the GPU-index which can be found in `nvtop` or `nvidia-smi`
+
 For instance:
 ```
 GPUS: 
   - 0
 ```
-It can also be provided as a space seperated string in an environment variable like `GPUS=0 2 5`
-
+It can also be provided as a space seperated string in an environment variable like `GPUS=0 2 5`. 
 Defaults to an empty list.
 
 ## Dashboard
-If you want to set up the grafana dashboard, make sure that the grafana service has access to `janitor`'s
+If you want to set up the grafana dashboard, make sure that the grafana service has access to `flow_tracker`'s
 `/opt/DicomFlow/database/database.sqlite` with the following two mounts:
 - **flow_tracker**: `./mounts/flow_tracker:/opt/DicomFlow/database:rw`
 - **dashboard**: `./mounts/flow_tracker:/var/lib/grafana/database:ro`
@@ -337,4 +338,4 @@ In the table settings, these status codes can be mapped to human readable string
 
 # Firewall
 If you are using a firewall, you should make sure that the SCP and SCU ports are open.
-By defaults they are 10000 and 10005
+By default they are 10000 and 10005, respectively
