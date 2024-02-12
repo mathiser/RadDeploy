@@ -161,11 +161,10 @@ class DockerConsumer:
     def delete_container(self, container_id):
         counter = 0
         while counter < 5:
-            self.logger.debug(f"Attempting to remove container {container_id}")
             try:
+                self.logger.debug(f"Attempting to remove container {container_id}")
                 c = self.cli.containers.get(container_id)
                 c.remove(force=True)
-                self.logger.debug(f"Attempting to remove container {container_id}")
                 return
             except errors.NotFound:
                 return

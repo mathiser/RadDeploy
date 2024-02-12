@@ -26,7 +26,6 @@ class TestFP(unittest.TestCase):
                 file_metas.append(ds)
 
         ds = parse_file_metas(file_metas)
-        print(ds["Modality"])
         flows = parse_fingerprints("fp/tests/test_data/flows.bak")
         for flow in flows:
             self.assertEqual(flow.optional_kwargs["pass"], fingerprint(ds, flow.triggers))

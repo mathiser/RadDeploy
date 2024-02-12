@@ -58,7 +58,6 @@ class Flow(BaseModel):
                 resid.remove("dst")
                 raise Exception(f"Invalid mapping - don't know what to do with {resid}")
         except Exception as e:
-            print(self.name, self.models)
             raise e
         return True
 
