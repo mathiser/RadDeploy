@@ -51,4 +51,5 @@ PUB_MODELS:
   - exchange: "consumer"
     exchange_type: "topic"
 
+CPUS: 1
 GPUS: []

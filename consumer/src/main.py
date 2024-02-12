@@ -1,20 +1,20 @@
 import logging
 import os
 import signal
+import sys
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.log import init_logger
-from DicomFlowLib.mq import PubModel, SubModel
-
 from DicomFlowLib.fs import FileStorageClient
+from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import MQSub
-from docker_consumer.impl import DockerConsumer
+from DicomFlowLib.mq import PubModel, SubModel
+from docker_consumer import Worker, DockerConsumer
 
 
-class Main:
-    def __init__(self, config):
+class MainConsumer:
+    def __init__(self, config, worker: Worker):
         signal.signal(signal.SIGTERM, self.stop)
-
+        self.worker = worker
         self.running = None
         init_logger(name=config["LOG_NAME"],
                     log_format=config["LOG_FORMAT"],
@@ -33,31 +33,33 @@ class Main:
                                     log_level=int(config["LOG_LEVEL"])
                                     )
 
-        self.consumer = DockerConsumer(file_storage=self.fs,
-                                       static_storage=self.ss,
-                                       gpus=config["GPUS"],
-                                       pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
-                                       pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
-                                       log_level=int(config["LOG_LEVEL"])
-                                       )
-
-        if len(self.consumer.gpus) > 0:
+        if self.worker.type == "GPU":
             self.logger.info("GPUS are set. Changing sub_model routing_key to listen for GPU jobs only")
+            self.logger.info(f"GPUS is set to ID: {str(self.worker.model_dump())}")
             sub_models = config["GPU_SUB_MODELS"]
             sub_queue_kwargs = config["GPU_SUB_QUEUE_KWARGS"]
         else:
             sub_models = config["CPU_SUB_MODELS"]
             sub_queue_kwargs = config["CPU_SUB_QUEUE_KWARGS"]
 
+        self.consumer = DockerConsumer(file_storage=self.fs,
+                                       static_storage=self.ss,
+                                       worker=self.worker,
+                                       pub_routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
+                                       pub_routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
+                                       log_level=int(config["LOG_LEVEL"]))
+
         self.mq = MQSub(rabbit_hostname=config["RABBIT_HOSTNAME"], rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**sm) for sm in sub_models],
                         pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                         work_function=self.consumer.mq_entrypoint, sub_prefetch_value=int(config["SUB_PREFETCH_COUNT"]),
                         sub_queue_kwargs=sub_queue_kwargs, pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"],
-                        log_level=int(config["LOG_LEVEL"])
-                        )
-
+                        log_level=int(config["LOG_LEVEL"]))
+        self.start()
     def start(self):
+        if self.running:
+            return
+
         self.running = True
 
         self.mq.start()
@@ -75,10 +77,3 @@ class Main:
         self.running = False
         self.mq.stop()
         self.mq.join()
-
-
-if __name__ == "__main__":
-    config = load_configs(os.environ["CONF_DIR"], os.environ["CURRENT_CONF"])
-
-    m = Main(config=config)
-    m.start()

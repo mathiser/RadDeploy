@@ -19,7 +19,7 @@ class Flow(BaseModel):
     destinations: List[Destination] = []
 
     return_to_sender_on_ports: List[int] = []
-    optional_kwargs: Dict = {}
+    extra: Dict = {}
 
     def __init__(self, **data: Any):
         super().__init__(**data)
