@@ -2,10 +2,10 @@ import logging
 import os
 
 from DicomFlowLib.conf import load_configs
+from DicomFlowLib.fs import FileManager
 from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import PubModel
-from DicomFlowLib.fs import FileStorageServer
-from file_janitor import FileJanitor
+from api import FileStorageServer
 
 
 class Main:
@@ -20,21 +20,27 @@ class Main:
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
-
+        routers = {
+            "/files": {
+                "file_manager": FileManager(log_level=config["LOG_LEVEL"],
+                                            base_dir=config["FILE_STORAGE_TEMP_DIR"],
+                                            delete_file_after=int(config["FILE_JANITOR_DELETE_FILES_AFTER"]),
+                                            delete_run_interval=int(config["FILE_JANITOR_RUN_INTERVAL"]))
+            },
+            "/static": {
+                "file_manager": FileManager(log_level=config["LOG_LEVEL"],
+                                            base_dir=config["FILE_STORAGE_STATIC_DIR"]),
+                "allow_post": False,
+                "allow_clone": False,
+                "allow_delete": False
+            }
+        }
         self.fs = FileStorageServer(host=config["FILE_STORAGE_HOST"],
-                                    port=config["FILE_STORAGE_PORT"],
-                                    base_dir=config["FILE_STORAGE_BASE_DIR"],
-                                    suffix=config["FILE_STORAGE_SUFFIX"],
-                                    delete_on_get=False,
-                                    log_level=int(config["LOG_LEVEL"]))
-
-        self.fj = FileJanitor(file_storage=self.fs,
-                              delete_files_after=int(config["FILE_JANITOR_DELETE_FILES_AFTER"]),
-                              run_inteval=int(config["FILE_JANITOR_RUN_INTERVAL"]),
-                              log_level=int(config["LOG_LEVEL"]))
+                                    port=int(config["FILE_STORAGE_PORT"]),
+                                    log_level=config["LOG_LEVEL"],
+                                    file_managers=routers)
 
     def start(self):
-        self.fj.start()
         self.fs.start()
 
 

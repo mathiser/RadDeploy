@@ -3,11 +3,9 @@ import os
 import threading
 import time
 
-from DicomFlowLib.fs import FileStorageServer
-
 
 class FileJanitor(threading.Thread):
-    def __init__(self, file_storage: FileStorageServer, delete_files_after: int, run_inteval: int = 60,
+    def __init__(self, file_storage, delete_files_after: int, run_inteval: int = 60,
                  log_level: int = 20):
         super().__init__()
         self.logger = logging.getLogger(__name__)

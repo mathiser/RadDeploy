@@ -11,7 +11,7 @@ LOG_PUB_MODELS:
   - exchange: logs
 
 # File Storage
-FILE_STORAGE_URL: "http://file-storage:80"
+FILE_STORAGE_URL: "http://file-storage:80/files/"
 
 AE_HOSTNAME: ""
 AE_PORT: 10005

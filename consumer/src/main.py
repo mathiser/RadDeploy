@@ -16,12 +16,7 @@ class MainConsumer:
         signal.signal(signal.SIGTERM, self.stop)
         self.worker = worker
         self.running = None
-        init_logger(name=config["LOG_NAME"],
-                    log_format=config["LOG_FORMAT"],
-                    log_dir=config["LOG_DIR"],
-                    rabbit_hostname=config["RABBIT_HOSTNAME"],
-                    rabbit_port=int(config["RABBIT_PORT"]),
-                    pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
         self.sub_models = sub_models

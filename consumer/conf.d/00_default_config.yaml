@@ -11,10 +11,10 @@ LOG_PUB_MODELS:
   - exchange: logs
 
 # File Storage
-FILE_STORAGE_URL: "http://file-storage:80"
+FILE_STORAGE_URL: "http://file-storage:80/files/"
 
 # Static Storage
-STATIC_STORAGE_URL: "http://static-storage:80"
+STATIC_STORAGE_URL: "http://file-storage:80/static/"
 STATIC_STORAGE_CACHE_DIR: "/opt/DicomFlow/static"
 
 # CONSUMER

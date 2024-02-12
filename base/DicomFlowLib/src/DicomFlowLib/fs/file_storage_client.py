@@ -5,7 +5,7 @@ from io import BytesIO
 import requests
 import urllib.parse
 
-from DicomFlowLib.fs.utils import hash_file
+from DicomFlowLib.fs.file_manager.file_manager import hash_file
 
 
 class FileStorageClient:
@@ -79,7 +79,6 @@ class FileStorageClient:
 
         res = requests.get(self.url, params={"uid": uid})
         if res.ok:
-            self.logger.debug(f"Serving file with uid: {uid}")
             file = BytesIO(res.content)
             if self.local_cache:
                 self.write_file_to_disk(uid, file)
@@ -99,7 +98,6 @@ class FileStorageClient:
                 os.remove(self.get_file_path(uid))
 
         if res.ok:
-            self.logger.debug(f"Deleting file with uid: {uid}")
             return res.json()
         elif res.status_code == 404:
             raise FileNotFoundError
@@ -132,6 +130,5 @@ class FileStorageClient:
         with open(p, "wb") as writer:
             self.logger.debug(f"Writing file with uid: {uid} to path: {p}")
             writer.write(file.read())
-            self.logger.debug(f"Writing file with uid: {uid} to path: {p}")
         file.seek(0)
         return p
