@@ -44,7 +44,7 @@ def main():
     for device_id in device_ids:
         logger.info(f"Spawning GPU worker: {device_id}")
         p = Process(target=MainConsumer, args=(config,
-                                               Worker(type="CPU", device_id=str(device_id)),
+                                               Worker(type="GPU", device_id=str(device_id)),
                                                config["GPU_SUB_MODELS"],
                                                config["GPU_SUB_QUEUE_KWARGS"]))
         workers.append(p)

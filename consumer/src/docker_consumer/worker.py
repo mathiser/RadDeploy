@@ -17,4 +17,7 @@ class Worker(BaseModel):
         super().__init__(**data)
 
     def is_gpu_worker(self):
+        print(self.type)
+        print(type(self.type))
+        print(self.type == WorkerType.GPU)
         return self.type == WorkerType.GPU
