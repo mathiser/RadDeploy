@@ -70,12 +70,12 @@ services:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=10
 
-  cpu_consumer:
+  consumer:
     hostname: "consumer"
     restart: always
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: 1
     depends_on:
       - rabbit
       - base
@@ -86,31 +86,10 @@ services:
         BASE_IMAGE: dicom_flow-base
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=20
-      #- GPUS=0
+      - LOG_LEVEL=10
+      - GPUS=0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-
-#  gpu_consumer:
-#    hostname: "consumer"
-#    restart: always
-#    deploy:
-#      mode: replicated
-#      replicas: 1
-#    depends_on:
-#      - rabbit
-#      - base
-#    build:
-#      context: "consumer"
-#      dockerfile: "Dockerfile"
-#      args:
-#        BASE_IMAGE: dicom_flow-base
-#    environment:
-#      - PYTHONUNBUFFERED=1
-#      - LOG_LEVEL=20
-#      - GPUS=0
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock
 
   storescu:
     hostname: "storescu"
@@ -149,20 +128,6 @@ services:
       - base
     build:
       context: "file_storage"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=10
-
-  static_storage:
-    hostname: "static-storage"
-    restart: always
-    depends_on:
-      - base
-    build:
-      context: "static_storage"
       dockerfile: "Dockerfile"
       args:
         BASE_IMAGE: dicom_flow-base
