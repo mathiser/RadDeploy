@@ -25,8 +25,9 @@ def main():
     logger = logging.getLogger(__name__)
     logger.setLevel(int(config["LOG_LEVEL"]))
     workers = []
-    assert isinstance(config["CPUS"], int)
-    for cpu_id in range(config["CPUS"]):
+
+    cpus = int(config["CPUS"])
+    for cpu_id in range(cpus):
         logger.info(f"Spawning CPU worker: {cpu_id}")
         p = Process(target=MainConsumer, args=(config, Worker(type="CPU", device_id=str(cpu_id)),))
         workers.append(p)
