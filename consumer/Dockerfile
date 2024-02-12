@@ -9,4 +9,4 @@ COPY . ./
 
 WORKDIR /opt/DicomFlow/src/
 
-ENTRYPOINT ["/usr/local/bin/python3", "main.py"]
+ENTRYPOINT ["/usr/local/bin/python3", "init_consumers.py"]

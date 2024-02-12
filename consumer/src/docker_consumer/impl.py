@@ -7,14 +7,14 @@ import tempfile
 import threading
 import time
 from io import BytesIO
-from typing import List, Iterable, Dict
+from typing import Iterable
 
 import docker
 from docker import types, errors
 
 from DicomFlowLib.data_structures.contexts import PublishContext, FlowContext
-from DicomFlowLib.data_structures.flow import Model
 from DicomFlowLib.fs import FileStorageClient
+from .worker import  Worker
 
 
 def postprocess_output_tar(output_dir: str, tarf: BytesIO):
@@ -50,7 +50,7 @@ class DockerConsumer:
     def __init__(self,
                  file_storage: FileStorageClient,
                  static_storage: FileStorageClient | None,
-                 gpus: List | str,
+                 worker: Worker,
                  pub_routing_key_success: str,
                  pub_routing_key_fail: str,
                  log_level: int = 20):
@@ -62,10 +62,7 @@ class DockerConsumer:
         self.pub_routing_key_success = pub_routing_key_success
         self.pub_routing_key_fail = pub_routing_key_fail
 
-        if isinstance(gpus, str):
-            self.gpus = gpus.split()
-        else:
-            self.gpus = gpus
+        self.worker = worker
 
         self.cli = docker.from_env()
 
@@ -74,19 +71,18 @@ class DockerConsumer:
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         fc = FlowContext(**json.loads(body.decode()))
-        model = fc.active_model
 
-        self.logger.info(f"RUNNING FLOW")
+        self.logger.info(f"Spinning up flow")
+        fc = self.exec_model(flow_context=fc)
+        self.logger.info(f"Finished flow")
 
-        fc.mount_mapping = self.exec_model(uid=fc.uid, model=model, mount_mapping=fc.mount_mapping)
-
-        self.logger.info(f"RUNNING FLOW")
         return [PublishContext(body=fc.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
 
     def exec_model(self,
-                   uid: str,
-                   model: Model,
-                   mount_mapping: Dict) -> Dict:
+                   flow_context: FlowContext) -> FlowContext:
+        uid = flow_context.uid
+        model = flow_context.active_model
+        mount_mapping = flow_context.mount_mapping
 
         if model.pull_before_exec:
             try:
@@ -103,10 +99,12 @@ class DockerConsumer:
         for src, dst in {**model.input_mounts, **model.output_mounts, **model.static_mounts}.items():
             kwargs["volumes"].append(f'{tempfile.mkdtemp()}:{dst}')
 
-        # Allow GPU usage. If int, use as count, if str use as uuid
-        if len(self.gpus) > 0:
+        # Allow GPU usage
+        if self.worker.is_gpu_worker():
             kwargs["ipc_mode"] = "host"
-            kwargs["device_requests"] = [types.DeviceRequest(device_ids=self.gpus, capabilities=[['gpu']])]
+            self.logger.debug(f"Uses GPU device {self.worker.device_id}")
+            if "DEBUG_DISABLE_GPU" not in flow_context.flow.extra.keys():
+                kwargs["device_requests"] = [types.DeviceRequest(device_ids=[self.worker.device_id], capabilities=[['gpu']])]
 
         # So logs can be pulled
         kwargs["detach"] = True
@@ -140,7 +138,7 @@ class DockerConsumer:
                 uid = self.fs.post(tar)
                 mount_mapping[src] = uid
 
-            return mount_mapping
+            return flow_context
 
         except Exception as e:
             self.logger.error(str(e))
