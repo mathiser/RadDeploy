@@ -10,9 +10,6 @@ LOG_FORMAT: "%(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)
 LOG_PUB_MODELS:
   - exchange: logs
 
-# Scheduler
-DATABASE_PATH: "/opt/DicomFlow/database/database.sqlite"
-
 SUB_QUEUE_KWARGS:
   queue: ""
   passive: False

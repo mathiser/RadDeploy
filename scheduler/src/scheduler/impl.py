@@ -1,12 +1,10 @@
 import json
 import logging
-from typing import Iterable, Tuple
+from typing import Iterable, Dict, Tuple, List
 
 import pika.spec
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
-from .db import Database
-from .db.db_models import MountMapping
 
 
 class Scheduler:
@@ -17,7 +15,6 @@ class Scheduler:
                  pub_routing_key_cpu: str,
                  reschedule_priority: int,
                  consumer_exchange: str,
-                 database_path: str,
                  log_level: int = 20):
         self.pub_declared = False
         self.logger = logging.getLogger(__name__)
@@ -30,12 +27,11 @@ class Scheduler:
         self.pub_routing_key_cpu = pub_routing_key_cpu
         self.pub_routing_key_success = pub_routing_key_success
         self.pub_routing_key_fail = pub_routing_key_fail
-
-        self.db = Database(database_path=database_path, log_level=log_level)
+        self.mount_mapping: Dict[str, Dict[str, str]] = {}
+        self.dispatched_flows: Dict[str, List[int]] = {}
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
         fc = FlowContext(**json.loads(body.decode()))
-        fc = self.sync_mount_mapping(fc)
 
         priority = self.determine_priority(fc, basic_deliver)
         self.logger.debug(f"Setting priority from {fc.flow.priority} to {priority}")
@@ -52,9 +48,10 @@ class Scheduler:
             return flow_context.flow.priority
 
     def schedule_from_flow_context(self, fc: FlowContext) -> Iterable[Tuple[FlowContext, str]]:
-        if self.check_flow_finished(fc.uid):
+        fc = self.update_mount_mapping(fc)
+        if self.check_flow_finished(fc):
             yield fc, self.pub_routing_key_success
-            self.db.delete_all_by_uid(fc.uid)
+            del self.mount_mapping[fc.uid]
         else:
             for new_fc in self.yield_eligible_models_as_publish_contexts(fc):
                 if new_fc.active_model.gpu:
@@ -62,46 +59,42 @@ class Scheduler:
                 else:
                     yield new_fc, self.pub_routing_key_cpu
 
-    def sync_mount_mapping(self, fc: FlowContext):
-        for name, file_uid in fc.mount_mapping.items():
-            self.db.insert_mount_mapping(uid=fc.uid,
-                                         name=name,
-                                         file_uid=file_uid)
-        mappings = self.db.get_objs_by_kwargs(_obj_type=MountMapping, uid=fc.uid)
-        fc.mount_mapping = {m.name: m.file_uid for m in mappings}
+    def update_mount_mapping(self, fc: FlowContext):
+        if fc.uid not in self.mount_mapping.keys():
+            self.mount_mapping[fc.uid] = {}
+
+        self.mount_mapping[fc.uid] = {**self.mount_mapping[fc.uid], **fc.mount_mapping}
+        fc.mount_mapping = self.mount_mapping[fc.uid]
         return fc
 
-    def check_flow_finished(self, flow_context_uid: str):
-        return bool(self.db.get_objs_by_kwargs(_obj_type=MountMapping,
-                                               uid=flow_context_uid,
-                                               name="dst").first())
+    def get_mapping_by_uid(self, flow_context_uid: str):
+        return self.mount_mapping[flow_context_uid]
 
-    def evaluate_mount_keys_are_in_db(self, uid, mount_keys):
-        for mount_key in mount_keys:
-            if not self.db.get_objs_by_kwargs(MountMapping, uid=uid, name=mount_key).first():
-                return False
-        else:
-            return True
+    def get_mapping_keys_by_uid(self, flow_context_uid: str):
+        return set(self.get_mapping_by_uid(flow_context_uid).keys())
 
-    def evaluate_mount_keys_are_not_in_db(self, uid, mount_keys):
-        for mount_key in mount_keys:
-            if self.db.get_objs_by_kwargs(MountMapping, uid=uid, name=mount_key).first():
-                return False
-        else:
-            return True
+    @staticmethod
+    def check_flow_finished(fc: FlowContext):
+        return "dst" in fc.mount_mapping.keys()
 
     def yield_eligible_models_as_publish_contexts(self, fc: FlowContext) -> Iterable[FlowContext]:
         uid = fc.uid
         for i, model in enumerate(fc.flow.models):
-            try:
-                self.db.insert_dispatched_model(uid=uid, model_id=i)  # Checks if this task has already been dispatched
-                if self.evaluate_mount_keys_are_in_db(uid=uid,
-                                                      mount_keys=model.input_mount_keys):  # Check that inputs exist
-                    if self.evaluate_mount_keys_are_not_in_db(uid=uid,
-                                                              mount_keys=model.output_mount_keys):  # Check that outputs not exist
-                        new_fc: FlowContext = fc.model_copy(deep=True)
-                        new_fc.active_model_idx = i
-                        yield new_fc
-            except Exception as e:
-                print(e)
-                self.logger.debug(f"Model {i} for flow {uid} is already dispatched")
+
+            # Checks if this task has already been dispatched
+            if self.is_already_scheduled(i, uid):
+                continue
+
+            if model.input_mount_keys.issubset(self.get_mapping_keys_by_uid(uid)):
+                if not model.output_mount_keys.issubset(self.get_mapping_keys_by_uid(uid)):
+                    new_fc: FlowContext = fc.model_copy(deep=True)
+                    new_fc.active_model_idx = i
+                    self.dispatched_flows[uid].append(i)
+                    yield new_fc
+
+    def is_already_scheduled(self, i, uid):
+        if uid not in self.dispatched_flows.keys():
+            self.dispatched_flows[uid] = []
+            return False
+
+        return i in self.dispatched_flows[uid]

@@ -21,29 +21,28 @@ class MyTestCase(unittest.TestCase):
                                    pub_routing_key_gpu="gpu",
                                    pub_routing_key_cpu="cpu",
                                    consumer_exchange="consumer",
-                                   reschedule_priority=5,
-                                   database_path=":memory:")
+                                   reschedule_priority=5
+                                   )
         flow.is_valid_dag()
         self.fc = FlowContext(src_uid="asdfasdfasdf", flow=flow, dataframe_json="a",
                               sender=Destination(host="asdf", port=1121, ae_title="SomeAE"))
 
     def test_check_flow_finished_false(self):
-        self.assertFalse(self.scheduler.check_flow_finished(self.fc.uid))
+        self.assertFalse(self.scheduler.check_flow_finished(self.fc))
 
     def test_update_mount_mapping(self):
-        self.fc = self.scheduler.sync_mount_mapping(self.fc)
-        self.assertTrue(
-            self.scheduler.evaluate_mount_keys_are_in_db(uid=self.fc.uid, mount_keys=self.fc.mount_mapping.keys()))
+        self.scheduler.update_mount_mapping(self.fc)
+        self.assertIn(self.fc.uid, self.scheduler.mount_mapping)
 
     def test_yield_eligible_models_as_publish_contexts(self):
-        self.fc = self.scheduler.sync_mount_mapping(self.fc)
+        self.scheduler.update_mount_mapping(self.fc)
         elig_models = list(self.scheduler.yield_eligible_models_as_publish_contexts(self.fc))
         self.assertEqual(1, len(elig_models))
 
         # Simulate first model run
         self.fc.mount_mapping["STRUCT"] = "new fancy uid"
         self.fc.mount_mapping["CT"] = "new bla"
-        self.fc = self.scheduler.sync_mount_mapping(self.fc)
+        self.scheduler.update_mount_mapping(self.fc)
         elig_models = list(self.scheduler.yield_eligible_models_as_publish_contexts(self.fc))
         self.assertEqual(2, len(elig_models))
         for m in elig_models:
