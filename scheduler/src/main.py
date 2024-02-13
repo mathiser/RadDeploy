@@ -30,7 +30,8 @@ class Main:
                                    pub_routing_key_cpu=config["PUB_ROUTING_KEY_CPU"],
                                    log_level=int(config["LOG_LEVEL"]),
                                    consumer_exchange=config["SUB_CONSUMER_EXCHANGE"],
-                                   reschedule_priority=config["SUB_RESCHEDULE_PRIORITY"])
+                                   reschedule_priority=config["SUB_RESCHEDULE_PRIORITY"],
+                                   database_path=config["DATABASE_PATH"])
 
         self.mq = MQSub(rabbit_hostname=config["RABBIT_HOSTNAME"], rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
