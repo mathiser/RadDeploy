@@ -57,10 +57,8 @@ class MQPub(MQBase):
             self._nacked = 0
             self._message_number = 0
 
-            self.logger.debug("Connecting")
-
             self.connect()
-            self.logger.debug("Connecting")
+            self.logger.debug("Connected to RabbitMQ")
             # self.logger.info('Enabling delivery confirmations')
             # self.enable_delivery_confirmations()
 

@@ -59,13 +59,20 @@ class MQBase(threading.Thread):
             self._channel = self._connection.channel()
         return self
 
-    def connect(self):
+    def connect(self, timeout=300):
         assert self._hostname and self._port
-        self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=self._hostname, port=self._port))
-        self._channel = self._connection.channel()
-        while not self._connection:
-            time.sleep(1)
-        return self
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            self.logger.debug("Trying to connect to RabbitMQ")
+            self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=self._hostname, port=self._port))
+            self._channel = self._connection.channel()
+            if self._connection:
+                if self._connection.is_open:
+                    return self
+            else:
+                self.logger.debug("Failed to connect to RabbitMQ - retrying in 5 seconds ...")
+                time.sleep(5)
+        raise Exception("Timeout connecting to RabbitMQ")
 
     def stop(self, signalnum=None, stack_frame=None):
         """Stop the example by closing the channel and connection. We
