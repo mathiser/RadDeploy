@@ -18,5 +18,9 @@ class FileStorageServer(FastAPI):
             router = FileStorageRouter(**file_manager_kwargs)
             self.include_router(router, prefix=prefix)
 
+        @self.get("/")
+        def hello_world():
+            return {"detail": "hello world"}
+
     def start(self):
         uvicorn.run(app=self, host=self.host, port=self.port)
