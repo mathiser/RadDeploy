@@ -39,7 +39,7 @@ jobs:
       - name: Build and push STORESCP
         uses: docker/build-push-action@v5
         with:
-          context: ./base
+          context: ./storescp
           file: ./Dockerfile
           push: true
           tags: |
@@ -49,7 +49,7 @@ jobs:
       - name: Build and push Fingerprinter
         uses: docker/build-push-action@v5
         with:
-          context: ./base
+          context: ./fingerprinter
           file: ./Dockerfile
           push: true
           tags: |
@@ -59,7 +59,7 @@ jobs:
       - name: Build and push Scheduler
         uses: docker/build-push-action@v5
         with:
-          context: ./base
+          context: ./scheduler
           file: ./Dockerfile
           push: true
           tags: |
@@ -69,7 +69,7 @@ jobs:
       - name: Build and push File_Storage
         uses: docker/build-push-action@v5
         with:
-          context: ./base
+          context: ./file_storage
           file: ./Dockerfile
           push: true
           tags: |
@@ -80,7 +80,7 @@ jobs:
       - name: Build and push STORESCU
         uses: docker/build-push-action@v5
         with:
-          context: ./base
+          context: ./storescu
           file: ./Dockerfile
           push: true
           tags: |
@@ -90,9 +90,19 @@ jobs:
       - name: Build and push Consumer
         uses: docker/build-push-action@v5
         with:
-          context: ./base
+          context: ./consumer
           file: ./Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-consumer:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-consumer:${{ steps.date.outputs.date }}
+      
+      - name: Build and push FlowTracker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./flow_tracker
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-flow_tracker:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-flow_tracker:${{ steps.date.outputs.date }}
