@@ -60,7 +60,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-scheduler:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-scheduler:$NOW
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-scheduler:${{ steps.date.outputs.date }}
 
       - name: Build and push File_Storage
         uses: docker/build-push-action@v5
