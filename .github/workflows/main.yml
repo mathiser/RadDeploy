@@ -13,7 +13,7 @@ jobs:
        # id: date
      #   run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
       - name: Set current date as env variable
-        run: echo "NOW=$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
+        run: echo "NOW=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
         
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,4 +33,6 @@ jobs:
           context: ./base
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-base:latest , ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-base:$NOW
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-base:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-base:$NOW
