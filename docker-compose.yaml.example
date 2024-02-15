@@ -19,15 +19,11 @@ services:
     ports:
       - "10000:10000"
     image: mathiser/dicom_flow-storescp
-    environment:
-      - PYTHONUNBUFFERED=1
 
   fingerprinter:
     hostname: "fingerprinter"
     restart: always
     image: mathiser/dicom_flow-fingerprinter
-    environment:
-      - PYTHONUNBUFFERED=1
     volumes:
       - ${FLOWS_DIR}:/opt/DicomFlow/flows
 
@@ -35,15 +31,12 @@ services:
     hostname: "scheduler"
     restart: always
     image: mathiser/dicom_flow-scheduler
-    environment:
-      - PYTHONUNBUFFERED=1
 
   consumer:
     hostname: "consumer"
     restart: always
     image: mathiser/dicom_flow-consumer
     environment:
-      - PYTHONUNBUFFERED=1
       #- GPUS=0
       - CPUS=1
     volumes:
@@ -52,23 +45,14 @@ services:
   storescu:
     hostname: "storescu"
     restart: always
-    depends_on:
-      - rabbit
     image: mathiser/dicom_flow-storescu
-    environment:
-      - PYTHONUNBUFFERED=1
 
   flow_tracker:
     hostname: "flow-tracker"
     restart: always
-    depends_on:
-      - rabbit
     image: mathiser/dicom_flow-flow_tracker
-    environment:
-      - PYTHONUNBUFFERED=1
     volumes:
       - ${FLOWTRACKER_DIR}:/opt/DicomFlow/database:rw
-      - ${LOGS_DIR}:/opt/DicomFlow/logs
     networks:
      - dicomflow_network
 
@@ -76,7 +60,5 @@ services:
     hostname: "file-storage"
     restart: always
     image: mathiser/dicom_flow-file_storage
-    environment:
-      - PYTHONUNBUFFERED=1
     volumes:
       - ${STATIC_DIR}:/opt/DicomFlow/static:ro
