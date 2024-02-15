@@ -9,6 +9,8 @@ ENV FILES_DIR="/opt/DicomFlow/files"
 ENV DEPENDENCIES_DIR="/opt/DicomFlow/dependencies"
 RUN mkdir -p  $LOG_DIR $FILES_DIR $DEPENDENCIES_DIR
 
+ENV PYTHONUNBUFFERED=1
+
 RUN chmod 753 -R /opt/DicomFlow
 
 ADD ./DicomFlowLib $DEPENDENCIES_DIR/DicomFlowLib

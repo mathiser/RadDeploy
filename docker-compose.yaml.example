@@ -1,21 +1,12 @@
 version: "3"
 
 services:
-  base:
-    image: dicom_flow-base
-    build:
-      context: "base"
-      dockerfile: "Dockerfile"
-
-
   rabbit:
     hostname: "rabbit"
     restart: always
     image: rabbitmq:3-management
-    ports:
-      - 15672:15672
     volumes:
-        - ./mounts/rabbit/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
+      - ${RABBIT_DIR}/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       interval: 30s
@@ -25,132 +16,49 @@ services:
   storescp:
     hostname: "storescp"
     restart: always
-    depends_on:
-      - rabbit
-      - base
     ports:
       - "10000:10000"
-    build:
-      context: "storescp"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=10
+    image: mathiser/dicom_flow-storescp
 
   fingerprinter:
     hostname: "fingerprinter"
     restart: always
-    depends_on:
-      - rabbit
-      - base
-    build:
-      context: "fingerprinter"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    environment:
-      - PYTHONUNBUFFERED=1
+    image: mathiser/dicom_flow-fingerprinter
     volumes:
       - ${FLOWS_DIR}:/opt/DicomFlow/flows
 
   scheduler:
     hostname: "scheduler"
     restart: always
-    depends_on:
-      - rabbit
-      - base
-    build:
-      context: "scheduler"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=10
+    image: mathiser/dicom_flow-scheduler
 
   consumer:
     hostname: "consumer"
     restart: always
-    deploy:
-      mode: replicated
-      replicas: 1
-    depends_on:
-      - rabbit
-      - base
-    build:
-      context: "consumer"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
+    image: mathiser/dicom_flow-consumer
     environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=10
-      - GPUS=0
+      #- GPUS=0
+      - CPUS=1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
   storescu:
     hostname: "storescu"
     restart: always
-    depends_on:
-      - rabbit
-      - base
-    build:
-      context: "storescu"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    environment:
-      - PYTHONUNBUFFERED=1
+    image: mathiser/dicom_flow-storescu
 
   flow_tracker:
     hostname: "flow-tracker"
     restart: always
-    depends_on:
-      - rabbit
-      - base
-    build:
-      context: "flow_tracker"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    environment:
-      - PYTHONUNBUFFERED=1
+    image: mathiser/dicom_flow-flow_tracker
     volumes:
       - ${FLOWTRACKER_DIR}:/opt/DicomFlow/database:rw
+    networks:
+     - dicomflow_network
 
   file_storage:
     hostname: "file-storage"
     restart: always
-    depends_on:
-      - base
-    build:
-      context: "file_storage"
-      dockerfile: "Dockerfile"
-      args:
-        BASE_IMAGE: dicom_flow-base
-    environment:
-      - PYTHONUNBUFFERED=1
+    image: mathiser/dicom_flow-file_storage
     volumes:
       - ${STATIC_DIR}:/opt/DicomFlow/static:ro
-
-  dashboard:
-    restart: always
-    image: grafana/grafana-enterprise
-    ports:
-      - "3001:3000"
-    environment:
-      - "GF_INSTALL_PLUGINS=frser-sqlite-datasource,cloudspout-button-panel"
-    volumes:
-      - dashboard_config:/etc/grafana:rw
-      - dashboard_home:/usr/share/grafana:rw
-      - dashboard_data:/var/lib/grafana:rw
-      - ${FLOWTRACKER_DIR}:/var/lib/grafana/database:ro
-
-volumes:
-  dashboard_config:
-  dashboard_home:
-  dashboard_data:
-
