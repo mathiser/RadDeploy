@@ -16,16 +16,26 @@ DicomFlow should be able run in any environment with [Docker](https://www.docker
 must be installed with appropriate dependencies and a compatible GPU installed.
 
 ### Setting up DicomFlow
-One you have dependencies set up, you can clone this repository and start up DicomFlow with docker compose:
+One you have dependencies set up, you can use the prebuild docker images and be up and running in a minute with the commands below:
 ```
-git clone https://github.com/mathiser/DicomFlow
+mkdir DicomFlow
 cd DicomFlow
-docker compose up -d --build
+wget https://raw.githubusercontent.com/mathiser/DicomFlow/main/docker-compose.yaml.example
+wget https://raw.githubusercontent.com/mathiser/DicomFlow/main/.env.example
+mv docker-compose.yaml.example docker-compose.yaml
+mv .env.example .env
+docker compose up -d
 ```
-If the services build successfully, you can inspect the logs of all services using `docker compose logs -f` and logs of a specific service with `docker compose logs -f {service name}`. 
-Now you should have a DICOM receiver running by default on `localhost:10000` with the ae title: `STORESCU`.
 
+If the services start successfully, you can inspect the logs of all services using `docker compose logs -f` and logs of a specific service with `docker compose logs -f {service name}`. 
+Now you should have a DICOM receiver running by default on `localhost:10000` with the ae title: `DICOMFLOW`.
 
+### Updating DicomFlow
+If you want to update DicomFlow to a more recent version, go ahead an run:
+```
+docker compose pull
+docker compose up -d
+```
 
 ### Docker compose mounts
 The `fingerprinter`-service should have a folder container flow-definitions (see next section) mounted. By defaults this this mount is: `./mounts/flows:/opt/DicomFlow/flows`
