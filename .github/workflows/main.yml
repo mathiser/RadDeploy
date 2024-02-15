@@ -29,8 +29,7 @@ jobs:
       - name: Build and push base
         uses: docker/build-push-action@v5
         with:
-          context: ./base
-          file: ./Dockerfile
+          context: "{{defaultContext}}:base"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-base:latest
@@ -39,8 +38,7 @@ jobs:
       - name: Build and push STORESCP
         uses: docker/build-push-action@v5
         with:
-          context: ./storescp
-          file: ./Dockerfile
+          context: "{{defaultContext}}:storescp"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescp:latest
@@ -49,8 +47,7 @@ jobs:
       - name: Build and push Fingerprinter
         uses: docker/build-push-action@v5
         with:
-          context: ./fingerprinter
-          file: ./Dockerfile
+          context: "{{defaultContext}}:fingerprinter"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-fingerprinter:latest
@@ -59,8 +56,7 @@ jobs:
       - name: Build and push Scheduler
         uses: docker/build-push-action@v5
         with:
-          context: ./scheduler
-          file: ./Dockerfile
+          context: "{{defaultContext}}:scheduler"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-scheduler:latest
@@ -69,8 +65,7 @@ jobs:
       - name: Build and push File_Storage
         uses: docker/build-push-action@v5
         with:
-          context: ./file_storage
-          file: ./Dockerfile
+          context: "{{defaultContext}}:file_storage"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-file_storage:latest
@@ -80,8 +75,7 @@ jobs:
       - name: Build and push STORESCU
         uses: docker/build-push-action@v5
         with:
-          context: ./storescu
-          file: ./Dockerfile
+          context: "{{defaultContext}}:storescu"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescu:latest
@@ -90,8 +84,7 @@ jobs:
       - name: Build and push Consumer
         uses: docker/build-push-action@v5
         with:
-          context: ./consumer
-          file: ./Dockerfile
+          context: "{{defaultContext}}:consumer"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-consumer:latest
@@ -100,8 +93,7 @@ jobs:
       - name: Build and push FlowTracker
         uses: docker/build-push-action@v5
         with:
-          context: ./flow_tracker
-          file: ./Dockerfile
+          context: "{{defaultContext}}:flow_tracker"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-flow_tracker:latest
