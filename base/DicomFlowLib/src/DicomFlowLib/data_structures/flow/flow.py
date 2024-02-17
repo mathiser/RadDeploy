@@ -13,11 +13,8 @@ class Flow(BaseModel):
     version: str = ""
     priority: int = Field(default=0, ge=0, le=4, description="Priority must be in the range 0-4")
     triggers: List[Dict[str, List[str]]] = []
-
     models: List[Model] = []
-
     destinations: List[Destination] = []
-
     return_to_sender_on_ports: List[int] = []
     extra: Dict = {}
 

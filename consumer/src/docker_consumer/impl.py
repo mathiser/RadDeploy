@@ -2,14 +2,16 @@ import json
 import logging
 import os
 import shutil
+import sys
 import tarfile
 import tempfile
 import threading
 import time
 from io import BytesIO
-from typing import Iterable
+from typing import Iterable, Dict
 
 import docker
+import yaml
 from docker import types, errors
 
 from DicomFlowLib.data_structures.contexts import PublishContext, FlowContext
@@ -96,6 +98,7 @@ class DockerConsumer:
 
         # generate dummy binds for all mounts
         kwargs["volumes"] = []
+        kwargs["volumes"].append(f"{tempfile.mkdtemp()}:{model.config_dump_folder}")  # Folder for config. Default is /config.yaml
         for src, dst in {**model.input_mounts, **model.output_mounts, **model.static_mounts}.items():
             kwargs["volumes"].append(f'{tempfile.mkdtemp()}:{dst}')
 
@@ -115,6 +118,12 @@ class DockerConsumer:
         try:
             # Reload new params
             container.reload()
+
+            # Dumps config.yaml in folder
+            if model.config_dump_folder:
+                config_file = self.config_to_tar(model.config)
+                container.put_archive(model.config_dump_folder, config_file.read())
+                config_file.close()
 
             # Mount inputs
             for uid, dst in model.remapped_input_mount_keys(mount_mapping).items():  # remap to use actual uid from the file_storage
@@ -191,3 +200,18 @@ class DockerConsumer:
         output_tar.seek(0)
 
         return postprocess_output_tar(path, tarf=output_tar)
+
+    def config_to_tar(self, config_dict: Dict):
+        info = tarfile.TarInfo(name="config.yaml")
+        dump = BytesIO(yaml.dump(config_dict).encode())
+        dump.seek(0, 2)
+        info.size = dump.tell()
+        dump.seek(0)
+
+        file = BytesIO()
+        with tarfile.TarFile.open(fileobj=file, mode="w") as tf:
+            tf.addfile(info, dump)
+            dump.close()
+
+        file.seek(0)
+        return file

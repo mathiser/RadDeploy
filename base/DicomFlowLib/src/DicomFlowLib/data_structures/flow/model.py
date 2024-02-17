@@ -21,7 +21,9 @@ class Model(BaseModel):
 
     pull_before_exec: bool = True
     timeout: int = 1800
-    extra: Dict = {}
+    
+    config_dump_folder: str = "/config"
+    config: Dict = {}
 
     def validate_docker_kwargs(self):
         assert "image" in self.docker_kwargs.keys()
