@@ -145,7 +145,7 @@ class SCP:
         # Add file metas so they can be shipped on
         prefix = [ds.get(key=tag, default=tag) for tag in self.tar_subdir]
         self.logger.debug(f"File subdir {prefix}")
-        path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
+        path_in_tar = os.path.join("/", *prefix, ".".join([ds.Modality, ds.SOPInstanceUID, "dcm"]))
 
         assoc_context.flow_context.add_meta_row(path_in_tar, ds)
 
@@ -204,9 +204,7 @@ class SCP:
     def publish_file_context(self, assoc_context):
         assoc_context.tar.close()
         assoc_context.file.seek(0)
-        res = self.fs.post(assoc_context.file)
-        print(res)
-        return res
+        return self.fs.post(assoc_context.file)
 
     def stop(self, signalnum=None, stack_frame=None):
         self.ae.shutdown()

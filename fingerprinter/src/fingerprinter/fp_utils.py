@@ -17,14 +17,13 @@ def generate_flow_specific_tar(tar_file: BytesIO, sliced_df: pd.DataFrame):
         flow_tar = tarfile.TarFile.open(fileobj=file, mode="w")
         for member in flow_tar.getmembers():
             if member.name in sliced_df["dcm_path"]:
-                print(member)
                 flow_tar.addfile(member, storescp_tar.extractfile(member.name))
     file.seek(0)
     return file
 
 
 def slice_dataframe_to_triggers(ds: pd.DataFrame, triggers: List):
-    match = None
+    matches = []
     for trigger in triggers:
         match = ds
 
@@ -35,11 +34,17 @@ def slice_dataframe_to_triggers(ds: pd.DataFrame, triggers: List):
             for regex_pattern in regex_patterns:
                 if regex_pattern.startswith("~"):
                     match = match[~match[keyword].str.contains(regex_pattern[1:], regex=True, na=False)]  # Regex NOT match. This is "recursive"
-
                 else:
                     match = match[match[keyword].str.contains(regex_pattern, regex=True, na=False)]  # Regex match. This is "recursive"
+        matches.append(match)
 
-    return match
+    # Check for no matches
+    for match in matches:
+        if not bool(len(match)):
+            return None
+
+    # otherwise give it all back
+    return pd.concat(matches)
 
 
 def parse_fingerprints(flow_directory: str):

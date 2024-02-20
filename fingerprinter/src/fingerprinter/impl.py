@@ -33,16 +33,17 @@ class Fingerprinter:
         tar_file = self.fs.get(scp_context.src_uid)
         try:
             for flow in parse_fingerprints(self.flow_directory):
-                sliced_dataframed = slice_dataframe_to_triggers(scp_context.dataframe, flow.triggers)
-                if bool(len(sliced_dataframed)):
+                sliced_dataframe = slice_dataframe_to_triggers(scp_context.dataframe, flow.triggers)
+
+                if bool(len(sliced_dataframe)):
                     self.logger.info(f"MATCHING FLOW")
 
-                    with generate_flow_specific_tar(sliced_df=sliced_dataframed, tar_file=tar_file) as flow_tar:
+                    with generate_flow_specific_tar(sliced_df=sliced_dataframe, tar_file=tar_file) as flow_tar:
                         src_uid = self.fs.post(flow_tar)
 
                     flow_context = FlowContext(flow=flow.copy(deep=True),
                                                src_uid=src_uid,
-                                               dataframe=sliced_dataframed.copy(deep=True),
+                                               dataframe=sliced_dataframe.copy(deep=True),
                                                sender=scp_context.sender)
                     self.logger.info(str(flow_context))
                     # Publish the context
