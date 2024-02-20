@@ -34,13 +34,10 @@ def slice_dataframe_to_triggers(ds: pd.DataFrame, triggers: List):
 
             for regex_pattern in regex_patterns:
                 if regex_pattern.startswith("~"):
-                    exclude = match[match[keyword].str.contains(regex_pattern[1:], regex=True,
-                                                                na=False)]  # Regex NOT match. This is "recursive"
-                    if bool(len(exclude)):
-                        return None
+                    match = match[~match[keyword].str.contains(regex_pattern[1:], regex=True, na=False)]  # Regex NOT match. This is "recursive"
+
                 else:
-                    match = match[match[keyword].str.contains(regex_pattern, regex=True,
-                                                              na=False)]  # Regex match. This is "recursive"
+                    match = match[match[keyword].str.contains(regex_pattern, regex=True, na=False)]  # Regex match. This is "recursive"
 
     return match
 
