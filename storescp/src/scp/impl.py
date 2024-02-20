@@ -35,7 +35,7 @@ class AssocContext:
         info.size = file.tell()
         file.seek(0)
         self.tar.addfile(info, file)
-
+        return info.name
 
 class SCP:
     def __init__(self, file_storage: FileStorageClient,
@@ -143,13 +143,14 @@ class SCP:
         ds.file_meta = event.file_meta
 
         # Add file metas so they can be shipped on
-        assoc_context.flow_context.add_meta(ds.to_json_dict())
-
         prefix = [ds.get(key=tag, default=tag) for tag in self.tar_subdir]
         self.logger.debug(f"File subdir {prefix}")
         path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
 
+        assoc_context.flow_context.add_meta_row(path_in_tar, ds)
+
         self.logger.debug(f"Writing dicom to path {path_in_tar}")
+
         with tempfile.TemporaryFile() as f:
             f.write(b'\x00' * 128)  # Write the preamble
             f.write(b'DICM')  # Write prefix
@@ -170,15 +171,12 @@ class SCP:
             return
 
         assoc_context = self.assoc[assoc_id]
-        uid = assoc_context.flow_context.uid
         self.logger.debug(f"HANDLE_RELEASE: {assoc_id}")
 
         try:
             self.logger.info(f"STORESCP PUBLISH CONTEXT")
 
-            input_file_uid = self.publish_file_context(assoc_context=assoc_context)
-            self.assoc[assoc_id].flow_context.input_file_uid = input_file_uid
-
+            assoc_context.flow_context.src_uid = self.publish_file_context(assoc_context=assoc_context)
             self.publish_main_context(assoc_context=assoc_context)
 
             self.logger.info(f"STORESCP PUBLISH CONTEXT", )
@@ -206,7 +204,9 @@ class SCP:
     def publish_file_context(self, assoc_context):
         assoc_context.tar.close()
         assoc_context.file.seek(0)
-        return self.fs.post(assoc_context.file)
+        res = self.fs.post(assoc_context.file)
+        print(res)
+        return res
 
     def stop(self, signalnum=None, stack_frame=None):
         self.ae.shutdown()
