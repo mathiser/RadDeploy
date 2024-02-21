@@ -44,7 +44,6 @@ class SCP:
                  port: int,
                  pub_models: List[PubModel],
                  pynetdicom_log_level: int,
-                 tar_subdir: List[str],
                  routing_key_success: str,
                  routing_key_fail: str,
                  mq_pub: MQPub,
@@ -61,7 +60,6 @@ class SCP:
         self.fs = file_storage
         self.ae = None
         self.mq_pub = mq_pub
-        self.tar_subdir = tar_subdir
         self.pub_models = pub_models
         self.routing_key_success = routing_key_success
         self.routing_key_fail = routing_key_fail

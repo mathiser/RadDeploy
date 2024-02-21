@@ -10,9 +10,7 @@ from DicomFlowLib.data_structures.flow import Flow
 
 
 def generate_sub_tar_file_path(row: Dict, tar_subdir: List):
-    print(tar_subdir)
     prefix = [row[c] if (c in row.keys()) else c for c in tar_subdir]
-    print()
     return os.path.join("/", *prefix, "_".join([row["Modality"], row["SeriesInstanceUID"], row["SOPInstanceUID"], "dcm"]))
 
 
@@ -26,7 +24,6 @@ def generate_flow_specific_tar(tar_file: BytesIO, sliced_df: pd.DataFrame, tar_s
             if len(rows) == 1:
                 info = tarfile.TarInfo(generate_sub_tar_file_path(rows.iloc[0], tar_subdir))  # Should not be able to get more than one.)
                 info.size = member.size
-                print(info)
                 flow_tar.addfile(info, storescp_tar.extractfile(member.name))
             elif len(rows) == 0:
                 pass

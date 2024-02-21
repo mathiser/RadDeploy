@@ -39,7 +39,6 @@ class Main:
                        hostname=config["AE_HOSTNAME"],
                        blacklisted_hosts=config["AE_BLACKLISTED_HOSTS"],
                        whitelisted_hosts=config["AE_WHITELISTED_HOSTS"],
-                       tar_subdir=config["TAR_SUBDIR"],
                        pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
                        ae_title=config["AE_TITLE"],
                        mq_pub=self.mq,
