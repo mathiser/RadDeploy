@@ -9,7 +9,7 @@ import yaml
 from DicomFlowLib.data_structures.flow import Flow
 
 
-def generate_flow_specific_tar(tar_file: BytesIO, sliced_df: pd.DataFrame):
+def generate_flow_specific_tar(tar_file: BytesIO, sliced_df: pd.DataFrame, tar_subdir: List):
     tar_file.seek(0)
     file = BytesIO()
 
