@@ -12,7 +12,8 @@
         "pyyaml",
         "requests",
         "networkx",
-        "pandas"
+        "pandas",
+        "pydicom"
 
     ]
     classifiers = []

@@ -35,7 +35,7 @@ class AssocContext:
         info.size = file.tell()
         file.seek(0)
         self.tar.addfile(info, file)
-
+        return info.name
 
 class SCP:
     def __init__(self, file_storage: FileStorageClient,
@@ -44,7 +44,6 @@ class SCP:
                  port: int,
                  pub_models: List[PubModel],
                  pynetdicom_log_level: int,
-                 tar_subdir: List[str],
                  routing_key_success: str,
                  routing_key_fail: str,
                  mq_pub: MQPub,
@@ -61,7 +60,6 @@ class SCP:
         self.fs = file_storage
         self.ae = None
         self.mq_pub = mq_pub
-        self.tar_subdir = tar_subdir
         self.pub_models = pub_models
         self.routing_key_success = routing_key_success
         self.routing_key_fail = routing_key_fail
@@ -143,13 +141,11 @@ class SCP:
         ds.file_meta = event.file_meta
 
         # Add file metas so they can be shipped on
-        assoc_context.flow_context.add_meta(ds.to_json_dict())
-
-        prefix = [ds.get(key=tag, default=tag) for tag in self.tar_subdir]
-        self.logger.debug(f"File subdir {prefix}")
-        path_in_tar = os.path.join("/", *prefix, ds.SOPInstanceUID + ".dcm")
-
+        path_in_tar = os.path.join("/", ".".join([ds.Modality, ds.SeriesInstanceUID, ds.SOPInstanceUID, "dcm"]))
         self.logger.debug(f"Writing dicom to path {path_in_tar}")
+
+        assoc_context.flow_context.add_meta_row(path_in_tar, ds)
+
         with tempfile.TemporaryFile() as f:
             f.write(b'\x00' * 128)  # Write the preamble
             f.write(b'DICM')  # Write prefix
@@ -170,15 +166,12 @@ class SCP:
             return
 
         assoc_context = self.assoc[assoc_id]
-        uid = assoc_context.flow_context.uid
         self.logger.debug(f"HANDLE_RELEASE: {assoc_id}")
 
         try:
             self.logger.info(f"STORESCP PUBLISH CONTEXT")
 
-            input_file_uid = self.publish_file_context(assoc_context=assoc_context)
-            self.assoc[assoc_id].flow_context.input_file_uid = input_file_uid
-
+            assoc_context.flow_context.src_uid = self.publish_file_context(assoc_context=assoc_context)
             self.publish_main_context(assoc_context=assoc_context)
 
             self.logger.info(f"STORESCP PUBLISH CONTEXT", )

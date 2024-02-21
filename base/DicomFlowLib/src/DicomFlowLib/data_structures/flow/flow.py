@@ -17,6 +17,7 @@ class Flow(BaseModel):
     destinations: List[Destination] = []
     return_to_sender_on_ports: List[int] = []
     extra: Dict = {}
+    tar_subdir: List[str] = []
 
     def __init__(self, **data: Any):
         super().__init__(**data)

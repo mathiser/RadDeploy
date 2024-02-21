@@ -1,10 +1,11 @@
 import json
 import logging
+import tarfile
 from typing import Iterable
 
 from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext, SCPContext
 from DicomFlowLib.fs import FileStorageClient
-from .fp_utils import parse_fingerprints, fingerprint, parse_file_metas
+from .fp_utils import parse_fingerprints, slice_dataframe_to_triggers, generate_flow_specific_tar
 
 
 class Fingerprinter:
@@ -29,29 +30,42 @@ class Fingerprinter:
 
         scp_context = SCPContext(**json.loads(body.decode()))
         self.uid = scp_context.uid
+        tar_file = self.fs.get(scp_context.src_uid)
+        try:
+            for flow in parse_fingerprints(self.flow_directory):
+                print(flow)
+                sliced_dataframe = slice_dataframe_to_triggers(scp_context.dataframe, flow.triggers)
 
-        ds = parse_file_metas(scp_context.file_metas)
+                if bool(len(sliced_dataframe)):  # If there is a match
+                    self.logger.info(f"MATCHING FLOW")
 
-        for flow in parse_fingerprints(self.flow_directory):
-            if fingerprint(ds, flow.triggers):
-                self.logger.info(f"MATCHING FLOW")
-                flow_context = FlowContext(flow=flow.copy(deep=True),
-                                           src_uid=self.fs.clone(scp_context.input_file_uid),
-                                           dataframe_json=ds.to_json(),
-                                           sender=scp_context.sender)
+                    flow_tar_file = generate_flow_specific_tar(sliced_df=sliced_dataframe,
+                                                               tar_file=tar_file,
+                                                               tar_subdir=flow.tar_subdir)
+                    src_uid = self.fs.post(flow_tar_file)
+                    flow_tar_file.close()
+                    flow_context = FlowContext(flow=flow.copy(deep=True),
+                                               src_uid=src_uid,
+                                               dataframe=sliced_dataframe.copy(deep=True),
+                                               sender=scp_context.sender)
+                    self.logger.info(str(flow_context))
+                    # Publish the context
+                    results.append(
+                        PublishContext(routing_key=self.routing_key_success,
+                                       body=flow_context.model_dump_json().encode(),
+                                       priority=flow.priority)
+                    )
 
-                # Publish the context
-                results.append(
-                    PublishContext(routing_key=self.routing_key_success,
-                                   body=flow_context.model_dump_json().encode(),
-                                   priority=flow.priority)
-                )
+                else:
+                    self.logger.info(f"NOT MATCHING FLOW")
+                    results.append(
+                        PublishContext(routing_key=self.routing_key_fail,
+                                       body=scp_context.model_dump_json().encode(),
+                                       priority=flow.priority))
 
-            else:
-                self.logger.info(f"NOT MATCHING FLOW")
-                results.append(
-                    PublishContext(routing_key=self.routing_key_fail,
-                                   body=scp_context.model_dump_json().encode(),
-                                   priority=flow.priority))
-        self.uid = None
-        return results
+            return results
+        except Exception as e:
+            raise e
+        finally:
+            tar_file.close()
+            self.uid = None
