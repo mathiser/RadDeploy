@@ -30,6 +30,7 @@ class STORESCU:
         self.ae_title = ae_title
         self.ae_port = ae_port
         self.ae_hostname = ae_hostname
+
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
 
         fc = FlowContext(**json.loads(body.decode()))

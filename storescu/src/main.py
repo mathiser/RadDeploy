@@ -44,11 +44,9 @@ class Main:
                         log_level=int(config["LOG_LEVEL"]))
 
     def start(self):
-        self.logger.debug("Starting SCU")
         self.running = True
-
         self.mq.start()
-        self.logger.debug("Starting SCU")
+        self.logger.debug("Started SCU")
 
         while self.running:
             try:

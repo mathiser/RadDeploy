@@ -143,13 +143,10 @@ class SCP:
         ds.file_meta = event.file_meta
 
         # Add file metas so they can be shipped on
-        prefix = [ds.get(key=tag, default=tag) for tag in self.tar_subdir]
-        self.logger.debug(f"File subdir {prefix}")
-        path_in_tar = os.path.join("/", *prefix, ".".join([ds.Modality, ds.SOPInstanceUID, "dcm"]))
+        path_in_tar = os.path.join("/", ".".join([ds.Modality, ds.SeriesInstanceUID, ds.SOPInstanceUID, "dcm"]))
+        self.logger.debug(f"Writing dicom to path {path_in_tar}")
 
         assoc_context.flow_context.add_meta_row(path_in_tar, ds)
-
-        self.logger.debug(f"Writing dicom to path {path_in_tar}")
 
         with tempfile.TemporaryFile() as f:
             f.write(b'\x00' * 128)  # Write the preamble
