@@ -33,10 +33,9 @@ class Fingerprinter:
         tar_file = self.fs.get(scp_context.src_uid)
         try:
             for flow in parse_fingerprints(self.flow_directory):
-                print(flow)
                 sliced_dataframe = slice_dataframe_to_triggers(scp_context.dataframe, flow.triggers)
 
-                if bool(len(sliced_dataframe)):  # If there is a match
+                if sliced_dataframe is not None:  # If there is a match
                     self.logger.info(f"MATCHING FLOW")
 
                     flow_tar_file = generate_flow_specific_tar(sliced_df=sliced_dataframe,
