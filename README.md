@@ -176,6 +176,39 @@ Furhtermore the following variables can be set in the flow definition
 ##### version
 `version` of the Flow. Defaults to "" (empty string)
 
+##### tar_subdir
+By default, the src receives dicom files into a flat directory.
+This is set with the default: `TAR_SUBDIR: []`, which will result in the following container input:
+- /input/
+  - file1.dcm
+  - file2.dcm
+  - file3.dcm
+  - file4.dcm
+  - file5.dcm
+  - ...
+
+When models are operating on multi-modal input data, it may be desirable to separate files into a directory
+already when they are received. To do this, `TAR_SUBDIR` can contain a list of dicom tags, to be used as sub-folders.
+As an example:
+```
+TAR_SUBDIR: 
+  - SOPClassUID
+  - SeriesInstanceUID
+```
+Which will results in something like:
+- /input/
+  - 1.2.840.10008.5.1.4.1.1.2
+    - 1.1.1.1.1
+      - CT1.dcm
+      - CT2.dcm
+      - ...
+  - 1.2.840.10008.5.1.4.1.1.4
+    - 1.1.1.1.1
+      - MR_T1.dcm
+      - ...
+    - 2.2.2.2.2
+      - MR1_T2.dcm
+
 ##### priority
 `priority` can be set to an integer between 0 and 5, where 5 is highest priority. 0 is default. When consumers are receiving a new flow to be run, the available flow with highest priority with run. 
 Note, that priority makes flows jump the queue, but NOT pause running flows.
@@ -276,39 +309,6 @@ AE_HOSTNAME: "localhost"
 AE_PORT: 10000
 PYNETDICOM_LOG_LEVEL: 20
 ```
-##### TAR_SUBDIR
-By default, the receiver writes dicom files into a flat directory,
-which is mounted into the containers input mountpoint. 
-This is set with the default: `TAR_SUBDIR: []`, which will result in the following container input:
-- /input/
-  - file1.dcm
-  - file2.dcm
-  - file3.dcm
-  - file4.dcm
-  - file5.dcm
-  - ...
-
-When models are operating on multi-modal input data, it may be desirable to separate files into a directory
-already when they are received. To do this, `TAR_SUBDIR` can contain a list of dicom tags, to be used as sub-folders.
-As an example:
-```
-TAR_SUBDIR: 
-  - SOPClassUID
-  - SeriesInstanceUID
-```
-Which will results in something like:
-- /input/
-  - 1.2.840.10008.5.1.4.1.1.2
-    - 1.1.1.1.1
-      - CT1.dcm
-      - CT2.dcm
-      - ...
-  - 1.2.840.10008.5.1.4.1.1.4
-    - 1.1.1.1.1
-      - MR_T1.dcm
-      - ...
-    - 2.2.2.2.2
-      - MR1_T2.dcm
 
 #### Consumer
 `CPUS` is a count of CPU-threads DicomFLow. Should be an integer
