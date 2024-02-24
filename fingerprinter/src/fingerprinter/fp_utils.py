@@ -35,13 +35,16 @@ def generate_flow_specific_tar(tar_file: BytesIO, sliced_df: pd.DataFrame, tar_s
 
 def slice_dataframe_to_triggers(ds: pd.DataFrame, triggers: List):
     matches = []
+    for col in ds.columns:
+        ds[col] = ds[col].astype(str)
+
     for trigger in triggers:
         match = ds
 
         for keyword, regex_patterns in trigger.items():
             if not keyword in match.columns:
-                return False
-
+                return None
+            ds[keyword] = ds[keyword].astype(str)
             for regex_pattern in regex_patterns:
                 if regex_pattern.startswith("~"):
                     match = match[~match[keyword].str.contains(regex_pattern[1:], regex=True,
