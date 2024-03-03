@@ -11,7 +11,7 @@ from DicomFlowLib.data_structures.flow import Flow
 
 def generate_sub_tar_file_path(row: Dict, tar_subdir: List):
     prefix = [row[c] if (c in row.keys()) else c for c in tar_subdir]
-    return os.path.join("/", *prefix, "_".join([row["Modality"], row["SeriesInstanceUID"], row["SOPInstanceUID"], "dcm"]))
+    return os.path.join("/", *prefix, "_".join([row["Modality"], row["SeriesInstanceUID"], row["SOPInstanceUID"] + ".dcm"]))
 
 
 def generate_flow_specific_tar(tar_file: BytesIO, sliced_df: pd.DataFrame, tar_subdir: List):
