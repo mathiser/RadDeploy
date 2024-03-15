@@ -11,8 +11,7 @@ jobs:
     steps:
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
-
+        run: echo "::set-output name=TAG::$(date +'%Y-%m-%d')_${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}_$(git rev-parse --short "$GITHUB_SHA")
         
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,7 +32,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-base:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-base:${{ steps.date.outputs.date }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-base:${{ steps.date.outputs.TAG }}
 
       - name: Build and push STORESCP
         uses: docker/build-push-action@v5
@@ -42,7 +41,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescp:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescp:${{ steps.date.outputs.date }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescp:${{ steps.date.outputs.TAG }}
 
       - name: Build and push Fingerprinter
         uses: docker/build-push-action@v5
@@ -51,7 +50,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-fingerprinter:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-fingerprinter:${{ steps.date.outputs.date }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-fingerprinter:${{ steps.date.outputs.TAG }}
 
       - name: Build and push Scheduler
         uses: docker/build-push-action@v5
@@ -60,7 +59,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-scheduler:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-scheduler:${{ steps.date.outputs.date }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-scheduler:${{ steps.date.outputs.TAG }}
 
       - name: Build and push File_Storage
         uses: docker/build-push-action@v5
@@ -69,7 +68,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-file_storage:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-file_storage:${{ steps.date.outputs.date }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-file_storage:${{ steps.date.outputs.TAG }}
      
 
       - name: Build and push STORESCU
@@ -79,7 +78,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescu:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescu:${{ steps.date.outputs.date }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescu:${{ steps.date.outputs.TAG }}
       
       - name: Build and push Consumer
         uses: docker/build-push-action@v5
@@ -88,7 +87,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-consumer:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-consumer:${{ steps.date.outputs.date }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-consumer:${{ steps.date.outputs.TAG }}
       
       - name: Build and push FlowTracker
         uses: docker/build-push-action@v5
@@ -97,4 +96,4 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-flow_tracker:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-flow_tracker:${{ steps.date.outputs.date }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-flow_tracker:${{ steps.date.outputs.TAG }}
