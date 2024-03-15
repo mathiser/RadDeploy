@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import shutil
-import sys
 import tarfile
 import tempfile
 import threading
@@ -16,36 +15,10 @@ from docker import types, errors
 
 from DicomFlowLib.data_structures.contexts import PublishContext, FlowContext
 from DicomFlowLib.fs import FileStorageClient
-from .worker import  Worker
+from DicomFlowLib.log import init_logger
+from .worker import Worker
 
 
-def postprocess_output_tar(output_dir: str, tarf: BytesIO):
-    """
-    Removes one layer from the output_tar - i.e. the /output/
-    """
-    """
-    Removes one layer from the output_tar - i.e. the /output/
-    If dump_logs==True, container logs are dumped to container.log
-    """
-
-    # Unwrap container tar to temp dir
-    with tempfile.TemporaryDirectory() as tmpd:
-        with tarfile.TarFile.open(fileobj=tarf, mode="r|*") as container_tar_obj:
-            container_tar_obj.extractall(tmpd)
-
-        # Make a new temp tar.gz
-        new_tar_file = BytesIO()
-        with tarfile.TarFile.open(fileobj=new_tar_file, mode="w") as new_tar_obj:
-            # Walk directory from output to strip it away the base dir
-            to_del = "/" + tmpd.strip("/") + "/" + output_dir.strip("/") + "/"
-            for fol, subs, files in os.walk(os.path.join(tmpd)):
-                for file in files:
-                    path = os.path.join(fol, file)
-                    new_path = path.replace(to_del, "")
-                    new_tar_obj.add(path, arcname=new_path)
-
-        new_tar_file.seek(0)  # Reset pointer
-        return new_tar_file  # Ready to ship directly to DB
 
 
 class DockerConsumer:
@@ -55,10 +28,12 @@ class DockerConsumer:
                  worker: Worker,
                  pub_routing_key_success: str,
                  pub_routing_key_fail: str,
-                 log_level: int = 20):
+                 log_level: int = 20,
+                 job_log_dir: str = "/opt/DicomFlow/logs/jobs/"):
         self.pub_declared = False
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
+        self.job_log_dir = job_log_dir
         self.fs = file_storage
         self.ss = static_storage
         self.pub_routing_key_success = pub_routing_key_success
@@ -98,7 +73,8 @@ class DockerConsumer:
 
         # generate dummy binds for all mounts
         kwargs["volumes"] = []
-        kwargs["volumes"].append(f"{tempfile.mkdtemp()}:{model.config_dump_folder}")  # Folder for config. Default is /config.yaml
+        kwargs["volumes"].append(
+            f"{tempfile.mkdtemp()}:{model.config_dump_folder}")  # Folder for config. Default is /config.yaml
         for src, dst in {**model.input_mounts, **model.output_mounts, **model.static_mounts}.items():
             kwargs["volumes"].append(f'{tempfile.mkdtemp()}:{dst}')
 
@@ -107,17 +83,25 @@ class DockerConsumer:
             kwargs["ipc_mode"] = "host"
             self.logger.debug(f"Uses GPU device {self.worker.device_id}")
             if "DEBUG_DISABLE_GPU" not in flow_context.flow.extra.keys():
-                kwargs["device_requests"] = [types.DeviceRequest(device_ids=[self.worker.device_id], capabilities=[['gpu']])]
+                kwargs["device_requests"] = [
+                    types.DeviceRequest(device_ids=[self.worker.device_id], capabilities=[['gpu']])]
 
         # So logs can be pulled
         kwargs["detach"] = True
+
+        # Add docker tag to environment to allow traceability
+        if "environment" not in kwargs.keys():
+            kwargs["environment"] = {}
+
+        kwargs["environment"]["FLOW_UID"] = flow_context.uid
+        kwargs["environment"]["CONTAINER_TAG"] = model.docker_kwargs["image"]
 
         # Create container
         container = self.cli.containers.create(**kwargs)
 
         try:
-            # Reload new params
-            container.reload()
+            # Reload new envionment
+            #container.reload()
 
             # Dumps config.yaml in folder
             if model.config_dump_folder:
@@ -126,7 +110,8 @@ class DockerConsumer:
                 config_file.close()
 
             # Mount inputs
-            for uid, dst in model.remapped_input_mount_keys(mount_mapping).items():  # remap to use actual uid from the file_storage
+            for uid, dst in model.remapped_input_mount_keys(
+                    mount_mapping).items():  # remap to use actual uid from the file_storage
                 container.put_archive(dst, self.fs.get(uid))
 
             # Mount statics
@@ -135,12 +120,16 @@ class DockerConsumer:
 
             # Run the container
             container.start()
-            for line in container.logs(stream=True):
-                self.logger.debug(f"UID={uid} ; CONTAINER_ID={container.short_id} ; {line.decode()}")
 
+            # Grab the output and log to job specific logger
+            job_logger_name = f"{flow_context.uid}_{flow_context.active_model_idx}_{kwargs["image"]}"
+            threading.Thread(target=self.catch_logs_from_container, args=(job_logger_name, container)).start()
+
+            # Wait for job to execute - with timeout. If not finished, it will be killed.
             result = container.wait(timeout=model.timeout)  # Blocks...
 
-            self.assert_container_status(uid=uid, container=container, result=result)
+            # If status code != 0,
+            self.assert_container_status(uid=flow_context.uid, container=container, result=result)
 
             for src, dst in model.output_mounts.items():
                 tar = self.get_archive(container=container, path=dst)
@@ -155,17 +144,25 @@ class DockerConsumer:
         finally:
             self.clean_up(container, kwargs)
 
+    def catch_logs_from_container(self, logger_name, container):
+
+        container_logger = init_logger(name=logger_name,
+                                       log_dir=self.job_log_dir)
+        container_logger.setLevel(10)
+
+        for line in container.logs(stream=True):
+            container_logger.info(line.decode().strip("\n"))
+
     def assert_container_status(self, uid, container, result):
-        self.logger.info(f"UID={uid} ; CONTAINER_ID={container.short_id} ; EXITCODE={result['StatusCode']}")
         if result["StatusCode"] != 0:
             self.logger.error(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow execution failed")
-            raise Exception(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow did not exit with code 0.")
+            raise Exception(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow exited with status code: {str(result["StatusCode"])}.")
         else:
             self.logger.info(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow execution succeeded")
 
     def clean_up(self, container, kwargs):
-        threading.Thread(target=self.delete_container, args=(container.short_id, )).start()
-        threading.Thread(target=self.remove_temp_dirs, args=(kwargs["volumes"], )).start()
+        threading.Thread(target=self.delete_container, args=(container.short_id,)).start()
+        threading.Thread(target=self.remove_temp_dirs, args=(kwargs["volumes"],)).start()
 
     def delete_container(self, container_id):
         counter = 0
@@ -182,16 +179,15 @@ class DockerConsumer:
                 counter += 1
                 time.sleep(5)
 
-
-    def remove_temp_dirs(self, volumes):
+    @staticmethod
+    def remove_temp_dirs(volumes):
         # Delete dummy directories from mounts. These are empty, so no loss if this fails for some reason.
         for src_dst in volumes:
             src, dst = src_dst.split(":")
             if os.path.exists(src):
                 shutil.rmtree(src)
 
-    @staticmethod
-    def get_archive(container, path):
+    def get_archive(self, container, path):
         output, stats = container.get_archive(path=path)
 
         output_tar = BytesIO()  # Write to a format I understand
@@ -199,9 +195,10 @@ class DockerConsumer:
             output_tar.write(chunk)
         output_tar.seek(0)
 
-        return postprocess_output_tar(path, tarf=output_tar)
+        return self.postprocess_output_tar(path, tarf=output_tar)
 
-    def config_to_tar(self, config_dict: Dict):
+    @staticmethod
+    def config_to_tar(config_dict: Dict):
         info = tarfile.TarInfo(name="config.yaml")
         dump = BytesIO(yaml.dump(config_dict).encode())
         dump.seek(0, 2)
@@ -215,3 +212,32 @@ class DockerConsumer:
 
         file.seek(0)
         return file
+
+    @staticmethod
+    def postprocess_output_tar(output_dir: str, tarf: BytesIO):
+        """
+        Removes one layer from the output_tar - i.e. the /output/
+        """
+        """
+        Removes one layer from the output_tar - i.e. the /output/
+        If dump_logs==True, container logs are dumped to container.log
+        """
+
+        # Unwrap container tar to temp dir
+        with tempfile.TemporaryDirectory() as tmpd:
+            with tarfile.TarFile.open(fileobj=tarf, mode="r|*") as container_tar_obj:
+                container_tar_obj.extractall(tmpd)
+
+            # Make a new temp tar.gz
+            new_tar_file = BytesIO()
+            with tarfile.TarFile.open(fileobj=new_tar_file, mode="w") as new_tar_obj:
+                # Walk directory from output to strip it away the base dir
+                to_del = "/" + tmpd.strip("/") + "/" + output_dir.strip("/") + "/"
+                for fol, subs, files in os.walk(os.path.join(tmpd)):
+                    for file in files:
+                        path = os.path.join(fol, file)
+                        new_path = path.replace(to_del, "")
+                        new_tar_obj.add(path, arcname=new_path)
+
+            new_tar_file.seek(0)  # Reset pointer
+            return new_tar_file  # Ready to ship directly to DB

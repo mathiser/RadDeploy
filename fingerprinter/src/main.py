@@ -17,7 +17,7 @@ class Main:
 
         self.running = True
 
-        init_logger(name=config["LOG_NAME"],
+        init_logger(name=None,  # init root logger,
                     log_format=config["LOG_FORMAT"],
                     log_dir=config["LOG_DIR"],
                     rabbit_hostname=config["RABBIT_HOSTNAME"],

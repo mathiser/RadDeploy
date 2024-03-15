@@ -16,7 +16,7 @@ def run_consumer(config, worker):
 
 def main():
     config = load_configs(os.environ["CONF_DIR"], os.environ["CURRENT_CONF"])
-    init_logger(name=config["LOG_NAME"],
+    init_logger(name=None,  # init root logger,
                 log_format=config["LOG_FORMAT"],
                 log_dir=config["LOG_DIR"],
                 rabbit_hostname=config["RABBIT_HOSTNAME"],
