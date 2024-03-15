@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Get current date
         id: date
-        run: echo '::set-output name=TAG::$(date +'%Y-%m-%d')_${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}_$(git rev-parse --short "$GITHUB_SHA")'
+        run: echo "::set-output name=TAG::$(date +'%Y-%m-%d')_${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}_$(git rev-parse --short '$GITHUB_SHA')"
         
       - name: Checkout
         uses: actions/checkout@v4
