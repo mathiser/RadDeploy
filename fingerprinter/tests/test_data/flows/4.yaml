@@ -1,0 +1,7 @@
+name: "test"
+triggers:
+  - Modality: ["MR"]
+    SeriesDescription: ["3D", '(?i)tra']
+  - Modality: ["CT"]
+models: []
+destinations: []

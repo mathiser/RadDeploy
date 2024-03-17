@@ -70,13 +70,3 @@ class FlowContext(SCPContext):
         else:
             raise Exception("Active model not set")
 
-
-if __name__ == "__main__":
-    m = SCPContext()
-    m.dataframe = pd.DataFrame()
-    m.add_meta_row("/1.dcm", {"A": 1, "B": 2})
-    m.add_meta_row("/2.dcm", {"A": 2, "B": 3})
-    print(m.dataframe)
-    j = m.model_dump_json()
-    new_m = SCPContext(**json.loads(j))
-    print(new_m.dataframe)

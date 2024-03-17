@@ -42,7 +42,7 @@ class Flow(BaseModel):
                 for e in edges:
                     G.add_edge(i, u, name=e)
         try:
-            if all_output_mounts.count("dst") != 1:
+            if all_output_mounts.count("dst") > 1:
                 raise Exception(f"'dst' must be used only once! Found outputs: {all_output_mounts}")
             if "dst" in inputs:
                 raise Exception("'dst' may not be used as input - use only for outputs only")
@@ -50,10 +50,9 @@ class Flow(BaseModel):
                 raise Exception("'src' may not be used output - use only for inputs only")
             if not networkx.is_directed_acyclic_graph(G):
                 raise Exception("is not directed and acyclic")
-            if not inputs.symmetric_difference(outputs) == {"src", "dst"}:
+            if not inputs.symmetric_difference(outputs).issubset({"src", "dst"}):
                 resid = inputs.symmetric_difference(outputs)
-                resid.remove("src")
-                resid.remove("dst")
+                resid = resid.symmetric_difference({"src", "dst"})
                 raise Exception(f"Invalid mapping - don't know what to do with {resid}")
         except Exception as e:
             raise e

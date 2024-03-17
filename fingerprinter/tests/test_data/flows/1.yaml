@@ -5,6 +5,4 @@ triggers:
   - Modality: ["CT"]
 models: []
 destinations: []
-optional_kwargs:
-  pass: True
 
