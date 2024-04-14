@@ -2,6 +2,7 @@ import functools
 import queue
 import time
 import traceback
+from typing import Tuple
 
 from .mq_models import PubModel
 from .base import MQBase
@@ -10,6 +11,7 @@ from ..data_structures.contexts import PublishContext
 
 class MQPub(MQBase):
     def __init__(self,
+                 in_queue: queue.Queue[Tuple[PubModel, PublishContext]],
                  rabbit_hostname: str,
                  rabbit_port: int,
                  log_level: int = 20):
@@ -18,7 +20,7 @@ class MQPub(MQBase):
                          rabbit_port=rabbit_port,
                          log_level=log_level)
 
-        self.publish_queue = queue.Queue()
+        self.in_queue = in_queue
 
         self._deliveries = {}
         self._acked = 0
@@ -29,7 +31,7 @@ class MQPub(MQBase):
         self.stop()
 
     def add_publish_message(self, pub_model: PubModel, pub_context: PublishContext):
-        self.publish_queue.put({"pub_model": pub_model, "pub_context": pub_context})
+        self.in_queue.put((pub_model, pub_context))
 
     def publish_message_callback(self, pub_model: PubModel, pub_context: PublishContext):
         cb = functools.partial(self.publish_message, pub_model=pub_model, pub_context=pub_context)
@@ -68,8 +70,8 @@ class MQPub(MQBase):
                 interval = 10
                 while time.time() - time_zero < (self.heartbeat / 4):
                     try:
-                        pub_context = self.publish_queue.get(timeout=interval)
-                        self.publish_message(**pub_context)
+                        pubmodel_publishcontext = self.in_queue.get(timeout=interval)
+                        self.publish_message(*pubmodel_publishcontext)
                     except queue.Empty:
                         if not self._stopping and self._connection:
                             self.process_event_data()

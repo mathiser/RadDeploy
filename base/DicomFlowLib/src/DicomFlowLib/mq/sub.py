@@ -108,8 +108,7 @@ class MQSub(MQBase):
 
     def work_function_wrapper(self, basic_deliver, body):
         try:
-            result: PublishContext
-            results = self.work_function(basic_deliver, body)
+            results: List[PublishContext] = self.work_function(basic_deliver, body)
             for result in results:
                 self.publish_on_all_pub_models(result=result)  # Routing key on success
 

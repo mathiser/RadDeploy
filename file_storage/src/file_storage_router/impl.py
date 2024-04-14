@@ -3,12 +3,15 @@ import logging
 from fastapi import File, UploadFile, HTTPException, APIRouter
 from fastapi.responses import FileResponse
 
-from DicomFlowLib.fs.file_manager import FileManager
+from file_manager import FileManager
+
+from delete_daemon import DeleteDaemon
 
 
 class FileStorageRouter(APIRouter):
     def __init__(self,
                  file_manager: FileManager,
+                 delete_daemon: DeleteDaemon,
                  allow_post: bool = True,
                  allow_get: bool = True,
                  allow_clone: bool = True,
@@ -19,8 +22,14 @@ class FileStorageRouter(APIRouter):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
 
+        # File manger
         self.file_manager = file_manager
 
+        # Delete Daemon
+        self.delete_daemon = delete_daemon
+        self.delete_daemon.start()
+
+        # Which methods allowed
         self.allow_post = allow_post
         self.allow_get = allow_get
         self.allow_delete = allow_delete
@@ -30,7 +39,7 @@ class FileStorageRouter(APIRouter):
         def post(tar_file: UploadFile = File(...)):
             if not self.allow_post:
                 raise HTTPException(status_code=405, detail="Method not allowed")
-            return self.file_manager.post_file(tar_file)
+            return self.file_manager.post_file(tar_file.file)
 
         @self.put("/")
         def clone(uid: str):

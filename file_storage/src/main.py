@@ -2,10 +2,11 @@ import logging
 import os
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.fs import FileManager
+from file_manager import FileManager
 from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import PubModel
 from api import FileStorageServer
+from file_storage.src.delete_daemon import DeleteDaemon
 
 
 class Main:
@@ -24,7 +25,7 @@ class Main:
             "/files": {
                 "file_manager": FileManager(log_level=config["LOG_LEVEL"],
                                             base_dir=config["FILE_STORAGE_TEMP_DIR"],
-                                            delete_file_after=int(config["FILE_JANITOR_DELETE_FILES_AFTER"]),
+                                            delete_files_after=int(config["FILE_JANITOR_DELETE_FILES_AFTER"]),
                                             delete_run_interval=int(config["FILE_JANITOR_RUN_INTERVAL"]))
             },
             "/static": {
@@ -35,6 +36,11 @@ class Main:
                 "allow_delete": False
             }
         }
+
+        # Create delete_daemons:
+        for router in routers:
+            routers["delete_daemon"] = DeleteDaemon(router["file_manager"])
+
         self.fs = FileStorageServer(host=config["FILE_STORAGE_HOST"],
                                     port=int(config["FILE_STORAGE_PORT"]),
                                     log_level=config["LOG_LEVEL"],

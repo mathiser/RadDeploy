@@ -3,17 +3,19 @@ import os
 import threading
 import time
 
-
-class FileJanitor(threading.Thread):
-    def __init__(self, file_storage, delete_files_after: int, run_inteval: int = 60,
+class DeleteDaemon(threading.Thread):
+    def __init__(self,
+                 base_dir: str,
+                 delete_files_after,
+                 delete_run_interval,
                  log_level: int = 20):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
-        self.fs = file_storage
-        self.base_dir = file_storage.base_dir
+
+        self.base_dir = base_dir
         self.delete_files_after = delete_files_after
-        self.run_inteval = run_inteval
+        self.delete_run_interval = delete_run_interval
         self.running = False
 
     def run(self):
@@ -22,12 +24,11 @@ class FileJanitor(threading.Thread):
             for fol, subs, files in os.walk(self.base_dir):
                 for file in files:
                     p = os.path.join(fol, file)
-                    uid = self.fs.get_uid_from_path(p)
                     if time.time() - os.path.getatime(p) > self.delete_files_after:
-                        self.logger.debug(f"Timeout for file uid: {uid} - deleting!")
-                        self.fs.delete_file(uid)
+                        self.logger.debug(f"Timeout for file uid: {p} - deleting!")
+                        os.remove(p)
 
-            time.sleep(self.run_inteval)
+            time.sleep(self.delete_run_interval)
 
     def stop(self):
         self.running = False

@@ -4,7 +4,7 @@ from typing import Dict
 import uvicorn
 from fastapi import FastAPI
 
-from DicomFlowLib.fs import FileStorageRouter
+from file_storage_router import FileStorageRouter
 
 
 class FileStorageServer(FastAPI):

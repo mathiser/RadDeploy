@@ -24,34 +24,8 @@ class BaseContext(BaseModel):
 
 
 class SCPContext(BaseContext):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    sender: Destination | None = None
-    src_uid: str | None = None
-    dataframe: pd.DataFrame | None = None
-
-    def __init__(self, dataframe: str | pd.DataFrame | None = None, **data: Any):
-        if isinstance(dataframe, str):
-            dataframe = self.deserialize_dataframe(dataframe)
-        super().__init__(dataframe=dataframe, **data)
-
-    def add_meta_row(self, dcm_path: str, ds: pydicom.dataset.Dataset):
-        elems = {"dcm_path": dcm_path}
-
-        for elem in ds:
-            if elem.keyword == "PixelData":
-                continue
-            else:
-                elems[str(elem.keyword)] = str(elem.value)
-
-        self.dataframe = pd.concat([self.dataframe, pd.DataFrame([elems])], ignore_index=True)
-
-    def deserialize_dataframe(self, dataframe: str):
-        return pd.read_json(StringIO(dataframe))
-
-    @field_serializer('dataframe', when_used='json')
-    def serialize_dataframe(self, dataframe: pd.DataFrame) -> str:
-        return dataframe.to_json()
+    sender: Destination
+    file_uuid: str
 
 
 class FlowContext(SCPContext):

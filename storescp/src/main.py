@@ -6,10 +6,11 @@ from typing import Dict
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.mq import PubModel
-from DicomFlowLib.fs.file_storage_client import FileStorageClient
+from DicomFlowLib.fs.client.impl import FileStorageClient
 from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import MQPub
 from scp import SCP
+from storescp.src.scp_release_handler.impl import SCPReleaseHandler
 
 
 class Main:
@@ -33,19 +34,21 @@ class Main:
         self.mq = MQPub(rabbit_port=int(config["RABBIT_PORT"]),
                         rabbit_hostname=config["RABBIT_HOSTNAME"],
                         log_level=int(config["LOG_LEVEL"]))
-
-        self.scp = SCP(file_storage=self.fs,
-                       port=int(config["AE_PORT"]),
-                       hostname=config["AE_HOSTNAME"],
-                       blacklisted_hosts=config["AE_BLACKLISTED_HOSTS"],
-                       whitelisted_hosts=config["AE_WHITELISTED_HOSTS"],
-                       pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
-                       ae_title=config["AE_TITLE"],
-                       mq_pub=self.mq,
-                       pynetdicom_log_level=int(config["PYNETDICOM_LOG_LEVEL"]),
-                       routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
-                       routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
-                       log_level=int(config["LOG_LEVEL"]))
+        self.scp_release_handler = SCPReleaseHandler(pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
+                                                     file_storage=self.fs,
+                                                     routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
+                                                     routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
+                                                     mq_pub=self.mq,
+                                                     )
+        self.scp = SCP(
+            scp_release_handler=self.scp_release_handler,
+            port=int(config["AE_PORT"]),
+            hostname=config["AE_HOSTNAME"],
+            blacklist_networks=config["AE_BLACKLISTED_IP_NETWORKS"],
+            whitelist_networks=config["AE_WHITELISTED_IP_NETWORKS"],
+            ae_title=config["AE_TITLE"],
+            pynetdicom_log_level=int(config["PYNETDICOM_LOG_LEVEL"]),
+            log_level=int(config["LOG_LEVEL"]))
 
     def start(self):
         self.running = True

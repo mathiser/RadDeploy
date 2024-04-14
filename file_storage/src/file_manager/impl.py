@@ -3,8 +3,9 @@ import logging
 import os
 import threading
 import uuid
+from io import BytesIO
 
-from .janitor import FileJanitor
+from file_storage.src.file_manager.delete_daemon import DeleteDaemon
 
 
 def hash_file(path, buffer_size=65536):
@@ -21,22 +22,23 @@ def hash_file(path, buffer_size=65536):
 
 
 class FileManager(threading.Thread):
-    def __init__(self, base_dir,
+    def __init__(self,
+                 base_dir,
                  suffix: str = ".tar",
                  log_level: int = 20,
                  delete_run_interval: int = 60,
-                 delete_file_after: int = -1):
+                 delete_files_after: int = -1):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
         self.base_dir = base_dir
         os.makedirs(self.base_dir, exist_ok=True)
         self.suffix = suffix
-        self.file_janitor = FileJanitor(file_storage=self,
-                                        log_level=log_level,
-                                        delete_files_after=delete_file_after,
-                                        run_inteval=delete_run_interval)
-        self.file_janitor.start()
+
+        self.delete_daemon = DeleteDaemon(base_dir=base_dir,
+                                          delete_run_interval=delete_run_interval,
+                                          delete_files_after=delete_files_after,
+                                          log_level=log_level).start()
 
     def get_hash(self, uid: str):
         self.logger.debug(f"Serving hash of: {uid}")
@@ -57,16 +59,16 @@ class FileManager(threading.Thread):
         os.link(self.get_file_path(uid), self.get_file_path(new_uid))
         return new_uid
 
-    def post_file(self, tar_file):
+    def post_file(self, tar_file: BytesIO):
         uid = str(uuid.uuid4())
         self.logger.debug(f"Putting file on uid: {uid}")
 
         p = self.get_file_path(uid)
         with open(p, "wb") as writer:
             self.logger.debug(f"Writing file with uid: {uid} to path: {p}")
-            writer.write(tar_file.file.read())
+            writer.write(tar_file.read())
 
-        tar_file.file.close()
+        tar_file.close()
         return uid
 
     def get_file_path(self, uid):

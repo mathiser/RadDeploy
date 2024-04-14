@@ -5,10 +5,11 @@ from io import BytesIO
 import requests
 import urllib.parse
 
-from DicomFlowLib.fs.file_manager.file_manager import hash_file
+from .interface import FileStorageClientInterface
+from file_storage.src.file_manager.impl import hash_file
 
 
-class FileStorageClient:
+class FileStorageClient(FileStorageClientInterface):
     def __init__(self,
                  file_storage_url: str,
                  local_cache: str | None = None,
