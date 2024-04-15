@@ -43,5 +43,5 @@ class SCPReleaseHandler(SCPReleaseHandlerInterface):
 
             self.out_queue.put((pub_model, pub_context))  # These are for the MQPub
 
-    def stop(self, signalnum=None, stack_frame=None):
+    def stop(self):
         self.running = False

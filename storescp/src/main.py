@@ -58,11 +58,11 @@ class Main:
                         in_queue=self.scp_release_handler_out_queue)
 
     def start(self):
-        self.running = True
-        self.mq.start()
-
-        self.scp.start(blocking=False)
         self.logger.debug("Starting")
+        self.running = True
+        self.scp.start(blocking=False)
+        self.scp_release_handler.start()
+        self.mq.start()
 
         while self.running:
             try:
@@ -78,7 +78,9 @@ class Main:
         self.running = False
         self.mq.stop()
         self.scp.stop()
+        self.scp_release_handler.stop()
         self.mq.join()
+        self.scp_release_handler.join()
 
 
 if __name__ == "__main__":
