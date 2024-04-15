@@ -6,7 +6,7 @@ import requests
 import urllib.parse
 
 from .interface import FileStorageClientInterface
-from file_storage.src.file_manager.impl import hash_file
+from DicomFlowLib.fs.utils import hash_file
 
 
 class FileStorageClient(FileStorageClientInterface):

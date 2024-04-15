@@ -1,19 +1,23 @@
+import os
 from io import BytesIO
 
 import pytest
 from DicomFlowLib.data_structures.flow import Flow
-from fingerprinter.src.fingerprinter.fp_utils import parse_fingerprints, generate_df_from_tar, \
-    generate_flow_specific_tar, slice_dataframe_to_triggers
+from ..src.fingerprinting.fp_utils import parse_fingerprints, generate_df_from_tar, generate_flow_specific_tar, slice_dataframe_to_triggers
 
+test_dir = os.path.dirname(__file__)
 
 @pytest.fixture
 def flow_dir():
-    return "tests/test_data/flows/"
+    return os.path.join(test_dir, "test_data/flows/")
+@pytest.fixture
+def scan_dir():
+    return os.path.join(test_dir, "test_data/scans/")
 
 
 @pytest.fixture
-def scp_tar():
-    with open("tests/test_data/scans/scp.tar", "rb") as r:
+def scp_tar(scan_dir):
+    with open(os.path.join(scan_dir, "scp.tar"), "rb") as r:
         return BytesIO(r.read())
 
 

@@ -2,14 +2,16 @@ import logging
 import os.path
 import queue
 import signal
-from typing import Dict
+from typing import Dict, Tuple
 
 from DicomFlowLib.conf import load_configs
+from DicomFlowLib.data_structures.contexts import PublishContext
 from DicomFlowLib.mq import PubModel
 from DicomFlowLib.fs.client.impl import FileStorageClient
 from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import MQPub
 from scp import SCP
+from storescp.src.scp.models import SCPAssociation
 from storescp.src.scp_release_handler.impl import SCPReleaseHandler
 
 
@@ -28,20 +30,9 @@ class Main:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
 
-        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"],
-                                    log_level=int(config["LOG_LEVEL"]))
-
-        self.mq = MQPub(rabbit_port=int(config["RABBIT_PORT"]),
-                        rabbit_hostname=config["RABBIT_HOSTNAME"],
-                        log_level=int(config["LOG_LEVEL"]))
-        self.scp_release_handler = SCPReleaseHandler(pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
-                                                     file_storage=self.fs,
-                                                     routing_key_success=config["PUB_ROUTING_KEY_SUCCESS"],
-                                                     routing_key_fail=config["PUB_ROUTING_KEY_FAIL"],
-                                                     mq_pub=self.mq,
-                                                     )
+        self.scp_out_queue: queue.Queue[SCPAssociation] = queue.Queue()
         self.scp = SCP(
-            scp_release_handler=self.scp_release_handler,
+            out_queue=self.scp_out_queue,
             port=int(config["AE_PORT"]),
             hostname=config["AE_HOSTNAME"],
             blacklist_networks=config["AE_BLACKLISTED_IP_NETWORKS"],
@@ -49,6 +40,22 @@ class Main:
             ae_title=config["AE_TITLE"],
             pynetdicom_log_level=int(config["PYNETDICOM_LOG_LEVEL"]),
             log_level=int(config["LOG_LEVEL"]))
+
+        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"],
+                                    log_level=int(config["LOG_LEVEL"]))
+
+        self.scp_release_handler_out_queue: queue.Queue[Tuple[PubModel, PublishContext]] = queue.Queue()
+        self.scp_release_handler = SCPReleaseHandler(
+            file_storage=self.fs,
+            pub_models=[PubModel(**d) for d in config["PUB_MODELS"]],
+            in_queue=self.scp_out_queue,
+            out_queue=self.scp_release_handler_out_queue
+        )
+
+        self.mq = MQPub(rabbit_port=int(config["RABBIT_PORT"]),
+                        rabbit_hostname=config["RABBIT_HOSTNAME"],
+                        log_level=int(config["LOG_LEVEL"]),
+                        in_queue=self.scp_release_handler_out_queue)
 
     def start(self):
         self.running = True

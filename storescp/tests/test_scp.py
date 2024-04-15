@@ -1,4 +1,3 @@
-import logging
 import multiprocessing.pool
 import os
 import queue
@@ -47,7 +46,7 @@ def post_folder_to_dicom_node(dicom_dir, ip, port, ae_title) -> bool:
 
 @pytest.fixture
 def scp():
-    return SCP(
+    scp = SCP(
         out_queue=queue.Queue(),
         ae_title="DicomFlow",
         hostname="localhost",
@@ -55,30 +54,39 @@ def scp():
         pynetdicom_log_level=20,
         log_level=10
     )
-
-
-def test_scp(scp):
     scp.start(blocking=False)
+    yield scp
+    scp.stop()
 
-    def post(i):
-        post_folder_to_dicom_node(dicom_dir=os.path.join(os.path.dirname(__file__), "test_data/scans"),
-                                  ip=scp.hostname,
-                                  port=scp.port,
-                                  ae_title=scp.ae_title)
+def post(i, ip, port, ae_title):
+    post_folder_to_dicom_node(dicom_dir=os.path.join(os.path.dirname(__file__), "test_data/scans"),
+                              ip=ip,
+                              port=port,
+                              ae_title=ae_title)
 
-    post(0)
+def test_scp_single(scp):
+    post(0,
+         ip=scp.hostname,
+         port=scp.port,
+         ae_title=scp.ae_title)
     scp_association = scp.out_queue.get()
     assert len(scp_association.dicom_files) == 2
     with tarfile.TarFile.open(fileobj=scp_association.as_tar()) as tf:
         for memb in tf.getmembers():
             assert memb.name in ["0.dcm", "1.dcm"]
 
+def test_stress_scp(scp):
     # Dealing with many simultaneous posts
     t = multiprocessing.pool.ThreadPool(10)
-    t.map(post, range(100))
+    t.starmap(post, [(i, scp.hostname, scp.port, scp.ae_title) for i in range(100)])
     t.close()
     t.join()
     assert scp.out_queue.qsize() == 100
+    prev = scp.out_queue.get()
+    while not scp.out_queue.empty:
+        next = scp.out_queue.get()
+        assert prev.model_dump_json() == next.model_dump_json()
+
     scp.stop()
 
 

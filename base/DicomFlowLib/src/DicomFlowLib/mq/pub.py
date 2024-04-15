@@ -38,19 +38,19 @@ class MQPub(MQBase):
         self._connection.add_callback_threadsafe(cb)
 
     def publish_message(self, pub_model: PubModel, pub_context: PublishContext):
+        self.logger.debug(f"Declaring exchanges from pub model: {pub_model.model_dump_json()}")
         # Declare Exchanges
         self.setup_exchange(exchange=pub_model.exchange,
                             exchange_type=pub_model.exchange_type)
-
+        print(pub_model)
         self.basic_publish(exchange=pub_model.exchange,
-                           routing_key=pub_context.routing_key,
+                           routing_key=pub_model.routing_key_values[pub_context.pub_model_routing_key],
                            body=pub_context.body,
                            reply_to=pub_context.reply_to,
                            priority=pub_context.priority)
 
         self._message_number += 1
         self._deliveries[self._message_number] = True
-
 
     def run(self):
         while not self._stopping:
@@ -68,10 +68,11 @@ class MQPub(MQBase):
             while not self._stopping:
                 time_zero = time.time()
                 interval = 10
-                while time.time() - time_zero < (self.heartbeat / 4):
+                while time.time() - time_zero < (self.heartbeat / 4) and not self._stopping:
                     try:
-                        pubmodel_publishcontext = self.in_queue.get(timeout=interval)
-                        self.publish_message(*pubmodel_publishcontext)
+                        self.process_event_data()
+                        elem: Tuple[PubModel, PublishContext] = self.in_queue.get(timeout=interval)
+                        self.publish_message(*elem)
                     except queue.Empty:
                         if not self._stopping and self._connection:
                             self.process_event_data()
@@ -82,10 +83,6 @@ class MQPub(MQBase):
                         self.logger.error(str(e))
                         self.logger.error(traceback.format_exc())
                         raise e
-                    self.process_event_data()
-
-                if not self._stopping and self._connection:
-                    self.process_event_data()
 
         self.logger.info('Stopped')
 

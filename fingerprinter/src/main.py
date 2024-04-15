@@ -8,7 +8,7 @@ from DicomFlowLib.mq import PubModel, SubModel
 from DicomFlowLib.fs import FileStorageClient
 
 from DicomFlowLib.mq import MQSub
-from fingerprinter import Fingerprinter
+from fingerprinting import Fingerprinter
 
 
 class Main:

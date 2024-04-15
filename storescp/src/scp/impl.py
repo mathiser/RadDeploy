@@ -42,7 +42,7 @@ class SCP:
 
         # SCP release queue is where SCPAssociations are put to
         # be popped by someone else
-        self.out_queue: queue.Queue[SCPAssociation] = queue.Queue()
+        self.out_queue: queue.Queue[SCPAssociation] = out_queue
 
         # Container to keep track of incoming associations
         self.assoc_manager = SCPAssociationManager()
@@ -138,6 +138,7 @@ class SCP:
             self.ae.start_server((self.hostname, self.port), block=blocking, evt_handlers=handler)
             self.logger.info(
                 f"Starting SCP on host: {self.hostname}, port:{str(self.port)}, ae title: {self.ae_title}")
+            return self
         except OSError as ose:
             self.logger.error(f'Cannot start Association Entity servers')
             raise ose

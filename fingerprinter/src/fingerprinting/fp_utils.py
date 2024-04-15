@@ -14,9 +14,8 @@ from DicomFlowLib.data_structures.flow import Flow
 def generate_df_from_tar(tar_file: BytesIO) -> pd.DataFrame:
     tar_file.seek(0)
     df = pd.DataFrame()
-    with tarfile.TarFile.open(fileobj=tar_file) as tar_file, tempfile.TemporaryDirectory() as tmp_dir:
-        tar_file.extractall(tmp_dir)
-
+    with tarfile.TarFile.open(fileobj=tar_file) as tf, tempfile.TemporaryDirectory() as tmp_dir:
+        tf.extractall(tmp_dir, filter='data')
         for fol, subs, files in os.walk(tmp_dir):
             for file in files:
                 p = os.path.join(fol, file)
@@ -29,6 +28,7 @@ def generate_df_from_tar(tar_file: BytesIO) -> pd.DataFrame:
                         elems[str(elem.keyword)] = str(elem.value)
 
                 df = pd.concat([df, pd.DataFrame([elems])], ignore_index=True)
+    tar_file.seek(0)
     return df
 
 

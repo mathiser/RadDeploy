@@ -25,8 +25,7 @@ class MQSub(MQBase):
     """
 
     def __init__(self, rabbit_hostname: str, rabbit_port: int, sub_models: List[SubModel], pub_models: List[PubModel],
-                 work_function: callable, sub_prefetch_value: int, sub_queue_kwargs: Dict, pub_routing_key_error: str,
-                 log_level: int = 20):
+                 work_function: callable, sub_prefetch_value: int, sub_queue_kwargs: Dict, log_level: int = 20):
 
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
@@ -53,7 +52,7 @@ class MQSub(MQBase):
 
         self.sub_models = {sm.exchange: sm for sm in sub_models}
         self.pub_models = {pm.exchange: pm for pm in pub_models}
-        self.pub_routing_key_error = pub_routing_key_error
+
         self.sub_queue_kwargs = sub_queue_kwargs
         self.queue = None
 
@@ -93,7 +92,7 @@ class MQSub(MQBase):
             self.logger.debug(f"publishing on exchange: {pub_model.exchange} with routing key: {result.routing_key}")
 
             self.basic_publish_callback(exchange=pub_model.exchange,
-                                        routing_key=result.routing_key,
+                                        routing_key=pub_model.routing_key_values[result.pub_model_routing_key],
                                         body=result.body,
                                         priority=result.priority)
 
@@ -116,7 +115,7 @@ class MQSub(MQBase):
             self.logger.error(str(e))
             self.logger.error(str(traceback.format_exc()))
             self.publish_on_all_pub_models(
-                result=PublishContext(body=body, routing_key=self.pub_routing_key_error))  # routing key on fail
+                result=PublishContext(body=body, pub_model_routing_key="ERROR"))  # routing key on fail
         finally:
             self.logger.debug('Acknowledging message {}'.format(basic_deliver.delivery_tag))
             self.acknowledge_message_callback(basic_deliver.delivery_tag)
