@@ -12,7 +12,7 @@ from DicomFlowLib.data_structures.flow import Flow, Destination
 
 class MyTestCase(unittest.TestCase):
     def setUp(self):
-        file = "scheduler/tests/test_flows/dag_flow.yaml"
+        file = "scheduler/test_utils/test_flows/dag_flow.yaml"
         with open(file) as r:
             fp = yaml.safe_load(r)
         flow = Flow(**fp)

@@ -14,21 +14,27 @@ class MQHandler(StreamHandler):
                  rabbit_port,
                  pub_models: List[PubModel],
                  ):
-        signal.signal(signal.SIGTERM, self.stop)
-
         super().__init__()
+        signal.signal(signal.SIGTERM, self.stop)
         self.mq = MQPub(rabbit_hostname=rabbit_hostname,
-                        rabbit_port=rabbit_port)
+                        rabbit_port=rabbit_port,
+                        log_level=0)
         self.pub_models = pub_models
+        self.running = False
         self.mq.start()
+        self.running = True
 
     def emit(self, record):
-        record = record.__dict__
-        record["hostname"] = socket.gethostname()
-        for pub_model in self.pub_models:
-            self.mq.add_publish_message(pub_model,
-                                        PublishContext(body=json.dumps(record),
-                                                       routing_key=f"{record["hostname"]}.{record["levelname"]}"))
+        if self.running:
+            record = record.__dict__
+            record["hostname"] = socket.gethostname()
+            for pub_model in self.pub_models:
+                pub_model.routing_key_values[record["levelname"]] = f'{record["hostname"]}.{record["levelname"]}'
+                self.mq.add_publish_message(
+                    pub_model,
+                    PublishContext(body=json.dumps(record),
+                                   pub_model_routing_key=record["levelname"])
+                )
 
     def stop(self, signalnum=None, stack_frame=None):
         self.mq.stop()

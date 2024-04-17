@@ -25,7 +25,7 @@ class BaseContext(BaseModel):
 
 class SCPContext(BaseContext):
     sender: Destination
-    file_uuid: str
+    src_uid: str
 
 
 class FlowContext(SCPContext):

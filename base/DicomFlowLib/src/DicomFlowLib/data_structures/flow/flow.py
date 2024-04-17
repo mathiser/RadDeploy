@@ -59,7 +59,7 @@ class Flow(BaseModel):
         return True
 
 if __name__ == "__main__":
-    file = "DicomFlowLib/data_structures/flow/tests/test_flows/dag_flow.yaml"
+    file = "DicomFlowLib/data_structures/flow/test_utils/test_flows/dag_flow.yaml"
     with open(file) as r:
         fp = yaml.safe_load(r)
     flow = Flow(**fp)

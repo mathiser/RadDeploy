@@ -2,45 +2,16 @@ import queue
 import time
 from typing import Tuple
 
-import docker
-import pika
-import pytest
-
 from DicomFlowLib.data_structures.contexts import PublishContext
-from DicomFlowLib.fs.client.mock_impl import MockFileStorageClient
-from DicomFlowLib.mq import MQPub, PubModel, MQBase
+from DicomFlowLib.mq import MQPub, PubModel
 from scp import SCP
 from scp.models import SCPAssociation
 from scp_release_handler.impl import SCPReleaseHandler
 from .test_scp import post
+from DicomFlowLib.test_utils.fixtures import mq_container, fs, mq_base
 
-
-@pytest.fixture
-def mq_container():
-    test_container_name = "test_rabbit"
-    cli = docker.from_env()
-    for container in cli.containers.list():
-        if container.name == test_container_name:
-            yield container
-            break
-    else:
-        container = cli.containers.run(name=test_container_name,
-                                 image="rabbitmq:3-management",
-                                 remove=True,
-                                 ports={5672: 5677})
-        time.sleep(15)
-        yield container
-    cli.close()
-
-
-@pytest.fixture
-def fs():
-    return MockFileStorageClient()
-
-
-def test_end_to_end(mq_container, fs):
+def test_end_to_end(mq_container, fs, mq_base):
     exchange_name = "SCP_TEST"
-    mq_base = MQBase(rabbit_hostname="localhost", rabbit_port=5677, close_conn_on_exit=True, log_level=10).connect()
     mq_base.setup_exchange(exchange_name, "topic")
     q = mq_base.setup_queue_and_bind(exchange_name, "#")
 

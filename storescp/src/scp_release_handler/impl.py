@@ -34,7 +34,7 @@ class SCPReleaseHandler(SCPReleaseHandlerInterface):
                 pass
 
     def release(self, scp_association: SCPAssociation):
-        scp_association.file_uuid = self.fs.post(scp_association.as_tar())
+        scp_association.src_uid = self.fs.post(scp_association.as_tar())
         for pub_model in self.pub_models:
             pub_context = PublishContext(
                 pub_model_routing_key="SUCCESS",

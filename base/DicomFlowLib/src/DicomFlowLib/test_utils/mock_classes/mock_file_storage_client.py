@@ -1,17 +1,18 @@
+import copy
 import logging
 import uuid
 from io import BytesIO
-from .interface import FileStorageClientInterface
+from DicomFlowLib.fs.client.interface import FileStorageClientInterface
 from DicomFlowLib.fs.utils import hash_file
 
 
 class MockFileStorageClient(FileStorageClientInterface):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.tar_files = {}
 
     def post(self, file: BytesIO) -> str:
         uid = str(uuid.uuid4())
-        self.tar_files[uid] = file
+        self.tar_files[uid] = copy.deepcopy(file)
         return uid
 
     def clone(self, uid):

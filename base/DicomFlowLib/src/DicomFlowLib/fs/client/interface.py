@@ -3,6 +3,11 @@ from io import BytesIO
 
 
 class FileStorageClientInterface:
+
+    @abstractmethod
+    def __init__(self, *args, **kwargs):
+        pass
+
     @abstractmethod
     def post(self, file: BytesIO):
         pass

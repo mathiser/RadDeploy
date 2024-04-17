@@ -1,7 +1,0 @@
-name: "test"
-triggers:
-  - Modality: ["MR"]
-    SeriesDescription: ["~Tra"]
-
-models: []
-destinations: []

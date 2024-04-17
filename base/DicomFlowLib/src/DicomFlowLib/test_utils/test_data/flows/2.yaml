@@ -1,0 +1,9 @@
+name: "test"
+triggers:
+  - Modality: ["MR"]
+
+models:
+  - docker_kwargs:
+      image: busybox
+      command: sh -c 'ls /'
+destinations: []

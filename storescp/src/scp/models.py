@@ -12,7 +12,7 @@ class SCPAssociation(BaseModel):
     assoc_id: int
     sender: Destination
     dicom_files: List[BytesIO] = []
-    file_uuid: str | None = None
+    src_uid: str | None = None
 
     def add_dicom_file(self, dicom_file: BytesIO):
         dicom_file.seek(0)

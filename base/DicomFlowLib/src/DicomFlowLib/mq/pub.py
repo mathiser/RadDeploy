@@ -11,16 +11,16 @@ from ..data_structures.contexts import PublishContext
 
 class MQPub(MQBase):
     def __init__(self,
-                 in_queue: queue.Queue[Tuple[PubModel, PublishContext]],
                  rabbit_hostname: str,
                  rabbit_port: int,
+                 in_queue: queue.Queue[Tuple[PubModel, PublishContext]] | None = None,
                  log_level: int = 20):
         super().__init__(close_conn_on_exit=True,
                          rabbit_hostname=rabbit_hostname,
                          rabbit_port=rabbit_port,
                          log_level=log_level)
 
-        self.in_queue = in_queue
+        self.in_queue = in_queue if in_queue is not None else queue.Queue()
 
         self._deliveries = {}
         self._acked = 0
@@ -38,11 +38,10 @@ class MQPub(MQBase):
         self._connection.add_callback_threadsafe(cb)
 
     def publish_message(self, pub_model: PubModel, pub_context: PublishContext):
-        self.logger.debug(f"Declaring exchanges from pub model: {pub_model.model_dump_json()}")
         # Declare Exchanges
         self.setup_exchange(exchange=pub_model.exchange,
                             exchange_type=pub_model.exchange_type)
-        print(pub_model)
+
         self.basic_publish(exchange=pub_model.exchange,
                            routing_key=pub_model.routing_key_values[pub_context.pub_model_routing_key],
                            body=pub_context.body,
@@ -53,7 +52,8 @@ class MQPub(MQBase):
         self._deliveries[self._message_number] = True
 
     def run(self):
-        while not self._stopping:
+        self.running = True
+        while self.running:
             self._deliveries = {}
             self._acked = 0
             self._nacked = 0
@@ -65,19 +65,18 @@ class MQPub(MQBase):
             # self.enable_delivery_confirmations()
 
             self.logger.info('Starting publishing')
-            while not self._stopping:
+            while self.running:
                 time_zero = time.time()
-                interval = 10
-                while time.time() - time_zero < (self.heartbeat / 4) and not self._stopping:
+                while time.time() - time_zero < (self.heartbeat / 4):
                     try:
                         self.process_event_data()
-                        elem: Tuple[PubModel, PublishContext] = self.in_queue.get(timeout=interval)
+                        elem: Tuple[PubModel, PublishContext] = self.in_queue.get(timeout=2)
                         self.publish_message(*elem)
                     except queue.Empty:
-                        if not self._stopping and self._connection:
+                        if self.running and self._connection:
                             self.process_event_data()
                     except KeyboardInterrupt:
-                        if not self._stopping:
+                        if self.running:
                             self.stop()
                     except Exception as e:
                         self.logger.error(str(e))

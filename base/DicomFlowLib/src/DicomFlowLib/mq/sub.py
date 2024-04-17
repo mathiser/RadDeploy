@@ -2,8 +2,10 @@
 # pylint: disable=C0111,C0103,R0205
 import logging
 import threading
+import time
 import traceback
-from typing import List, Dict
+from time import sleep
+from typing import List, Dict, Iterable
 
 from .base import MQBase
 from ..data_structures.contexts import PublishContext
@@ -24,8 +26,15 @@ class MQSub(MQBase):
 
     """
 
-    def __init__(self, rabbit_hostname: str, rabbit_port: int, sub_models: List[SubModel], pub_models: List[PubModel],
-                 work_function: callable, sub_prefetch_value: int, sub_queue_kwargs: Dict, log_level: int = 20):
+    def __init__(self,
+                 rabbit_hostname: str,
+                 rabbit_port: int,
+                 sub_models: List[SubModel],
+                 pub_models: List[PubModel],
+                 work_function: callable,
+                 sub_prefetch_value: int,
+                 sub_queue_kwargs: Dict | None = None,
+                 log_level: int = 20):
 
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
@@ -40,11 +49,6 @@ class MQSub(MQBase):
 
         self.logger = logging.getLogger(__name__)
 
-        self.should_reconnect = False
-        self.was_consuming = False
-
-        self._consumer_tag = None
-        self._consuming = False
         self.work_function = work_function
         self.sub_prefetch_value = sub_prefetch_value
         self._thread_lock = threading.Lock()
@@ -53,10 +57,15 @@ class MQSub(MQBase):
         self.sub_models = {sm.exchange: sm for sm in sub_models}
         self.pub_models = {pm.exchange: pm for pm in pub_models}
 
-        self.sub_queue_kwargs = sub_queue_kwargs
+        if sub_queue_kwargs:
+            self.sub_queue_kwargs = sub_queue_kwargs
+        else:
+            self.sub_queue_kwargs = {}
+
         self.queue = None
 
     def run(self):
+        self.running = True
         # Set Connection and channel
         self.connect()
         self.queue = self.setup_queue(**self.sub_queue_kwargs)
@@ -70,6 +79,7 @@ class MQSub(MQBase):
                 self.bind_queue(queue=self.queue, exchange=sub.exchange, routing_key=rk)
 
             self.logger.debug(f"Setting up sub model {sub}")
+
         # Set prefetch value
         self._channel.basic_qos(prefetch_count=self.sub_prefetch_value)
 
@@ -77,7 +87,17 @@ class MQSub(MQBase):
         self._channel.basic_consume(queue=self.queue, on_message_callback=self.on_message)
 
         self.logger.info(' [*] Waiting for messages')
-        self._channel.start_consuming()
+        while self.running:
+            self.process_event_data()
+            time.sleep(0.1)
+
+        self.close_connection()
+        #self.
+        # try:
+        #     self._channel.start_consuming()
+        # except:
+        #     self._channel.stop_consuming()
+
 
     def fetch_echo(self, basic_deliver, body):
         if self.sub_models[basic_deliver.exchange].routing_key_fetch_echo:
@@ -89,7 +109,7 @@ class MQSub(MQBase):
     def publish_on_all_pub_models(self,
                                   result: PublishContext):
         for pub_model in self.pub_models.values():
-            self.logger.debug(f"publishing on exchange: {pub_model.exchange} with routing key: {result.routing_key}")
+            self.logger.debug(f"publishing on exchange: {pub_model.exchange} with routing key: {result.pub_model_routing_key}")
 
             self.basic_publish_callback(exchange=pub_model.exchange,
                                         routing_key=pub_model.routing_key_values[result.pub_model_routing_key],
@@ -107,7 +127,7 @@ class MQSub(MQBase):
 
     def work_function_wrapper(self, basic_deliver, body):
         try:
-            results: List[PublishContext] = self.work_function(basic_deliver, body)
+            results: Iterable[PublishContext] = self.work_function(basic_deliver, body)
             for result in results:
                 self.publish_on_all_pub_models(result=result)  # Routing key on success
 

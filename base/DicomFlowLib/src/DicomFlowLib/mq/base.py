@@ -21,34 +21,30 @@ class MQBase(threading.Thread):
         self.logger.setLevel(log_level)
         self._hostname = rabbit_hostname
         self._port = rabbit_port
-        self._connection: pika.connection.Connection | None = None
-        self._channel: pika.channel.Channel | None = None
+        self._connection: pika.adapters.BlockingConnection | None = None
+        self._channel: pika.adapters.blocking_connection.BlockingChannel | None = None
 
-        self._stopping = False
+        self.running = False
 
         self.close_conn_on_exit = close_conn_on_exit
 
         self._declared_exchanges = {""}
         self._declared_queues = set()
 
-    def __del__(self):
-        if self.close_conn_on_exit:
-            self.stop()
-
     @property
     def heartbeat(self):
         return self._connection._impl.params.heartbeat
 
-    def connect_like(self, connection: pika.connection.Connection):
-        self._connection = pika.BlockingConnection(
+    def connect_like(self, connection: pika.adapters.BlockingConnection):
+        self._connection = pika.adapters.BlockingConnection(
             pika.ConnectionParameters(host=connection._impl.params.host, port=connection._impl.params.port)
         )
         self._channel = self._connection.channel()
         return self
 
     def connect_with(self,
-                     connection: connection.Connection,
-                     channel: channel.Channel | None = None):
+                     connection: pika.adapters.BlockingConnection,
+                     channel: pika.adapters.blocking_connection.BlockingChannel | None = None):
         if connection and channel:
             self.logger.debug('Using existing connection and connection')
             self._connection = connection
@@ -65,7 +61,8 @@ class MQBase(threading.Thread):
         try:
             while time.time() - t0 < timeout:
                 self.logger.debug("Trying to connect to RabbitMQ")
-                self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=self._hostname, port=self._port))
+                self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=self._hostname,
+                                                                                     port=self._port))
                 self._channel = self._connection.channel()
                 if self._connection:
                     if self._connection.is_open:
@@ -88,16 +85,7 @@ class MQBase(threading.Thread):
         disconnect from RabbitMQ.
 
         """
-        self.logger.debug('Stopping')
-        self._stopping = True
-        if self._channel:
-            if self._channel.is_open:
-                for q in self._declared_queues:
-                    if q.startswith("amq.gen"):
-                        self.delete_queue(queue=q)
-
-        self.close_channel()
-        self.close_connection()
+        self.running = False
 
     def close_channel(self):
         """Invoke this command to close the channel with RabbitMQ by sending
@@ -106,8 +94,12 @@ class MQBase(threading.Thread):
         """
         if self._channel is not None:
             if self._channel.is_open:
+                self._channel.stop_consuming()
                 self.logger.info('Closing the channel')
                 self._channel.close()
+
+    def confirm_delivery(self):
+        self._channel.confirm_delivery()
 
     def close_connection(self):
         """This method closes the connection to RabbitMQ."""
@@ -122,8 +114,7 @@ class MQBase(threading.Thread):
 
     def setup_exchange(self, exchange: str, exchange_type: str):
         if exchange in self._declared_exchanges:
-            pass
-            #self.logger.debug('Exchange {} type {} already exist'.format(exchange, exchange_type))
+            return
         else:
             self.logger.debug('Declaring exchange {} type {}'.format(exchange, exchange_type))
             self._channel.exchange_declare(exchange=exchange,
@@ -135,11 +126,11 @@ class MQBase(threading.Thread):
         self._connection.add_callback_threadsafe(cb)
 
     def setup_queue(self,
-                    queue: str,
+                    queue: str = "",
                     passive: bool = False,
                     durable: bool = False,
                     exclusive: bool = False,
-                    auto_delete: bool = False, ):
+                    auto_delete: bool = False):
         queue = self._channel.queue_declare(queue=queue, passive=passive, durable=durable,
                                             exclusive=exclusive, auto_delete=auto_delete,
                                             arguments={"x-max-priority": 5}).method.queue
@@ -223,7 +214,8 @@ class MQBase(threading.Thread):
         self._channel.queue_delete(queue=queue, if_empty=if_empty)
 
     def process_event_data(self):
-        self._connection.process_data_events()
+        if self._connection.is_open:
+            self._connection.process_data_events()
 
     def process_event_data_callback(self):
         cb = functools.partial(self.process_event_data)
