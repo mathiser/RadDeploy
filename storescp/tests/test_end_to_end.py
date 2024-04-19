@@ -2,15 +2,16 @@ import queue
 import time
 from typing import Tuple
 
-from DicomFlowLib.data_structures.contexts import PublishContext
+from DicomFlowLib.mq.mq_models import PublishContext
 from DicomFlowLib.mq import MQPub, PubModel
 from scp import SCP
 from scp.models import SCPAssociation
 from scp_release_handler.impl import SCPReleaseHandler
-from .test_scp import post
-from DicomFlowLib.test_utils.fixtures import mq_container, fs, mq_base
+from DicomFlowLib.test_utils.fixtures import mq_container, fs, mq_base, scan_dir
+from DicomFlowLib.test_utils.mock_scu import post_folder_to_dicom_node
 
-def test_end_to_end(mq_container, fs, mq_base):
+
+def test_end_to_end(mq_container, fs, mq_base, scan_dir):
     exchange_name = "SCP_TEST"
     mq_base.setup_exchange(exchange_name, "topic")
     q = mq_base.setup_queue_and_bind(exchange_name, "#")
@@ -26,7 +27,8 @@ def test_end_to_end(mq_container, fs, mq_base):
         pynetdicom_log_level=20,
         log_level=10).start(blocking=False)
 
-    post(0,
+    post_folder_to_dicom_node(0,
+                              scan_dir,
          ip=scp.hostname,
          port=scp.port,
          ae_title=scp.ae_title)

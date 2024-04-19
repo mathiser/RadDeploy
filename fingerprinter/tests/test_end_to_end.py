@@ -1,7 +1,5 @@
-import copy
-
-from DicomFlowLib.data_structures.contexts import PublishContext, SCPContext
 from DicomFlowLib.data_structures.flow import Destination
+from DicomFlowLib.data_structures.service_contexts import SCPContext
 from DicomFlowLib.test_utils.fixtures import *
 from DicomFlowLib.mq import PubModel, MQSub, SubModel
 from fingerprinting import Fingerprinter

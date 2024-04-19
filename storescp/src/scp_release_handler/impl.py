@@ -2,7 +2,7 @@ import queue
 import threading
 from typing import List, Tuple
 
-from DicomFlowLib.data_structures.contexts import PublishContext
+from DicomFlowLib.mq.mq_models import PublishContext
 from DicomFlowLib.fs.client.interface import FileStorageClientInterface
 from DicomFlowLib.mq import PubModel, MQPub
 from .interface import SCPReleaseHandlerInterface

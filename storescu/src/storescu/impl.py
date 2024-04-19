@@ -9,9 +9,10 @@ import pydicom
 from pydicom.errors import InvalidDicomError
 from pynetdicom import AE, StoragePresentationContexts
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
 from DicomFlowLib.data_structures.flow import Destination
+from DicomFlowLib.data_structures.service_contexts import FlowContext
 from DicomFlowLib.fs import FileStorageClient
+from DicomFlowLib.mq.mq_models import PublishContext
 
 
 class STORESCU:

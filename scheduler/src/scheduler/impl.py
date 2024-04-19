@@ -4,7 +4,7 @@ from typing import Iterable, Dict, Tuple, List
 
 import pika.spec
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
+from DicomFlowLib.mq.mq_models import PublishContext
 
 
 class Scheduler:

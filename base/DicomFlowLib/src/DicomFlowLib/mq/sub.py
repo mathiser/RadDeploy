@@ -4,11 +4,10 @@ import logging
 import threading
 import time
 import traceback
-from time import sleep
 from typing import List, Dict, Iterable
 
 from .base import MQBase
-from ..data_structures.contexts import PublishContext
+from DicomFlowLib.mq.mq_models import PublishContext
 from .mq_models import PubModel, SubModel
 
 

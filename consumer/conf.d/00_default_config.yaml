@@ -18,7 +18,7 @@ STATIC_STORAGE_CACHE_DIR: "/opt/DicomFlow/static"
 
 # CONSUMER
 SUB_PREFETCH_COUNT: 1
-########################### Will be used if GPUS is NOT set ####################3
+########################### Will be used for CPU consumers ####################
 CPU_SUB_MODELS:  # Will be used by default.
   - exchange: "scheduler"
     exchange_type: "topic"
@@ -30,7 +30,8 @@ CPU_SUB_QUEUE_KWARGS:
   durable: False
   exclusive: False
   auto_delete: False
-########################### Will be used if GPUS is set ####################3
+
+########################### Will be used for GPU consumers ####################
 GPU_SUB_MODELS:
   - exchange: "scheduler"
     exchange_type: "topic"
@@ -43,9 +44,7 @@ GPU_SUB_QUEUE_KWARGS:
   exclusive: False
   auto_delete: False
 ##########################
-PUB_ROUTING_KEY_ERROR: "error"
-PUB_ROUTING_KEY_SUCCESS: "success"
-PUB_ROUTING_KEY_FAIL: "fail"
+
 PUB_MODELS:
   - exchange: "consumer"
     exchange_type: "topic"

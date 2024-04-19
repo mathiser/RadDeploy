@@ -1,10 +1,7 @@
-import os
-from io import BytesIO
-
-import pytest
 from DicomFlowLib.data_structures.flow import Flow
 from fingerprinting.fp_utils import parse_fingerprints, generate_df_from_tar, generate_flow_specific_tar, slice_dataframe_to_triggers
 from DicomFlowLib.test_utils.fixtures import *
+
 test_dir = os.path.dirname(__file__)
 
 

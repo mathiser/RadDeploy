@@ -1,15 +1,12 @@
 import os
-import tarfile
-import tempfile
+
 import time
 
 import pytest
 from main import Main
 
 from DicomFlowLib.fs.client.interface import FileStorageClientInterface
-from DicomFlowLib.test_utils.fixtures import mq_container, mq_base
-from DicomFlowLib.test_utils.mock_scu import post_folder_to_dicom_node
-from DicomFlowLib.test_utils.fixtures import scan_dir, scp_tar_path
+from DicomFlowLib.test_utils.fixtures import mq_container, mq_base, scan_dir, scp_tar_path
 
 
 @pytest.fixture

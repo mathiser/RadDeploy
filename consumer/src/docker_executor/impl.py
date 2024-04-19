@@ -13,21 +13,19 @@ import docker
 import yaml
 from docker import types, errors
 
-from DicomFlowLib.data_structures.contexts import PublishContext, FlowContext
-from DicomFlowLib.fs import FileStorageClient
+from DicomFlowLib.data_structures.flow import Model
+from DicomFlowLib.data_structures.service_contexts import ModelContext
+from DicomFlowLib.fs.client.interface import FileStorageClientInterface
 from DicomFlowLib.log import init_logger
-from .worker import Worker
+from DicomFlowLib.mq import PublishContext
+from .models import Worker
 
 
-
-
-class DockerConsumer:
+class DockerExecutor:
     def __init__(self,
-                 file_storage: FileStorageClient,
-                 static_storage: FileStorageClient | None,
+                 file_storage: FileStorageClientInterface,
+                 static_storage: FileStorageClientInterface,
                  worker: Worker,
-                 pub_routing_key_success: str,
-                 pub_routing_key_fail: str,
                  log_level: int = 20,
                  job_log_dir: str = "/opt/DicomFlow/logs/jobs/"):
         self.pub_declared = False
@@ -36,8 +34,6 @@ class DockerConsumer:
         self.job_log_dir = job_log_dir
         self.fs = file_storage
         self.ss = static_storage
-        self.pub_routing_key_success = pub_routing_key_success
-        self.pub_routing_key_fail = pub_routing_key_fail
 
         self.worker = worker
 
@@ -47,19 +43,24 @@ class DockerConsumer:
         self.cli.close()
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
-        fc = FlowContext(**json.loads(body.decode()))
+        model_context = ModelContext(**json.loads(body.decode()))
 
         self.logger.info(f"Spinning up flow")
-        fc = self.exec_model(flow_context=fc)
+        output_mapping = self.exec_model(model_context.model,
+                                         model_context.mount_mapping)
         self.logger.info(f"Finished flow")
 
-        return [PublishContext(body=fc.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
+        # Overwrite with output mount mapping
+        model_context.mount_mapping = output_mapping
+
+        # Return new
+        return [PublishContext(body=model_context.model_dump_json().encode(), pub_model_routing_key="SUCCESS")]
 
     def exec_model(self,
-                   flow_context: FlowContext) -> FlowContext:
-        uid = flow_context.uid
-        model = flow_context.active_model
-        mount_mapping = flow_context.mount_mapping
+                   model: Model,
+                   mount_mapping: Dict,
+                   flow_uid: str = ""
+                   ) -> Dict:
 
         if model.pull_before_exec:
             try:
@@ -67,14 +68,16 @@ class DockerConsumer:
             except Exception as e:
                 self.logger.error("Could not pull container - does it exist on docker hub?")
                 raise e
-        self.logger.info(f"UID={uid} ; RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}")
+        self.logger.info(f"RUNNING CONTAINER TAG: {model.docker_kwargs["image"]}")
 
         kwargs = model.docker_kwargs
 
         # generate dummy binds for all mounts
         kwargs["volumes"] = []
         kwargs["volumes"].append(
-            f"{tempfile.mkdtemp()}:{model.config_dump_folder}")  # Folder for config. Default is /config.yaml
+            f"{tempfile.mkdtemp()}:{os.path.dirname(model.config_path)}"   # Folder for config.
+        )                                                                  # Default is /config/config.yaml
+
         for src, dst in {**model.input_mounts, **model.output_mounts, **model.static_mounts}.items():
             kwargs["volumes"].append(f'{tempfile.mkdtemp()}:{dst}')
 
@@ -82,7 +85,7 @@ class DockerConsumer:
         if self.worker.is_gpu_worker():
             kwargs["ipc_mode"] = "host"
             self.logger.debug(f"Uses GPU device {self.worker.device_id}")
-            if "DEBUG_DISABLE_GPU" not in flow_context.flow.extra.keys():
+            if "DEBUG_DISABLE_GPU" not in model.config.keys():
                 kwargs["device_requests"] = [
                     types.DeviceRequest(device_ids=[self.worker.device_id], capabilities=[['gpu']])]
 
@@ -93,26 +96,25 @@ class DockerConsumer:
         if "environment" not in kwargs.keys():
             kwargs["environment"] = {}
 
-        kwargs["environment"]["FLOW_UID"] = flow_context.uid
+        # kwargs["environment"]["FLOW_UID"] = model.uid
         kwargs["environment"]["CONTAINER_TAG"] = model.docker_kwargs["image"]
+        # To do: Insert hash of flow definition
 
         # Create container
         container = self.cli.containers.create(**kwargs)
 
         try:
             # Reload new envionment
-            #container.reload()
+            # container.reload()
 
             # Dumps config.yaml in folder
-            if model.config_dump_folder:
-                config_file = self.config_to_tar(model.config)
-                container.put_archive(model.config_dump_folder, config_file.read())
-                config_file.close()
+            with self.config_to_tar(model.config, model.config_path) as config_file:
+                container.put_archive("/", config_file.read())  # Dump in root. Should end up the right place
 
             # Mount inputs
-            for uid, dst in model.remapped_input_mount_keys(
-                    mount_mapping).items():  # remap to use actual uid from the file_storage
-                container.put_archive(dst, self.fs.get(uid))
+            # Remap to use actual uid from the file_storage
+            for mappings in model.remap_input_mount_keys(mount_mapping):
+                container.put_archive(mappings["dst"], self.fs.get(mappings["uid"]))
 
             # Mount statics
             for uid, dst in model.static_mounts.items():
@@ -122,21 +124,22 @@ class DockerConsumer:
             container.start()
 
             # Grab the output and log to job specific logger
-            job_logger_name = f"{flow_context.uid}_{flow_context.active_model_idx}_{kwargs["image"]}"
+            job_logger_name = f"{flow_uid}_{kwargs["image"]}"
             threading.Thread(target=self.catch_logs_from_container, args=(job_logger_name, container)).start()
 
             # Wait for job to execute - with timeout. If not finished, it will be killed.
             result = container.wait(timeout=model.timeout)  # Blocks...
 
             # If status code != 0,
-            self.assert_container_status(uid=flow_context.uid, container=container, result=result)
+            self.assert_container_status(uid=flow_uid, container=container, result=result)
 
+            output_mapping = {}
             for src, dst in model.output_mounts.items():
                 tar = self.get_archive(container=container, path=dst)
                 uid = self.fs.post(tar)
-                mount_mapping[src] = uid
+                output_mapping[src] = uid
 
-            return flow_context
+            return output_mapping
 
         except Exception as e:
             self.logger.error(str(e))
@@ -156,7 +159,8 @@ class DockerConsumer:
     def assert_container_status(self, uid, container, result):
         if result["StatusCode"] != 0:
             self.logger.error(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow execution failed")
-            raise Exception(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow exited with status code: {str(result["StatusCode"])}.")
+            raise Exception(
+                f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow exited with status code: {str(result["StatusCode"])}.")
         else:
             self.logger.info(f"UID={uid} ; CONTAINER_ID={container.short_id} ; Flow execution succeeded")
 
@@ -198,8 +202,8 @@ class DockerConsumer:
         return self.postprocess_output_tar(path, tarf=output_tar)
 
     @staticmethod
-    def config_to_tar(config_dict: Dict):
-        info = tarfile.TarInfo(name="config.yaml")
+    def config_to_tar(config_dict: Dict, config_path: str):
+        info = tarfile.TarInfo(name=config_path)
         dump = BytesIO(yaml.dump(config_dict).encode())
         dump.seek(0, 2)
         info.size = dump.tell()
@@ -226,7 +230,7 @@ class DockerConsumer:
         # Unwrap container tar to temp dir
         with tempfile.TemporaryDirectory() as tmpd:
             with tarfile.TarFile.open(fileobj=tarf, mode="r|*") as container_tar_obj:
-                container_tar_obj.extractall(tmpd)
+                container_tar_obj.extractall(tmpd, filter="data")
 
             # Make a new temp tar.gz
             new_tar_file = BytesIO()

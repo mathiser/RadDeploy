@@ -7,6 +7,7 @@ import pytest
 from scp import SCP
 
 from DicomFlowLib.test_utils.mock_scu import post_folder_to_dicom_node
+from DicomFlowLib.test_utils.fixtures import scan_dir
 
 
 @pytest.fixture
@@ -24,8 +25,9 @@ def scp():
     scp.stop()
 
 
-def test_scp_single(scp):
+def test_scp_single(scp, scan_dir):
     post_folder_to_dicom_node(0,
+                              scan_dir,
                               ip=scp.hostname,
                               port=scp.port,
                               ae_title=scp.ae_title)
@@ -37,10 +39,10 @@ def test_scp_single(scp):
             assert memb.name in ["0.dcm", "1.dcm"]
 
 
-def test_stress_scp(scp):
+def test_stress_scp(scp, scan_dir):
     # Dealing with many simultaneous posts
     t = multiprocessing.pool.ThreadPool(10)
-    t.starmap(post, [(i, scp.hostname, scp.port, scp.ae_title) for i in range(100)])
+    t.starmap(post_folder_to_dicom_node, [(i, scan_dir, scp.hostname, scp.port, scp.ae_title) for i in range(100)])
     t.close()
     t.join()
     assert scp.out_queue.qsize() == 100

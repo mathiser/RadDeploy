@@ -25,6 +25,13 @@ class SubModel(BaseModel):
     routing_key_fetch_echo: str | None = None
 
 
+class PublishContext(BaseModel):
+    body: bytes
+    pub_model_routing_key: str
+    reply_to: str | None = None
+    priority: int = 0
+
+
 if __name__ == "__main__":
     p = PubModel(exchange="test", exchange_type="test", routing_key_values={"HO": "HEI"})
     print(p.routing_key_values)

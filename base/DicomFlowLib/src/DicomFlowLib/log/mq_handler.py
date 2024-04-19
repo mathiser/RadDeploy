@@ -4,7 +4,7 @@ from logging import StreamHandler
 from typing import List
 import socket
 
-from DicomFlowLib.data_structures.contexts import PublishContext
+from DicomFlowLib.mq.mq_models import PublishContext
 from DicomFlowLib.mq import MQPub, PubModel
 
 
@@ -21,8 +21,6 @@ class MQHandler(StreamHandler):
                         log_level=0)
         self.pub_models = pub_models
         self.running = False
-        self.mq.start()
-        self.running = True
 
     def emit(self, record):
         if self.running:
@@ -36,6 +34,15 @@ class MQHandler(StreamHandler):
                                    pub_model_routing_key=record["levelname"])
                 )
 
+    def start(self):
+        self.running = True
+        self.mq.start()
+
+
     def stop(self, signalnum=None, stack_frame=None):
+        self.running = False
         self.mq.stop()
+
+
+    def join(self):
         self.mq.join()

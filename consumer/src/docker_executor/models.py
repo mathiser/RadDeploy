@@ -3,7 +3,6 @@ from typing import Any
 
 from pydantic import BaseModel
 
-
 class WorkerType(enum.Enum):
     CPU = "CPU"
     GPU = "GPU"

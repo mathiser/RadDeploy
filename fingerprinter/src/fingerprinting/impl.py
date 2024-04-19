@@ -3,8 +3,9 @@ import logging
 from io import BytesIO
 from typing import Iterable
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext, SCPContext
+from DicomFlowLib.data_structures.service_contexts import FlowContext, SCPContext
 from DicomFlowLib.fs.client.interface import FileStorageClientInterface
+from DicomFlowLib.mq import PublishContext
 from .fp_utils import parse_fingerprints, slice_dataframe_to_triggers, generate_flow_specific_tar, generate_df_from_tar
 
 

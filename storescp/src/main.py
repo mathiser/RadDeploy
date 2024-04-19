@@ -6,7 +6,7 @@ import time
 from typing import Dict, Tuple, Type
 
 from DicomFlowLib.conf import load_configs
-from DicomFlowLib.data_structures.contexts import PublishContext
+from DicomFlowLib.mq.mq_models import PublishContext
 from DicomFlowLib.fs.client.interface import FileStorageClientInterface
 from DicomFlowLib.log.mq_handler import MQHandler
 from DicomFlowLib.mq import PubModel
@@ -69,6 +69,7 @@ class Main:
     def start(self, blocking=True):
         self.logger.debug("Starting")
         self.running = True
+        self.mq_handler.start()
         self.mq.start()
         self.scp_release_handler.start()
         self.scp.start(blocking=False)
@@ -80,6 +81,8 @@ class Main:
         self.running = False
         self.mq.stop()
         self.scp_release_handler.stop()
+        self.mq_handler.stop()
+
         self.mq.join()
         self.scp_release_handler.join()
         self.mq_handler.stop()

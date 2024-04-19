@@ -1,4 +1,4 @@
-from DicomFlowLib.data_structures.contexts import SCPContext
+from DicomFlowLib.data_structures.service_contexts import SCPContext
 from DicomFlowLib.data_structures.flow import Destination
 from DicomFlowLib.test_utils.fixtures import *
 from main import Main

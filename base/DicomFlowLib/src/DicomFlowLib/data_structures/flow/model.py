@@ -21,8 +21,8 @@ class Model(BaseModel):
 
     pull_before_exec: bool = True
     timeout: int = 1800
-    
-    config_dump_folder: str = "/config"
+
+    config_path: str = "/config/config.yaml"
     config: Dict = {}
 
     def validate_docker_kwargs(self):
@@ -36,6 +36,7 @@ class Model(BaseModel):
     @property
     def input_mount_keys(self):
         return set(self.input_mounts.keys())
+
     @property
     def output_mount_keys(self):
         return set(self.output_mounts.keys())
@@ -44,5 +45,10 @@ class Model(BaseModel):
     def static_mount_keys(self):
         return set(self.static_mounts.keys())
 
-    def remapped_input_mount_keys(self, mapping: Dict):
-        return {mapping[k]: v for k, v in self.input_mounts.items()}
+    def remap_input_mount_keys(self, mapping: Dict):  # Mapping must be "src": "qwer-qwer-qwer" (uid)
+        for name, dst in self.input_mounts.items():
+            yield {
+                "src": name,
+                "dst": dst,
+                "uid": mapping[name]
+            }

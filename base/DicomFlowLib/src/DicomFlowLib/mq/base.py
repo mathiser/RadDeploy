@@ -85,6 +85,8 @@ class MQBase(threading.Thread):
         disconnect from RabbitMQ.
 
         """
+        self.logger.info('Stopping')
+
         self.running = False
 
     def close_channel(self):

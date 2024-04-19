@@ -54,6 +54,7 @@ class Main:
     def start(self):
         self.running = True
         self.mq.start()
+        self.mq_handler.start()
 
     def stop(self, signalnum=None, stack_frame=None):
         self.running = False

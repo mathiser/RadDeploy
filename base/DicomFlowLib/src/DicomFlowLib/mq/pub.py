@@ -6,7 +6,7 @@ from typing import Tuple
 
 from .mq_models import PubModel
 from .base import MQBase
-from ..data_structures.contexts import PublishContext
+from DicomFlowLib.mq.mq_models import PublishContext
 
 
 class MQPub(MQBase):
@@ -82,8 +82,6 @@ class MQPub(MQBase):
                         self.logger.error(str(e))
                         self.logger.error(traceback.format_exc())
                         raise e
-
-        self.logger.info('Stopped')
 
     def enable_delivery_confirmations(self):
         """Send the Confirm.Select RPC method to RabbitMQ to enable delivery
