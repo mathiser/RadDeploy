@@ -28,15 +28,20 @@ class FlowContext(SCPContext):
     flow: Flow
 
 
-class ModelContext(BaseContext):
+class FlowFinishedContext(FlowContext):
+    dst_uid: str
+
+
+class PendingModelContext(BaseContext):
     correlation_id: str | None = None
     model: Model
-    mount_mapping: Dict[str, str]
+    input_mount_mapping: Dict[str, str]
 
     def __init__(self, **data: Any):
         super().__init__(**data)
         if not self.uid:
             self.uid = generate_uid()
 
-class FlowFinishedContext(FlowContext):
-    dst_uid: str
+
+class FinishedModelContext(PendingModelContext):
+    output_mount_mapping: Dict[str, str]

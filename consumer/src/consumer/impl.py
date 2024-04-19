@@ -1,5 +1,6 @@
 import logging
 import signal
+import threading
 import time
 from typing import List, Dict
 
@@ -8,10 +9,10 @@ from DicomFlowLib.log import init_logger
 from DicomFlowLib.log.mq_handler import MQHandler
 from DicomFlowLib.mq import MQSub
 from DicomFlowLib.mq import PubModel, SubModel
-from docker_executor import Worker, DockerExecutor
+from docker_executor import DockerExecutor
 
 
-class Consumer:
+class Consumer(threading.Thread):
     def __init__(self,
                  rabbit_hostname: str,
                  rabbit_port: int,
@@ -21,14 +22,16 @@ class Consumer:
                  log_level: int,
                  pub_models: List[PubModel],
                  sub_models: List[SubModel],
-                 worker: Worker,
+                 worker_type: str,
+                 worker_device_id: str,
                  file_storage: FileStorageClientInterface,
                  static_storage: FileStorageClientInterface,
                  sub_prefetch_value: int,
-                 sub_queue_kwargs: Dict):
+                 sub_queue_kwargs: Dict,
+                 job_log_dir: str):
         super().__init__()
         signal.signal(signal.SIGTERM, self.stop)
-
+        assert worker_type in ["CPU", "GPU"]
         self.running = False
 
         self.mq_handler = MQHandler(
@@ -47,8 +50,10 @@ class Consumer:
 
         self.consumer = DockerExecutor(file_storage=file_storage,
                                        static_storage=static_storage,
-                                       worker=worker,
-                                       log_level=log_level)
+                                       worker_device_id=worker_device_id,
+                                       worker_type=worker_type,
+                                       log_level=log_level,
+                                       job_log_dir=job_log_dir)
 
         self.mq = MQSub(rabbit_hostname=rabbit_hostname,
                         rabbit_port=rabbit_port,
@@ -59,7 +64,7 @@ class Consumer:
                         sub_queue_kwargs=sub_queue_kwargs,
                         log_level=log_level)
 
-    def start(self, blocking=False):
+    def run(self, blocking=True):
         self.running = True
         self.mq.start()
         self.mq_handler.start()
@@ -67,12 +72,9 @@ class Consumer:
         while self.running and blocking:
             time.sleep(1)
 
-        return self
-
     def stop(self, signalnum=None, stack_frame=None):
         self.running = False
         self.mq.stop()
         self.mq_handler.stop()
         self.mq.join()
         self.mq_handler.join()
-

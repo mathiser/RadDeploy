@@ -1,3 +1,4 @@
+import enum
 import json
 import logging
 import os
@@ -14,20 +15,21 @@ import yaml
 from docker import types, errors
 
 from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.data_structures.service_contexts import ModelContext
+from DicomFlowLib.data_structures.service_contexts.models import FinishedModelContext, PendingModelContext
 from DicomFlowLib.fs.client.interface import FileStorageClientInterface
 from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import PublishContext
-from .models import Worker
 
 
-class DockerExecutor:
+class DockerExecutor(threading.Thread):
     def __init__(self,
                  file_storage: FileStorageClientInterface,
                  static_storage: FileStorageClientInterface,
-                 worker: Worker,
-                 log_level: int = 20,
-                 job_log_dir: str = "/opt/DicomFlow/logs/jobs/"):
+                 worker_device_id: str,
+                 job_log_dir: str,
+                 worker_type: str = "CPU",
+                 log_level: int = 20):
+        super().__init__()
         self.pub_declared = False
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
@@ -35,7 +37,8 @@ class DockerExecutor:
         self.fs = file_storage
         self.ss = static_storage
 
-        self.worker = worker
+        self.worker_type = worker_type
+        self.worker_device_id = worker_device_id
 
         self.cli = docker.from_env()
 
@@ -43,22 +46,25 @@ class DockerExecutor:
         self.cli.close()
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
-        model_context = ModelContext(**json.loads(body.decode()))
+        pending_model_context = PendingModelContext(**json.loads(body.decode()))
 
         self.logger.info(f"Spinning up flow")
-        output_mapping = self.exec_model(model_context.model,
-                                         model_context.mount_mapping)
+        output_mount_mapping = self.exec_model(pending_model_context.model,
+                                               pending_model_context.input_mount_mapping,
+                                               pending_model_context.uid)
         self.logger.info(f"Finished flow")
 
         # Overwrite with output mount mapping
-        model_context.mount_mapping = output_mapping
+        finished_model_context = FinishedModelContext(**pending_model_context.model_dump(),
+                                                      output_mount_mapping=output_mount_mapping)
 
         # Return new
-        return [PublishContext(body=model_context.model_dump_json().encode(), pub_model_routing_key="SUCCESS")]
+        return [PublishContext(body=finished_model_context.model_dump_json().encode(),
+                               pub_model_routing_key="SUCCESS")]
 
     def exec_model(self,
                    model: Model,
-                   mount_mapping: Dict,
+                   input_mount_mapping: Dict,
                    flow_uid: str = ""
                    ) -> Dict:
 
@@ -75,19 +81,19 @@ class DockerExecutor:
         # generate dummy binds for all mounts
         kwargs["volumes"] = []
         kwargs["volumes"].append(
-            f"{tempfile.mkdtemp()}:{os.path.dirname(model.config_path)}"   # Folder for config.
-        )                                                                  # Default is /config/config.yaml
+            f"{tempfile.mkdtemp()}:{os.path.dirname(model.config_path)}"  # Folder for config.
+        )  # Default is /config/config.yaml
 
         for src, dst in {**model.input_mounts, **model.output_mounts, **model.static_mounts}.items():
             kwargs["volumes"].append(f'{tempfile.mkdtemp()}:{dst}')
 
         # Allow GPU usage
-        if self.worker.is_gpu_worker():
+        if self.worker_type == "GPU":
             kwargs["ipc_mode"] = "host"
-            self.logger.debug(f"Uses GPU device {self.worker.device_id}")
+            self.logger.debug(f"Uses GPU device {self.worker_device_id}")
             if "DEBUG_DISABLE_GPU" not in model.config.keys():
                 kwargs["device_requests"] = [
-                    types.DeviceRequest(device_ids=[self.worker.device_id], capabilities=[['gpu']])]
+                    types.DeviceRequest(device_ids=[self.worker_device_id], capabilities=[['gpu']])]
 
         # So logs can be pulled
         kwargs["detach"] = True
@@ -113,7 +119,7 @@ class DockerExecutor:
 
             # Mount inputs
             # Remap to use actual uid from the file_storage
-            for mappings in model.remap_input_mount_keys(mount_mapping):
+            for mappings in model.remap_input_mount_keys(input_mount_mapping):
                 container.put_archive(mappings["dst"], self.fs.get(mappings["uid"]))
 
             # Mount statics
