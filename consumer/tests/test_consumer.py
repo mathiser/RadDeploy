@@ -25,7 +25,7 @@ def config():
             "passive": False,
             "durable": False,
             "exclusive": False,
-            "auto_delete": True,
+            "auto_delete": False,
         },
         "SUB_PREFETCH_COUNT": 1,
         "CPU_SUB_MODELS": [
@@ -44,13 +44,10 @@ def config():
         ],
         "FILE_STORAGE_URL": "",
         "STATIC_STORAGE_CACHE_DIR": None,
-        "CPUS": 1,
-        "GPUS": [],
     }
-
-
-def test_consumer(mq_container, mq_base, scp_tar, config, tmpdir):
-    fs = MockFileStorageClient()
+@pytest.fixture
+def consumer(config, tmpdir):
+    fs = MockFileStorageClient(log_level=10)
     ss = MockFileStorageClient()
     main = Consumer(
         rabbit_hostname=config["RABBIT_HOSTNAME"],
@@ -70,6 +67,11 @@ def test_consumer(mq_container, mq_base, scp_tar, config, tmpdir):
         job_log_dir=tmpdir
     )
     main.start()
+    yield main
+    main.stop()
+
+def test_consumer(mq_container, mq_base, scp_tar, consumer):
+    fs = consumer.file_storage
 
     # Exchange should already have been setup, but best practice is to always to it.
     mq_base.setup_exchange("TEST_CONSUMER_IN", "topic")
@@ -79,7 +81,6 @@ def test_consumer(mq_container, mq_base, scp_tar, config, tmpdir):
     q_out = mq_base.setup_queue_and_bind("TEST_CONSUMER_OUT", routing_key="success")
 
     # Generate the scp_context, which the fingerprinter should retrieve and process.
-
     model = Model(
         docker_kwargs={"image": "busybox",
                        "command": "sh -c 'cp /input/* /output/'"},
@@ -97,10 +98,9 @@ def test_consumer(mq_container, mq_base, scp_tar, config, tmpdir):
                           body=pending_model_context.model_dump_json())
     #
     # Wait for the entry to be processed
-    time.sleep(5)
+    time.sleep(10)
 
     method_frame, header_frame, body = mq_base._channel.basic_get(q_out, auto_ack=True)
     assert method_frame
-    print(method_frame, header_frame, body)
 
-    main.stop()
+    print(method_frame, header_frame, body)

@@ -1,8 +1,7 @@
 import logging
 import os
 import signal
-from multiprocessing import Process
-from typing import Type
+
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.fs import FileStorageClient
@@ -36,8 +35,8 @@ class Main:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
 
-        self.fs = file_storage
-        self.ss = static_storage
+        self.file_storage = file_storage
+        self.static_storage = static_storage
 
         self.workers = []
         cpus = int(config["CPUS"])
@@ -48,8 +47,8 @@ class Main:
                          worker_device_id=str(cpu_id),
                          rabbit_port=config["RABBIT_PORT"],
                          rabbit_hostname=config["RABBIT_HOSTNAME"],
-                         file_storage=self.fs,
-                         static_storage=self.ss,
+                         file_storage=self.file_storage,
+                         static_storage=self.static_storage,
                          log_dir=config["LOG_DIR"],
                          log_format=config["LOG_FORMAT"],
                          pub_models=[PubModel(**pm) for pm in config["PUB_MODELS"]],
@@ -92,7 +91,6 @@ class Main:
         while self.running and blocking:
             time.sleep(1)
 
-
     def stop(self, signalnum=None, stack_frame=None):
         self.running = False
         for worker in self.workers:
@@ -101,13 +99,14 @@ class Main:
         for worker in self.workers:
             worker.join()
 
+
 if __name__ == "__main__":
     config = load_configs(os.environ["CONF_DIR"], os.environ["CURRENT_CONF"])
     fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"],
-                                    log_level=int(config["LOG_LEVEL"]))
+                           log_level=int(config["LOG_LEVEL"]))
 
     ss = FileStorageClient(file_storage_url=config["STATIC_STORAGE_URL"],
-                                    log_level=config["LOG_LEVEL"],
-                                    local_cache=config["STATIC_STORAGE_CACHE_DIR"])
+                           log_level=config["LOG_LEVEL"],
+                           local_cache=config["STATIC_STORAGE_CACHE_DIR"])
     main = Main(config=config, file_storage=fs, static_storage=ss)
     main.start(True)

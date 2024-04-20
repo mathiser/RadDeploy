@@ -25,7 +25,7 @@ def config(tmpdir):
             "passive": False,
             "durable": False,
             "exclusive": False,
-            "auto_delete": True,
+            "auto_delete": False,
         },
         "SUB_PREFETCH_COUNT": 1,
         "CPU_SUB_MODELS": [
@@ -49,20 +49,24 @@ def config(tmpdir):
         "GPUS": [],
     }
 
-
-def test_main(mq_container, mq_base, scp_tar, config, tmpdir):
+@pytest.fixture
+def main(config):
     fs = MockFileStorageClient()
     ss = MockFileStorageClient()
-    main = Main(
+    m = Main(
         config=config,
         file_storage=fs,
         static_storage=ss
     )
-
-    main.start(blocking=False)
-
+    m.start(blocking=False)
     # Wait for setting up consumer
     time.sleep(5)
+    yield m
+
+    m.stop()
+
+
+def test_main(mq_container, mq_base, scp_tar, main):
 
     # Exchange should already have been setup, but best practice is to always to it.
     mq_base.setup_exchange("TEST_CONSUMER_IN", "topic")
@@ -78,7 +82,7 @@ def test_main(mq_container, mq_base, scp_tar, config, tmpdir):
                        "command": "sh -c 'cp /input/* /output/'"},
     )
     input_mount_mapping = {
-        "src": fs.post(scp_tar)
+        "src": main.file_storage.post(scp_tar)
     }
     pending_model_context = PendingModelContext(
         model=model,
@@ -95,5 +99,3 @@ def test_main(mq_container, mq_base, scp_tar, config, tmpdir):
     method_frame, header_frame, body = mq_base._channel.basic_get(q_out, auto_ack=True)
     assert method_frame
     print(method_frame, header_frame, body)
-
-    main.stop()

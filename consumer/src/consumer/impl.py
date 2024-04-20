@@ -32,7 +32,22 @@ class Consumer(threading.Thread):
         super().__init__()
         signal.signal(signal.SIGTERM, self.stop)
         assert worker_type in ["CPU", "GPU"]
+
         self.running = False
+        self.rabbit_hostname = rabbit_hostname
+        self.rabbit_port = rabbit_port
+        self.log_pub_models = log_pub_models
+        self.log_format = log_format
+        self.log_level = log_level
+        self.pub_models = pub_models
+        self.sub_models = sub_models
+        self.worker_type = worker_type
+        self.worker_device_id = worker_device_id
+        self.file_storage = file_storage
+        self.static_storage = static_storage
+        self.sub_prefetch_value = sub_prefetch_value
+        self.sub_queue_kwargs = sub_queue_kwargs
+        self.job_log_dir = job_log_dir
 
         self.mq_handler = MQHandler(
             rabbit_hostname=rabbit_hostname,
