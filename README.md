@@ -1,37 +1,40 @@
-# DicomFlow
-DicomFlow is an extendable micro-service-oriented framework to executed containerized workflows on DICOM files.
-Though DicomFlow can be extensively configured, it is designed to provide basic functionality with as little user configuration
+# Note !!
+This project has previously been developed under the name "RadDeploy", but to avoid confusion with other projects it has been renamed to RadDeploy. As the name "RadDeploy" has been used many, places thorough refactoring of the naming is in the pipeline.
+
+# RadDeploy
+RadDeploy is an extendable micro-service-oriented framework to executed containerized workflows on DICOM files.
+Though RadDeploy can be extensively configured, it is designed to provide basic functionality with as little user configuration
 as possible - even though this sometimes may come at the price of reduced performance.
 
 ## Intended Use
-DicomFlow is provided as is and without any responsibility or warrenty by the authors. The author does not considered it a medical device under EU's Medical Device Regulation (MDR),
-as it only facilitate recieving of, execution of docker containers on and finally sending of DICOM files. DicomFlow in it self does not manipulate any of the received data. 
+RadDeploy is provided as is and without any responsibility or warrenty by the authors. The author does not considered it a medical device under EU's Medical Device Regulation (MDR),
+as it only facilitate recieving of, execution of docker containers on and finally sending of DICOM files. RadDeploy in it self does not manipulate any of the received data. 
 Operations on data are limited to storing, lossless compression, mounting to containers, receiving and sending of dicom files. 
 
 If used in a clinical/research setting, beaware that the docker containers should comply to MDR or any local legislation regarding medical devices.
 
 ## Get started
 ### Dependencies
-DicomFlow should be able run in any environment with [Docker](https://www.docker.com/get-started/) installed. If the executed containers require GPU-support, [NVIDIA container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+RadDeploy should be able run in any environment with [Docker](https://www.docker.com/get-started/) installed. If the executed containers require GPU-support, [NVIDIA container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 must be installed with appropriate dependencies and a compatible GPU installed.
 
-### Setting up DicomFlow
+### Setting up RadDeploy
 One you have dependencies set up, you can use the prebuild docker images and be up and running in a minute with the commands below:
 ```
-mkdir DicomFlow
-cd DicomFlow
-wget https://raw.githubusercontent.com/mathiser/DicomFlow/main/docker-compose.yaml.example
-wget https://raw.githubusercontent.com/mathiser/DicomFlow/main/.env.example
+mkdir RadDeploy
+cd RadDeploy
+wget https://raw.githubusercontent.com/mathiser/RadDeploy/main/docker-compose.yaml.example
+wget https://raw.githubusercontent.com/mathiser/RadDeploy/main/.env.example
 mv docker-compose.yaml.example docker-compose.yaml
 mv .env.example .env
 docker compose up -d
 ```
 
 If the services start successfully, you can inspect the logs of all services using `docker compose logs -f` and logs of a specific service with `docker compose logs -f {service name}`. 
-Now you should have a DICOM receiver running by default on `localhost:10000` with the ae title: `DICOMFLOW`.
+Now you should have a DICOM receiver running by default on `localhost:10000` with the ae title: `RadDeploy`.
 
-### Updating DicomFlow
-If you want to update DicomFlow to a more recent version, go ahead an run:
+### Updating RadDeploy
+If you want to update RadDeploy to a more recent version, go ahead an run:
 ```
 docker compose pull
 docker compose up -d
@@ -48,7 +51,7 @@ to give grafana access to it's database, which by default is `./mounts/flow_trac
 
 
 ### Defining a Flow
-In DicomFlow, a "Flow" refers to the full of path of a dicom input through model execution an dicom sending to a different endpoint. Flows are defined in yaml files (one per flow) and mounted to `fingerprinter` in `/opt/DicomFlow/flows`.
+In RadDeploy, a "Flow" refers to the full of path of a dicom input through model execution an dicom sending to a different endpoint. Flows are defined in yaml files (one per flow) and mounted to `fingerprinter` in `/opt/DicomFlow/flows`.
 
 Below is an example of the simplest possible flow. It triggers if any received dicom file is a CT. The resulting folder is not sent anywhere.
 ```
@@ -236,7 +239,7 @@ extra:
 ```
 
 ## Configuration of services
-All services in DicomFlow are extensively configurable, but do only change something if you know what you do. 
+All services in RadDeploy are extensively configurable, but do only change something if you know what you do. 
 
 If you would like to change a configuration, you have two options. 
 - Mount a .yaml file with the desired variables into the containers directory `/opt/DicomFlow/conf.d`.
@@ -268,10 +271,10 @@ Below is a list of variables which should be adapted to the specific environment
 
 #### STORESCP
 ##### IP/Hostname and port of SCP 
-The DICOM receiver can be adapted with the following variables
+The DICOM receiver can be adapted with the following variables. Defaults given here.
 ```
 # SCP
-AE_TITLE: "DICOMFLOW"
+AE_TITLE: "DicomFlow"
 AE_HOSTNAME: "localhost"
 AE_PORT: 10000
 PYNETDICOM_LOG_LEVEL: 20
@@ -311,7 +314,7 @@ Which will results in something like:
       - MR1_T2.dcm
 
 #### Consumer
-`CPUS` is a count of CPU-threads DicomFLow. Should be an integer
+`CPUS` is a count of CPU-threads RadDeploy. Should be an integer
 
 `GPUS` is a list of physical GPUs that are at disposal for flow execution. 
 It is the GPU-index which can be found in `nvtop` or `nvidia-smi`
