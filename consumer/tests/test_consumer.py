@@ -3,7 +3,7 @@ import time
 import pytest
 
 from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.data_structures.service_contexts import PendingModelContext
+from DicomFlowLib.data_structures.service_contexts import JobContext
 from DicomFlowLib.mq import PubModel, SubModel
 from DicomFlowLib.test_utils.mock_classes import MockFileStorageClient
 from consumer.src.consumer.impl import Consumer
@@ -88,14 +88,14 @@ def test_consumer(mq_container, mq_base, scp_tar, consumer):
     input_mount_mapping = {
         "src": fs.post(scp_tar)
     }
-    pending_model_context = PendingModelContext(
+    pending_job_context = JobContext(
         model=model,
         input_mount_mapping=input_mount_mapping
     )
     # Publish to the exchange and routing key that the mq_sub is listening to.
     mq_base.basic_publish(exchange="TEST_CONSUMER_IN",
                           routing_key="SCHEDULED_CPU",
-                          body=pending_model_context.model_dump_json())
+                          body=pending_job_context.model_dump_json())
     #
     # Wait for the entry to be processed
     time.sleep(10)

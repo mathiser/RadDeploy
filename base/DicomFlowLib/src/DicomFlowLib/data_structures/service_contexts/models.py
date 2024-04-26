@@ -20,28 +20,33 @@ class BaseContext(BaseModel):
 
 
 class SCPContext(BaseContext):
+    """
+    Being published by the storescp when DICOM files are received.
+    """
     sender: Destination
     src_uid: str
 
 
 class FlowContext(SCPContext):
+    """
+    Published by the fingerprinter when a flow is matched to received DICOM tar
+    """
     flow: Flow
 
 
-class FlowFinishedContext(FlowContext):
-    dst_uid: str
+class FinishedFlowContext(FlowContext):
+    """
+    Published by scheduler when a flow is finished
+    """
+    mount_mapping: Dict[str, str]
 
 
-class PendingModelContext(BaseContext):
-    correlation_id: str | None = None
+
+class JobContext(BaseContext):
+    """
+    Used for communication between scheduler and consumers
+    """
+    correlation_id: int
     model: Model
-    input_mount_mapping: Dict[str, str]
-
-    def __init__(self, **data: Any):
-        super().__init__(**data)
-        if not self.uid:
-            self.uid = generate_uid()
-
-
-class FinishedModelContext(PendingModelContext):
-    output_mount_mapping: Dict[str, str]
+    input_mount_mapping: Dict[str, str] = {}
+    output_mount_mapping: Dict[str, str] = {}

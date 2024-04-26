@@ -158,7 +158,7 @@ class MQBase(threading.Thread):
         if queue not in self._declared_queues:
             queue = self.setup_queue(queue)
             self.bind_queue(queue=queue, exchange=exchange, routing_key=routing_key)
-            self.logger.debug('Declaring queue {} on exchange {}'.format(queue, exchange))
+            self.logger.debug('Declaring queue {} on exchange {} with routing key {}'.format(queue, exchange, routing_key))
             self._declared_queues.add(queue)
         return queue
 

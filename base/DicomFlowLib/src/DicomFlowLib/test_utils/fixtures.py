@@ -5,6 +5,8 @@ import docker
 import pytest
 import time
 
+from DicomFlowLib.data_structures.flow import Destination, Flow
+from DicomFlowLib.data_structures.service_contexts import SCPContext, FlowContext
 from DicomFlowLib.mq import MQBase
 from DicomFlowLib.test_utils.mock_classes import MockFileStorageClient
 
@@ -15,6 +17,7 @@ def mq_container():
     cli = docker.from_env()
     for container in cli.containers.list():
         if container.name == test_container_name:
+            container.start()
             yield container
             break
     else:
@@ -55,9 +58,37 @@ def scp_tar_path():
     from DicomFlowLib.test_utils.test_data import scp_tar
     return os.path.join(os.path.dirname(scp_tar.__file__), "scp.tar")
 
+
 @pytest.fixture
 def scp_tar(scp_tar_path):
     with open(scp_tar_path, "rb") as scp_tar_file:
         file = BytesIO(scp_tar_file.read())
     file.seek(0)
     return file
+
+
+@pytest.fixture
+def destination():
+    return Destination(host="localhost", port=1234, ae_title="test")
+
+
+@pytest.fixture
+def dag_flow_path(flow_dir):
+    return os.path.join(flow_dir, 'dag_flow.yaml')
+
+
+@pytest.fixture
+def dag_flow(dag_flow_path):
+    return Flow.from_file(dag_flow_path)
+
+
+@pytest.fixture
+def scp_context(fs, scp_tar, destination):
+    uid = fs.post(scp_tar)
+    return SCPContext(src_uid=uid, sender=destination)
+
+
+@pytest.fixture
+def dag_flow_context(scp_context, dag_flow):
+    return FlowContext(**scp_context.model_dump(),
+                       flow=dag_flow)

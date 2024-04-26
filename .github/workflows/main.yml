@@ -56,7 +56,7 @@ jobs:
       - name: Build and push Scheduler
         uses: docker/build-push-action@v5
         with:
-          context: "{{defaultContext}}:scheduler"
+          context: "{{defaultContext}}:orchestration"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-scheduler:latest

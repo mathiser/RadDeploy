@@ -4,7 +4,7 @@ import pytest
 from main import Main
 
 from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.data_structures.service_contexts import PendingModelContext
+from DicomFlowLib.data_structures.service_contexts import JobContext
 from DicomFlowLib.test_utils.mock_classes import MockFileStorageClient
 from DicomFlowLib.test_utils.fixtures import *
 
@@ -84,14 +84,14 @@ def test_main(mq_container, mq_base, scp_tar, main):
     input_mount_mapping = {
         "src": main.file_storage.post(scp_tar)
     }
-    pending_model_context = PendingModelContext(
+    pending_job_context = JobContext(
         model=model,
         input_mount_mapping=input_mount_mapping
     )
     # Publish to the exchange and routing key that the mq_sub is listening to.
     mq_base.basic_publish(exchange="TEST_CONSUMER_IN",
                           routing_key="SCHEDULED_CPU",
-                          body=pending_model_context.model_dump_json())
+                          body=pending_job_context.model_dump_json())
     #
     # Wait for the entry to be processed
     time.sleep(5)

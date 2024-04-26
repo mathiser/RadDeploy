@@ -20,7 +20,7 @@ STATIC_STORAGE_CACHE_DIR: "/opt/DicomFlow/static"
 SUB_PREFETCH_COUNT: 1
 ########################### Will be used for CPU consumers ####################
 CPU_SUB_MODELS:  # Will be used by default.
-  - exchange: "scheduler"
+  - exchange: "orchestration"
     exchange_type: "topic"
     routing_keys: ["CPU"]
     routing_key_fetch_echo: "fetch"
@@ -33,7 +33,7 @@ CPU_SUB_QUEUE_KWARGS:
 
 ########################### Will be used for GPU consumers ####################
 GPU_SUB_MODELS:
-  - exchange: "scheduler"
+  - exchange: "orchestration"
     exchange_type: "topic"
     routing_keys: ["GPU"]
     routing_key_fetch_echo: "fetch"

@@ -23,6 +23,11 @@ class Flow(BaseModel):
         super().__init__(**data)
         assert self.is_valid_dag()
 
+    @staticmethod
+    def from_file(path):
+        with open(path) as r:
+            return Flow(**yaml.safe_load(r))
+
     def is_valid_dag(self):
         inputs = set()
         outputs = set()

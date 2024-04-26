@@ -24,7 +24,7 @@ SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"
     routing_keys: ["success", "fetch"]
-  - exchange: "scheduler"
+  - exchange: "orchestration"
     exchange_type: "topic"
     routing_keys: ["#"]
   - exchange: "consumer"
@@ -41,7 +41,7 @@ PUB_ROUTING_KEY_ERROR: "error"
 
 # Dashboard Rules:
 DASHBOARD_RULES:
-  - on_exchange: "scheduler"
+  - on_exchange: "orchestration"
     on_routing_keys: ["error", "fail"]
     status: 400
   - on_exchange: "consumer"
@@ -57,10 +57,10 @@ DASHBOARD_RULES:
   - on_exchange: "fingerprinter"
     on_routing_keys: ["fetch"]
     status: 1
-  - on_exchange: "scheduler"
+  - on_exchange: "orchestration"
     on_routing_keys: ["fetch"]
     status: 2
-  - on_exchange: "scheduler"
+  - on_exchange: "orchestration"
     on_routing_keys: [ "success" ]
     status: 3
   - on_exchange: "storescu"

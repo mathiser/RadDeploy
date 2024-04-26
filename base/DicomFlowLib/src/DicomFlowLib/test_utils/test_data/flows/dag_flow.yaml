@@ -1,7 +1,6 @@
 name: "dag_flow.yaml"
 triggers:
   - Modality: ["MR"]
-return_to_sender_on_port: [10002]
 
 models:
   - docker_kwargs:

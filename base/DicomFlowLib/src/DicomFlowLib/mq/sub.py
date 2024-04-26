@@ -128,6 +128,7 @@ class MQSub(MQBase):
         try:
             results: Iterable[PublishContext] = self.work_function(basic_deliver, body)
             for result in results:
+                print(result)
                 self.publish_on_all_pub_models(result=result)  # Routing key on success
 
         except Exception as e:

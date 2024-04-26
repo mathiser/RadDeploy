@@ -25,7 +25,7 @@ SUB_QUEUE_KWARGS:
     auto_delete: True
 SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
-  - exchange: "scheduler"
+  - exchange: "orchestration"
     exchange_type: "topic"
     routing_keys: ["success"]
     routing_key_fetch_echo: "fetch"

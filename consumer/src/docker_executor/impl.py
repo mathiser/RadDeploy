@@ -15,7 +15,7 @@ import yaml
 from docker import types, errors
 
 from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.data_structures.service_contexts.models import FinishedModelContext, PendingModelContext
+from DicomFlowLib.data_structures.service_contexts.models import JobContext
 from DicomFlowLib.fs.client.interface import FileStorageClientInterface
 from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import PublishContext
@@ -46,26 +46,27 @@ class DockerExecutor(threading.Thread):
         self.cli.close()
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
-        pending_model_context = PendingModelContext(**json.loads(body.decode()))
+        pending_job_context = JobContext(**json.loads(body.decode()))
 
         self.logger.info(f"Spinning up flow")
-        output_mount_mapping = self.exec_model(pending_model_context.model,
-                                               pending_model_context.input_mount_mapping,
-                                               pending_model_context.uid)
+        output_mount_mapping = self.exec_model(pending_job_context.model,
+                                               pending_job_context.input_mount_mapping,
+                                               pending_job_context.uid)
         self.logger.info(f"Finished flow")
 
         # Overwrite with output mount mapping
-        finished_model_context = FinishedModelContext(**pending_model_context.model_dump(),
-                                                      output_mount_mapping=output_mount_mapping)
+        finished_job_context = JobContext(**pending_job_context.model_dump(),
+                                              output_mount_mapping=output_mount_mapping)
 
         # Return new
-        return [PublishContext(body=finished_model_context.model_dump_json().encode(),
+        return [PublishContext(body=finished_job_context.model_dump_json().encode(),
                                pub_model_routing_key="SUCCESS")]
 
     def exec_model(self,
                    model: Model,
                    input_mount_mapping: Dict,
-                   flow_uid: str = ""
+                   correlation_id: int,
+                   flow_uid: str,
                    ) -> Dict:
 
         if model.pull_before_exec:
@@ -130,7 +131,7 @@ class DockerExecutor(threading.Thread):
             container.start()
 
             # Grab the output and log to job specific logger
-            job_logger_name = f"{flow_uid}_{kwargs["image"]}"
+            job_logger_name = f"{flow_uid}_{correlation_id}_{kwargs["image"].replace("/", "-")}"
             threading.Thread(target=self.catch_logs_from_container, args=(job_logger_name, container)).start()
 
             # Wait for job to execute - with timeout. If not finished, it will be killed.
@@ -153,10 +154,10 @@ class DockerExecutor(threading.Thread):
         finally:
             self.clean_up(container, kwargs)
 
-    def catch_logs_from_container(self, logger_name, container):
+    def catch_logs_from_container(self, logger_name, container, job_log_dir):
 
         container_logger = init_logger(name=logger_name,
-                                       log_dir=self.job_log_dir)
+                                       log_dir=job_log_dir)
         container_logger.setLevel(10)
 
         for line in container.logs(stream=True):
