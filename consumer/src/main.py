@@ -9,7 +9,7 @@ from DicomFlowLib.fs.client.interface import FileStorageClientInterface
 from DicomFlowLib.log import init_logger
 from DicomFlowLib.log.mq_handler import MQHandler
 from DicomFlowLib.mq import PubModel, SubModel
-from consumer.src.consumer.impl import Consumer
+from consumer import Consumer
 import time
 
 
@@ -42,7 +42,7 @@ class Main:
         cpus = int(config["CPUS"])
         for cpu_id in range(cpus):
             self.logger.info(f"Spawning CPU worker: {cpu_id}")
-            m = Consumer(log_level=config["LOG_LEVEL"],
+            m = Consumer(log_level=int(config["LOG_LEVEL"]),
                          worker_type="CPU",
                          worker_device_id=str(cpu_id),
                          rabbit_port=config["RABBIT_PORT"],
@@ -66,13 +66,13 @@ class Main:
 
         for device_id in device_ids:
             self.logger.info(f"Spawning GPU worker: {device_id}")
-            m = Consumer(log_level=config["LOG_LEVEL"],
+            m = Consumer(log_level=int(config["LOG_LEVEL"]),
                          worker_type="GPU",
                          worker_device_id=str(device_id),
                          rabbit_port=config["RABBIT_PORT"],
                          rabbit_hostname=config["RABBIT_HOSTNAME"],
-                         file_storage=self.fs,
-                         static_storage=self.ss,
+                         file_storage=self.file_storage,
+                         static_storage=self.static_storage,
                          log_dir=config["LOG_DIR"],
                          log_format=config["LOG_FORMAT"],
                          pub_models=[PubModel(**pm) for pm in config["PUB_MODELS"]],
@@ -106,7 +106,7 @@ if __name__ == "__main__":
                            log_level=int(config["LOG_LEVEL"]))
 
     ss = FileStorageClient(file_storage_url=config["STATIC_STORAGE_URL"],
-                           log_level=config["LOG_LEVEL"],
+                           log_level=int(config["LOG_LEVEL"]),
                            local_cache=config["STATIC_STORAGE_CACHE_DIR"])
     main = Main(config=config, file_storage=fs, static_storage=ss)
     main.start(True)

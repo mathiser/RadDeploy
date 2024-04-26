@@ -3,28 +3,25 @@ import logging
 import os
 import tarfile
 import tempfile
-from typing import Iterable
+from typing import Iterable, List
 
 import pydicom
 from pydicom.errors import InvalidDicomError
 from pynetdicom import AE, StoragePresentationContexts
 
 from DicomFlowLib.data_structures.flow import Destination
-from DicomFlowLib.data_structures.service_contexts import FlowContext
+from DicomFlowLib.data_structures.service_contexts import FlowContext, FinishedFlowContext
 from DicomFlowLib.fs import FileStorageClient
-from DicomFlowLib.mq.mq_models import PublishContext
+from DicomFlowLib.mq.mq_models import PublishContext, PubModel
 
 
 class STORESCU:
-    def __init__(self, file_storage: FileStorageClient, pub_routing_key_success: str,
-                 pub_routing_key_fail: str,
+    def __init__(self,
+                 file_storage: FileStorageClient,
                  ae_title: str,
                  ae_port: int,
                  ae_hostname: str,
                  log_level: int = 20):
-        self.pub_routing_key_success = pub_routing_key_success
-        self.pub_routing_key_fail = pub_routing_key_fail
-
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
         self.fs = file_storage
@@ -33,37 +30,34 @@ class STORESCU:
         self.ae_hostname = ae_hostname
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
+        finished_flow_context = FinishedFlowContext(**json.loads(body.decode()))
+        sender_destinations = [Destination(host=finished_flow_context.sender.host,
+                                         port=port,
+                                         ae_title=finished_flow_context.sender.ae)
+                             for port in finished_flow_context.flow.return_to_sender_on_ports]
 
-        fc = FlowContext(**json.loads(body.decode()))
-        self.uid = fc.uid
+        for src, uid in finished_flow_context.mount_mapping.items():
+            if src.startswith("dst"):
+                for destination in [*finished_flow_context.destinations, *sender_destinations]:
+                    self.post(uid, destination)
 
-        self.logger.info("SCU")
+        return [PublishContext(body=finished_flow_context.model_dump_json().encode(),
+                               pub_model_routing_key="SUCCESS")]
 
+    def post(self, file_uid, destinations):
         self.logger.info("EXTRACTING FILE(S)")
         with tempfile.TemporaryDirectory() as tmp_dir:
-            output_tar = self.fs.get(fc.mount_mapping["dst"])
+            output_tar = self.fs.get(file_uid)
+
             with tarfile.TarFile.open(fileobj=output_tar, mode="r:*") as tf:
                 tf.extractall(tmp_dir)
 
             self.logger.info("EXTRACTING FILE(S)")
 
-            for port in fc.flow.return_to_sender_on_ports:
-                self.logger.info(
-                    f"POSTING TO SENDER: {fc.sender.ae_title} ON: {fc.sender.host}:{fc.sender.port}",
-                )
-                sender = fc.sender
-                sender.port = port
-                self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=sender)
-
-
             for dest in fc.flow.destinations:
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}")
                 self.post_folder_to_dicom_node(dicom_dir=tmp_dir, destination=dest)
 
-        self.logger.info("SCU")
-        self.uid = None
-
-        return [PublishContext(body=fc.model_dump_json().encode(), routing_key=self.pub_routing_key_success)]
 
     def post_folder_to_dicom_node(self, dicom_dir, destination: Destination) -> bool:
         ae = AE(ae_title=self.ae_title)

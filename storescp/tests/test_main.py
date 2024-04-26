@@ -3,42 +3,33 @@ import os
 import time
 
 import pytest
+import yaml
 from main import Main
 
 from DicomFlowLib.fs.client.interface import FileStorageClientInterface
 from DicomFlowLib.test_utils.fixtures import mq_container, mq_base, scan_dir, scp_tar_path
 
+@pytest.fixture
+def config(tmpdir, mq_container):
+    with open(os.path.join(os.path.dirname(__file__), "..", "conf.d", "00_default_config.yaml"), "r") as r:
+        config = yaml.safe_load(r)
+
+    config["RABBIT_HOSTNAME"] = "localhost"
+    config["RABBIT_PORT"] = 5677
+    config["LOG_DIR"] = tmpdir
+    config["LOG_LEVEL"] = 10
+    config["AE_HOSTNAME"] = "localhost"
+
+    return config
 
 @pytest.fixture
-def config(tmp_path):
-    return {
-        "RABBIT_HOSTNAME": "localhost",
-        "RABBIT_PORT": 5677,
-        "LOG_DIR": tmp_path,
-        "LOG_LEVEL": 10,
-        "LOG_FORMAT": "%(name)s ; %(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s",
-        "LOG_PUB_MODELS": [
-            {"exchange": "logs"},
-        ],
-        "FILE_STORAGE_URL": "",
-        "AE_TITLE": "DICOMFLOW",
-        "AE_HOSTNAME": "localhost",
-        "AE_PORT": 10101,
-        "AE_BLACKLISTED_IP_NETWORKS": None,
-        "AE_WHITELISTED_IP_NETWORKS": None,
-        "PYNETDICOM_LOG_LEVEL": 10,
-        "PUB_MODELS": [
-            {
-                "exchange": "SCP_OUT",
-                "exchange_type": "topic",
-            },
-        ]
-    }
-
-
-def test_main(mq_container, config, mq_base, scan_dir, scp_tar_path):
+def main(config):
     m = Main(config, FileStorageClientInterface)
     m.start(blocking=False)
+    yield m
+    m.stop()
+
+def test_main(main, mq_container, config, mq_base, scan_dir, scp_tar_path):
     exchange_name = config["PUB_MODELS"][0]["exchange"]
     mq_base.setup_exchange(exchange_name, "topic")
     q_out = mq_base.setup_queue_and_bind(exchange_name, "#")
@@ -48,5 +39,3 @@ def test_main(mq_container, config, mq_base, scan_dir, scp_tar_path):
 
     method_frame, header_frame, body = mq_base._channel.basic_get(q_out, auto_ack=True)
     assert method_frame
-
-    m.stop()

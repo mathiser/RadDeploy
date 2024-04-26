@@ -4,6 +4,7 @@ import signal
 
 from DicomFlowLib.conf import load_configs
 from DicomFlowLib.log import init_logger
+from DicomFlowLib.log.mq_handler import MQHandler
 from DicomFlowLib.mq import SubModel, PubModel
 from DicomFlowLib.mq import MQSub
 from flow_tracker import FlowTracker
@@ -14,13 +15,14 @@ class Main:
     def __init__(self, config):
         signal.signal(signal.SIGTERM, self.stop)
         self.running = False
+        self.mq_handler = MQHandler(rabbit_hostname=config["RABBIT_HOSTNAME"],
+                                    rabbit_port=int(config["RABBIT_PORT"]),
+                                    pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
+
         init_logger(name=None,  # init root logger,
                     log_format=config["LOG_FORMAT"],
                     log_dir=config["LOG_DIR"],
-                    rabbit_hostname=config["RABBIT_HOSTNAME"],
-                    rabbit_port=int(config["RABBIT_PORT"]),
-                    pub_models=[PubModel(**d) for d in config["LOG_PUB_MODELS"]])
-
+                    mq_handler=self.mq_handler)
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
 

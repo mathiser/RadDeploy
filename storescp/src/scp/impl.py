@@ -1,5 +1,6 @@
 import logging
 import queue
+import time
 from io import BytesIO
 from typing import List
 
@@ -115,7 +116,9 @@ class SCP:
 
 
     def stop(self, signalnum=None, stack_frame=None):
+        self.logger.info("Stopping SCP")
         self.ae.shutdown()
+        time.sleep(5)
 
 
     def start(self, blocking=True):

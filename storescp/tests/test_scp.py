@@ -1,28 +1,9 @@
 import multiprocessing.pool
-import os
-import queue
 import tarfile
-
-import pytest
-from scp import SCP
 
 from DicomFlowLib.test_utils.mock_scu import post_folder_to_dicom_node
 from DicomFlowLib.test_utils.fixtures import scan_dir
-
-
-@pytest.fixture
-def scp():
-    scp = SCP(
-        out_queue=queue.Queue(),
-        ae_title="DicomFlow",
-        hostname="localhost",
-        port=10000,
-        pynetdicom_log_level=20,
-        log_level=10
-    )
-    scp.start(blocking=False)
-    yield scp
-    scp.stop()
+from .fixtures import *
 
 
 def test_scp_single(scp, scan_dir):
@@ -50,8 +31,6 @@ def test_stress_scp(scp, scan_dir):
     while not scp.out_queue.empty:
         next = scp.out_queue.get()
         assert prev.model_dump_json() == next.model_dump_json()
-
-    scp.stop()
 
 
 if __name__ == "__main__":

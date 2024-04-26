@@ -4,8 +4,8 @@ import networkx
 import yaml
 from pydantic import BaseModel, Field
 
-from DicomFlowLib.data_structures.flow.model import Model
-from DicomFlowLib.data_structures.flow.destination import Destination
+from .model import Model
+from .destination import Destination
 
 
 class Flow(BaseModel):
@@ -21,52 +21,38 @@ class Flow(BaseModel):
 
     def __init__(self, **data: Any):
         super().__init__(**data)
-        assert self.is_valid_dag()
+        assert self.is_valid_dag(self.models)
 
     @staticmethod
     def from_file(path):
         with open(path) as r:
             return Flow(**yaml.safe_load(r))
 
-    def is_valid_dag(self):
+    @staticmethod
+    def is_valid_dag(models):
         inputs = set()
         outputs = set()
-        all_output_mounts = []
         G = networkx.MultiDiGraph()
-        G.add_nodes_from([i for i, m in enumerate(self.models)])
+        G.add_nodes_from([i for i, m in enumerate(models)])
 
-        for i in range(len(self.models)):
-            all_output_mounts += self.models[i].output_mounts.keys()
-            for u in range(len(self.models)):
-                outputs_i = set(self.models[i].output_mounts.keys())
-                outputs = outputs.union(outputs_i)
-                inputs_u = set(self.models[u].input_mounts.keys())
+        # Construct a networkx graph to evaluate validity.
+        for i in range(len(models)):
+            outputs_i = models[i].output_mount_keys
+            outputs = outputs.union(outputs_i)
+
+            for u in range(len(models)):
+                inputs_u = models[u].input_mount_keys
                 inputs = inputs.union(inputs_u)
 
                 edges = outputs_i.intersection(inputs_u)
                 for e in edges:
                     G.add_edge(i, u, name=e)
-        try:
-            if all_output_mounts.count("dst") > 1:
-                raise Exception(f"'dst' must be used only once! Found outputs: {all_output_mounts}")
-            if "dst" in inputs:
-                raise Exception("'dst' may not be used as input - use only for outputs only")
-            if "src" in outputs:
-                raise Exception("'src' may not be used output - use only for inputs only")
-            if not networkx.is_directed_acyclic_graph(G):
-                raise Exception("is not directed and acyclic")
-            if not inputs.symmetric_difference(outputs).issubset({"src", "dst"}):
-                resid = inputs.symmetric_difference(outputs)
-                resid = resid.symmetric_difference({"src", "dst"})
-                raise Exception(f"Invalid mapping - don't know what to do with {resid}")
-        except Exception as e:
-            raise e
-        return True
 
-if __name__ == "__main__":
-    file = "DicomFlowLib/data_structures/flow/test_utils/test_flows/dag_flow.yaml"
-    with open(file) as r:
-        fp = yaml.safe_load(r)
-    flow = Flow(**fp)
-    print(flow)
-    flow.is_valid_dag()
+        if not "src" in inputs:
+            raise Exception("'src' must be provided at least once in inputs")
+        if "src" in outputs:
+            raise Exception("'src' cannot be used as output - use for inputs only")
+        if not networkx.is_directed_acyclic_graph(G):
+            raise Exception("is not directed and acyclic")
+
+        return True

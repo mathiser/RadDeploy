@@ -30,9 +30,6 @@ class Model(BaseModel):
         for key in self.docker_kwargs.keys():
             assert key in ALLOWED_KWARGS
 
-    def get_dynamic_mounts(self):
-        return {**self.input_mounts, **self.output_mounts}
-
     @property
     def input_mount_keys(self):
         return set(self.input_mounts.keys())
@@ -45,7 +42,7 @@ class Model(BaseModel):
     def static_mount_keys(self):
         return set(self.static_mounts.keys())
 
-    def remap_input_mount_keys(self, mapping: Dict):  # Mapping must be "src": "qwer-qwer-qwer" (uid)
+    def remap_input_mount_keys(self, mapping: Dict):  # Mapping must be {"src": "qwer-qwer-qwer-(UID)"}
         for name, dst in self.input_mounts.items():
             yield {
                 "src": name,

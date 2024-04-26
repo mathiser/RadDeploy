@@ -1,4 +1,5 @@
 import tarfile
+import uuid
 
 import pytest
 
@@ -29,10 +30,28 @@ def test_docker_executor_hello_world(tmpdir, scp_tar, docker_executor):
 
     output_mount_mapping = docker_executor.exec_model(
         model=model,
-        input_mount_mapping=input_mount_mapping
+        input_mount_mapping=input_mount_mapping,
+        correlation_id=0,
+        flow_uid=str(uuid.uuid4())
     )
     assert "dst" in output_mount_mapping
 
+def test_container_tag_exists(tmpdir, scp_tar, docker_executor):
+    model = Model(
+        docker_kwargs={"image": "busybox",
+                       "command": "sh -c 'if [[ -z $CONTAINER_TAG ]]; then exit 0; else exit 1; fi'"},
+    )
+    input_mount_mapping = {
+        "src": docker_executor.fs.post(scp_tar)
+    }
+
+    output_mount_mapping = docker_executor.exec_model(
+        model=model,
+        input_mount_mapping=input_mount_mapping,
+        correlation_id=0,
+        flow_uid=str(uuid.uuid4())
+    )
+    assert "dst" in output_mount_mapping
 
 def test_docker_executor_multiple_outputs(scp_tar, docker_executor):
     model = Model(
@@ -50,7 +69,9 @@ def test_docker_executor_multiple_outputs(scp_tar, docker_executor):
 
     output_mount_mapping = docker_executor.exec_model(
         model=model,
-        input_mount_mapping=input_mount_mapping
+        input_mount_mapping=input_mount_mapping,
+        correlation_id=0,
+        flow_uid=str(uuid.uuid4())
     )
     assert "output_0" in output_mount_mapping
     assert "output_1" in output_mount_mapping
@@ -80,7 +101,10 @@ def test_docker_executor_default_config_loc(tmpdir, scp_tar, docker_executor):
     input_mount_mapping = {
         "src": docker_executor.fs.post(scp_tar)
     }
-    output_mount_mapping = docker_executor.exec_model(model=model, input_mount_mapping=input_mount_mapping)
+    output_mount_mapping = docker_executor.exec_model(model=model,
+                                                      input_mount_mapping=input_mount_mapping,
+                                                      correlation_id=0,
+                                                      flow_uid=str(uuid.uuid4()))
     output = docker_executor.fs.get(output_mount_mapping["dst"])
     with tarfile.TarFile.open(fileobj=output) as dst_tf:
         assert "HEST: 123" in str(dst_tf.extractfile("config.yaml").read())
@@ -100,7 +124,10 @@ def test_docker_executor_new_config_loc(tmpdir, scp_tar, docker_executor):
     input_mount_mapping = {
         "src": docker_executor.fs.post(scp_tar)
     }
-    output_mount_mapping = docker_executor.exec_model(model=model, input_mount_mapping=input_mount_mapping)
+    output_mount_mapping = docker_executor.exec_model(model=model,
+                                                      input_mount_mapping=input_mount_mapping,
+                                                      correlation_id=0,
+                                                      flow_uid=str(uuid.uuid4()))
     output = docker_executor.fs.get(output_mount_mapping["dst"])
     with tarfile.TarFile.open(fileobj=output) as dst_tf:
         assert "HEST: 123" in str(dst_tf.extractfile("config.yaml").read())

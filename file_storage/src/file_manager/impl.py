@@ -1,12 +1,12 @@
-import hashlib
 import logging
 import os
 import threading
 import uuid
 from io import BytesIO
 
-from file_storage.src.file_manager.delete_daemon import DeleteDaemon
+from file_manager.delete_daemon import DeleteDaemon
 
+from DicomFlowLib.fs.utils import hash_file
 
 
 class FileManager(threading.Thread):
@@ -30,7 +30,7 @@ class FileManager(threading.Thread):
 
     def get_hash(self, uid: str):
         self.logger.debug(f"Serving hash of: {uid}")
-        return hash_file(self.get_file_path(uid))
+        return hash_file(str(self.get_file_path(uid)))
 
     def get_file(self, uid: str):
         self.logger.debug(f"Serving file with uid: {uid}")

@@ -3,14 +3,14 @@ RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging
-LOG_DIR: "/opt/DicomFlow/logs"
+LOG_DIR: "/opt/RadDeploy/flow_tracker/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(name)s ; %(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 LOG_PUB_MODELS:
   - exchange: logs
 
 # FlowTracker
-DATABASE_PATH: "/opt/DicomFlow/database/database.sqlite"
+DATABASE_PATH: "/opt/RadDeploy/flow_tracker/database/database.sqlite"
 
 # MQSub
 SUB_QUEUE_KWARGS:
@@ -24,7 +24,7 @@ SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"
     routing_keys: ["success", "fetch"]
-  - exchange: "orchestration"
+  - exchange: "scheduler"
     exchange_type: "topic"
     routing_keys: ["#"]
   - exchange: "consumer"
@@ -41,7 +41,7 @@ PUB_ROUTING_KEY_ERROR: "error"
 
 # Dashboard Rules:
 DASHBOARD_RULES:
-  - on_exchange: "orchestration"
+  - on_exchange: "scheduler"
     on_routing_keys: ["error", "fail"]
     status: 400
   - on_exchange: "consumer"
@@ -57,10 +57,10 @@ DASHBOARD_RULES:
   - on_exchange: "fingerprinter"
     on_routing_keys: ["fetch"]
     status: 1
-  - on_exchange: "orchestration"
+  - on_exchange: "scheduler"
     on_routing_keys: ["fetch"]
     status: 2
-  - on_exchange: "orchestration"
+  - on_exchange: "scheduler"
     on_routing_keys: [ "success" ]
     status: 3
   - on_exchange: "storescu"

@@ -1,7 +1,7 @@
 import threading
 from abc import abstractmethod
 
-from storescp.src.scp.models import SCPAssociation
+from scp.models import SCPAssociation
 
 
 class SCPReleaseHandlerInterface(threading.Thread):

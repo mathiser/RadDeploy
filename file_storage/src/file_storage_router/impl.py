@@ -5,13 +5,10 @@ from fastapi.responses import FileResponse
 
 from file_manager import FileManager
 
-from delete_daemon import DeleteDaemon
-
 
 class FileStorageRouter(APIRouter):
     def __init__(self,
                  file_manager: FileManager,
-                 delete_daemon: DeleteDaemon,
                  allow_post: bool = True,
                  allow_get: bool = True,
                  allow_clone: bool = True,
@@ -24,10 +21,6 @@ class FileStorageRouter(APIRouter):
 
         # File manger
         self.file_manager = file_manager
-
-        # Delete Daemon
-        self.delete_daemon = delete_daemon
-        self.delete_daemon.start()
 
         # Which methods allowed
         self.allow_post = allow_post

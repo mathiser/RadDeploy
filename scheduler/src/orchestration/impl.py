@@ -51,7 +51,7 @@ class Scheduler:
                 self.update_db_mount_mapping_from_job_context_output(job_context=job_context)
 
             # In case model executed failed
-            elif basic_deliver.routing_key == "fail":
+            elif basic_deliver.routing_key in ["fail", "error"]:
                 self.db.update_by_kwargs(DBJob,
                                          {"id": job_context.correlation_id},
                                          {"status": 400}),

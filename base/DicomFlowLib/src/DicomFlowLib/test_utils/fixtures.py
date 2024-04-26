@@ -15,11 +15,12 @@ from DicomFlowLib.test_utils.mock_classes import MockFileStorageClient
 def mq_container():
     test_container_name = "test_rabbit"
     cli = docker.from_env()
-    for container in cli.containers.list():
+    for container in cli.containers.list(all=True):
         if container.name == test_container_name:
             container.start()
-            yield container
-            break
+            cli.close()
+            return container
+
     else:
         container = cli.containers.run(name=test_container_name,
                                        image="rabbitmq:3-management",
@@ -27,8 +28,9 @@ def mq_container():
                                        ports={5672: 5677,
                                               15672: 15677})
         time.sleep(15)
-        yield container
-    cli.close()
+        cli.close()
+        return container
+
 
 
 @pytest.fixture

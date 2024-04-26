@@ -3,29 +3,29 @@ RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging
-LOG_DIR: "/opt/DicomFlow/logs"
+LOG_DIR: "/opt/RadDeploy/consumer/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(name)s ; %(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 LOG_PUB_MODELS:
   - exchange: logs
-
+JOB_LOG_DIR: "/opt/RadDeploy/consumer/logs/jobs"
 # File Storage
 FILE_STORAGE_URL: "http://file-storage:80/files/"
 
 # Static Storage
 STATIC_STORAGE_URL: "http://file-storage:80/static/"
-STATIC_STORAGE_CACHE_DIR: "/opt/DicomFlow/static"
+STATIC_STORAGE_CACHE_DIR: "/opt/RadDeploy/consumer/static"
 
 # CONSUMER
 SUB_PREFETCH_COUNT: 1
 ########################### Will be used for CPU consumers ####################
 CPU_SUB_MODELS:  # Will be used by default.
-  - exchange: "orchestration"
+  - exchange: "scheduler"
     exchange_type: "topic"
-    routing_keys: ["CPU"]
+    routing_keys: ["cpu"]
     routing_key_fetch_echo: "fetch"
 CPU_SUB_QUEUE_KWARGS:
-  queue: "SCHEDULED_CPU"
+  queue: "cpu"
   passive: False
   durable: False
   exclusive: False
@@ -33,12 +33,12 @@ CPU_SUB_QUEUE_KWARGS:
 
 ########################### Will be used for GPU consumers ####################
 GPU_SUB_MODELS:
-  - exchange: "orchestration"
+  - exchange: "scheduler"
     exchange_type: "topic"
-    routing_keys: ["GPU"]
+    routing_keys: ["gpu"]
     routing_key_fetch_echo: "fetch"
 GPU_SUB_QUEUE_KWARGS:
-  queue: "SCHEDULED_GPU"
+  queue: "gpu"
   passive: False
   durable: False
   exclusive: False

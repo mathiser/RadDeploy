@@ -30,4 +30,4 @@ def scheduler(db):
                      log_level=10,
                      reschedule_priority=5,
                      flow_incoming_exchanges=["FLOW_INCOMING"],
-                     model_incoming_exchange=["MODEL_INCOMING"])
+                     job_incoming_exchanges=["MODEL_INCOMING"])

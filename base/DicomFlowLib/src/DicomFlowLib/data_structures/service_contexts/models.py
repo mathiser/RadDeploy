@@ -40,7 +40,10 @@ class FinishedFlowContext(FlowContext):
     """
     mount_mapping: Dict[str, str]
 
-
+class SCUContext(BaseContext):
+    uid: str
+    destination: Destination
+    status: str
 
 class JobContext(BaseContext):
     """

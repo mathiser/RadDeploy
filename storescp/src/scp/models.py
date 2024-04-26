@@ -1,6 +1,6 @@
 import tarfile
 from io import BytesIO
-from typing import List, Dict, Any
+from typing import List, Dict
 
 from pydantic import BaseModel, ConfigDict
 

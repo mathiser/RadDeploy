@@ -34,6 +34,7 @@ class DockerExecutor(threading.Thread):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
         self.job_log_dir = job_log_dir
+        os.makedirs(self.job_log_dir, exist_ok=True)
         self.fs = file_storage
         self.ss = static_storage
 
@@ -46,20 +47,20 @@ class DockerExecutor(threading.Thread):
         self.cli.close()
 
     def mq_entrypoint(self, basic_deliver, body) -> Iterable[PublishContext]:
-        pending_job_context = JobContext(**json.loads(body.decode()))
+        job_context = JobContext(**json.loads(body.decode()))
 
         self.logger.info(f"Spinning up flow")
-        output_mount_mapping = self.exec_model(pending_job_context.model,
-                                               pending_job_context.input_mount_mapping,
-                                               pending_job_context.uid)
+        output_mount_mapping = self.exec_model(model=job_context.model,
+                                               input_mount_mapping=job_context.input_mount_mapping,
+                                               flow_uid=job_context.uid,
+                                               correlation_id=job_context.correlation_id)
         self.logger.info(f"Finished flow")
 
         # Overwrite with output mount mapping
-        finished_job_context = JobContext(**pending_job_context.model_dump(),
-                                              output_mount_mapping=output_mount_mapping)
+        job_context.output_mount_mapping = output_mount_mapping
 
         # Return new
-        return [PublishContext(body=finished_job_context.model_dump_json().encode(),
+        return [PublishContext(body=job_context.model_dump_json().encode(),
                                pub_model_routing_key="SUCCESS")]
 
     def exec_model(self,
@@ -154,10 +155,10 @@ class DockerExecutor(threading.Thread):
         finally:
             self.clean_up(container, kwargs)
 
-    def catch_logs_from_container(self, logger_name, container, job_log_dir):
+    def catch_logs_from_container(self, logger_name, container):
 
         container_logger = init_logger(name=logger_name,
-                                       log_dir=job_log_dir)
+                                       log_dir=self.job_log_dir)
         container_logger.setLevel(10)
 
         for line in container.logs(stream=True):

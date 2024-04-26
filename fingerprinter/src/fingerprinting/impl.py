@@ -39,10 +39,12 @@ class Fingerprinter:
         self.logger.info("Generating a dataframe of all dicom files in the tar")
 
         dataframe = generate_df_from_tar(tar_file=tar_file)
+        self.logger.info(str(dataframe))
         for flow in parse_fingerprints(self.flow_directory):
             # Generate a dataframe of files which match the flow triggers
             self.logger.info("Slicing the dataframe to only dicom files which match the flow")
             sliced_dataframe = slice_dataframe_to_triggers(dataframe, flow.triggers)
+            self.logger.info(str(sliced_dataframe))
 
             if sliced_dataframe is not None:  # If there is a match
                 self.logger.info(f"MATCHING FLOW")

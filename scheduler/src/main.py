@@ -31,7 +31,7 @@ class Main:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
         self.db = Database(database_path=config["SCHEDULER_DATABASE_PATH"],
-                           log_level=config["LOG_LEVEL"])
+                           log_level=int(config["LOG_LEVEL"]))
 
         self.scheduler = Scheduler(log_level=int(config["LOG_LEVEL"]),
                                    flow_incoming_exchanges=config["SCHEDULER_FLOW_INCOMING_EXCHANGES"],

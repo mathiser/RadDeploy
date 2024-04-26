@@ -4,12 +4,14 @@ from io import BytesIO
 from DicomFlowLib.data_structures.flow import Destination
 from scp.models import SCPAssociationManager, SCPAssociation
 
+
 def get_scp_association(assoc_id):
     return SCPAssociation(
         assoc_id=assoc_id,
         sender=Destination(host="127.0.0.1",
                            port=10000,
                            ae_title="ae_title"))
+
 
 def test_scp_association_manager():
     man = SCPAssociationManager()

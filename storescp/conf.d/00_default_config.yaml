@@ -3,7 +3,7 @@ RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging
-LOG_DIR: "/opt/DicomFlow/logs"
+LOG_DIR: "/opt/RadDeploy/storescp/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(name)s ; %(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 LOG_PUB_MODELS:
@@ -13,7 +13,7 @@ LOG_PUB_MODELS:
 FILE_STORAGE_URL: "http://file-storage:80/files/"
 
 # SCP
-AE_TITLE: "DICOMFLOW"
+AE_TITLE: "RADDEPLOY"
 AE_HOSTNAME: "storescp"
 AE_PORT: 10000
 AE_BLACKLISTED_IP_NETWORKS: null

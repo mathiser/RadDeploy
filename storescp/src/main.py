@@ -14,8 +14,8 @@ from DicomFlowLib.fs.client.impl import FileStorageClient
 from DicomFlowLib.log import init_logger
 from DicomFlowLib.mq import MQPub
 from scp import SCP
-from storescp.src.scp.models import SCPAssociation
-from storescp.src.scp_release_handler.impl import SCPReleaseHandler
+from scp.models import SCPAssociation
+from scp_release_handler.impl import SCPReleaseHandler
 
 
 class Main:
@@ -79,13 +79,14 @@ class Main:
 
     def stop(self, signalnum=None, stack_frame=None):
         self.running = False
+        self.scp.stop()
         self.mq.stop()
         self.scp_release_handler.stop()
         self.mq_handler.stop()
 
         self.mq.join()
         self.scp_release_handler.join()
-        self.mq_handler.stop()
+        self.mq_handler.join()
 
 
 if __name__ == "__main__":

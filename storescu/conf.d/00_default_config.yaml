@@ -3,7 +3,7 @@ RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging
-LOG_DIR: "/opt/DicomFlow/logs"
+LOG_DIR: "/opt/RadDeploy/storescu/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(name)s ; %(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 LOG_PUB_MODELS:
@@ -14,7 +14,7 @@ FILE_STORAGE_URL: "http://file-storage:80/files/"
 
 AE_HOSTNAME: ""
 AE_PORT: 10005
-AE_TITLE: DICOMFLOW
+AE_TITLE: RadDeploy
 
 # STORESCU
 SUB_QUEUE_KWARGS:
@@ -25,13 +25,10 @@ SUB_QUEUE_KWARGS:
     auto_delete: True
 SUB_PREFETCH_COUNT: 1
 SUB_MODELS:
-  - exchange: "orchestration"
+  - exchange: "scheduler"
     exchange_type: "topic"
     routing_keys: ["success"]
     routing_key_fetch_echo: "fetch"
-PUB_ROUTING_KEY_ERROR: "error"
-PUB_ROUTING_KEY_SUCCESS: "success"
-PUB_ROUTING_KEY_FAIL: "fail"
 PUB_MODELS:
   - exchange: "storescu"
     exchange_type: "topic"

@@ -1,1 +1,1 @@
-docker build . -t mathiser/dicom_flow-storescp:latest
+docker build . -t mathiser/raddeploy-storescp:latest

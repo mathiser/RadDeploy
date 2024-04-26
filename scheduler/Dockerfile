@@ -5,8 +5,13 @@ LABEL authors="Mathis Ersted Rasmussen"
 ADD requirements /requirements
 RUN pip install -r /requirements
 
+ENV APP_DIR=/opt/RadDeploy/scheduler
+RUN mkdir -p $APP_DIR
+WORKDIR $APP_DIR
 COPY . ./
+WORKDIR $APP_DIR/src
 
-WORKDIR /opt/DicomFlow/src/
+ENV CONF_DIR=$APP_DIR/conf.d
+ENV CURRENT_CONF=$APP_DIR/current_config.yaml
 
 ENTRYPOINT ["/usr/local/bin/python3", "main.py"]

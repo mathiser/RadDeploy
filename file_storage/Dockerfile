@@ -7,7 +7,15 @@ RUN pip install -r /requirements
 
 COPY . ./
 
-WORKDIR /opt/DicomFlow/src/
+ENV APP_DIR=/opt/RadDeploy/file_storage
+RUN mkdir -p $APP_DIR
+WORKDIR $APP_DIR
+COPY . ./
+WORKDIR $APP_DIR/src
+
+ENV CONF_DIR=$APP_DIR/conf.d
+ENV CURRENT_CONF=$APP_DIR/src/current_config.yaml
+
 #HEALTHCHECK --interval=30s --timeout=60s --retries=3 CMD curl http://file-storage:80/ || exit 1
 
 ENTRYPOINT ["/usr/local/bin/python3", "main.py"]
