@@ -4,7 +4,7 @@ from typing import Iterable, Dict, List
 
 import pandas as pd
 
-from DicomFlowLib.data_structures.contexts import FlowContext, PublishContext
+from RadDeployLib.data_structures.contexts import FlowContext, PublishContext
 from .db import Database
 
 

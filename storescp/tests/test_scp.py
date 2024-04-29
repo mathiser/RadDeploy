@@ -1,8 +1,8 @@
 import multiprocessing.pool
 import tarfile
 
-from DicomFlowLib.test_utils.mock_scu import post_folder_to_dicom_node
-from DicomFlowLib.test_utils.fixtures import scan_dir
+from RadDeployLib.test_utils.mock_scu import post_folder_to_dicom_node
+from RadDeployLib.test_utils.fixtures import scan_dir
 from .fixtures import *
 
 

@@ -1,5 +1,5 @@
-from DicomFlowLib.test_utils.fixtures import *
-from DicomFlowLib.mq import PubModel, MQSub, SubModel
+from RadDeployLib.test_utils.fixtures import *
+from RadDeployLib.mq import PubModel, MQSub, SubModel
 from fingerprinting import Fingerprinter
 
 

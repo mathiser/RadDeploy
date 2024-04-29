@@ -2,11 +2,11 @@ import logging
 import os
 import signal
 
-from DicomFlowLib.conf import load_configs
-from DicomFlowLib.log import init_logger
-from DicomFlowLib.log.mq_handler import MQHandler
-from DicomFlowLib.mq import SubModel, PubModel
-from DicomFlowLib.mq import MQSub
+from RadDeployLib.conf import load_configs
+from RadDeployLib.log import init_logger
+from RadDeployLib.log.mq_handler import MQHandler
+from RadDeployLib.mq import SubModel, PubModel
+from RadDeployLib.mq import MQSub
 from flow_tracker import FlowTracker
 import time
 

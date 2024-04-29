@@ -3,10 +3,10 @@ import uuid
 
 import pytest
 
-from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.test_utils.fixtures import scp_tar, scp_tar_path, fs
-from DicomFlowLib.test_utils.mock_classes import MockFileStorageClient
-from consumer.src.docker_executor import DockerExecutor
+from RadDeployLib.data_structures.flow import Model
+from RadDeployLib.test_utils.fixtures import scp_tar, scp_tar_path, fs
+from RadDeployLib.test_utils.mock_classes import MockFileStorageClient
+from docker_executor import DockerExecutor
 
 
 
@@ -39,7 +39,7 @@ def test_docker_executor_hello_world(tmpdir, scp_tar, docker_executor):
 def test_container_tag_exists(tmpdir, scp_tar, docker_executor):
     model = Model(
         docker_kwargs={"image": "busybox",
-                       "command": "sh -c 'if [[ -z $CONTAINER_TAG ]]; then exit 0; else exit 1; fi'"},
+                       "command": "sh -c 'echo $CONTAINER_TAG; if [[ -z $CONTAINER_TAG ]]; then exit 1; else exit 0; fi'"},
     )
     input_mount_mapping = {
         "src": docker_executor.fs.post(scp_tar)

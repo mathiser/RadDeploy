@@ -1,4 +1,4 @@
-from DicomFlowLib.data_structures.flow import Destination
+from RadDeployLib.data_structures.flow import Destination
 
 
 def generate_destination_from_event(event):

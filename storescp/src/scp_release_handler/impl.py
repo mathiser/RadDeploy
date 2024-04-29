@@ -1,9 +1,9 @@
 import queue
 from typing import List, Tuple
 
-from DicomFlowLib.mq.mq_models import PublishContext
-from DicomFlowLib.fs.client.interface import FileStorageClientInterface
-from DicomFlowLib.mq import PubModel
+from RadDeployLib.mq.mq_models import PublishContext
+from RadDeployLib.fs.client.interface import FileStorageClientInterface
+from RadDeployLib.mq import PubModel
 from .interface import SCPReleaseHandlerInterface
 from scp.models import SCPAssociation
 

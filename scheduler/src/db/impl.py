@@ -5,8 +5,8 @@ from typing import List, Type, Dict
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.exc import IntegrityError
-from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.data_structures.service_contexts import FlowContext
+from RadDeployLib.data_structures.flow import Model
+from RadDeployLib.data_structures.service_contexts import FlowContext
 from .db_models import Base, DBFlow, DBJob, DBMountMapping
 
 

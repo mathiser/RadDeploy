@@ -1,4 +1,4 @@
-name: CI DicomFlow
+name: CI RadDeploy
 
 on:
   push:
@@ -75,7 +75,7 @@ jobs:
       - name: Build and push STORESCU
         uses: docker/build-push-action@v5
         with:
-          context: "{{defaultContext}}:storescu"
+          context: "{{defaultContext}}:scu"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-storescu:latest
@@ -84,7 +84,7 @@ jobs:
       - name: Build and push Consumer
         uses: docker/build-push-action@v5
         with:
-          context: "{{defaultContext}}:consumer"
+          context: "{{defaultContext}}:consuming"
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dicom_flow-consumer:latest

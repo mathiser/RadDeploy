@@ -1,11 +1,11 @@
 import logging
 import os
 
-from DicomFlowLib.conf import load_configs
-from DicomFlowLib.log.mq_handler import MQHandler
+from RadDeployLib.conf import load_configs
+from RadDeployLib.log.mq_handler import MQHandler
 from file_manager import FileManager
-from DicomFlowLib.log import init_logger
-from DicomFlowLib.mq import PubModel
+from RadDeployLib.log import init_logger
+from RadDeployLib.mq import PubModel
 from api import FileStorageServer
 
 

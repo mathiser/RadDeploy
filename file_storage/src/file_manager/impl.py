@@ -6,7 +6,7 @@ from io import BytesIO
 
 from file_manager.delete_daemon import DeleteDaemon
 
-from DicomFlowLib.fs.utils import hash_file
+from RadDeployLib.fs.utils import hash_file
 
 
 class FileManager(threading.Thread):

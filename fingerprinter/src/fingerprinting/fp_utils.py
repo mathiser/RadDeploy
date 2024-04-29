@@ -8,7 +8,7 @@ import pandas as pd
 import pydicom
 import yaml
 
-from DicomFlowLib.data_structures.flow import Flow
+from RadDeployLib.data_structures.flow import Flow
 
 
 def generate_df_from_tar(tar_file: BytesIO) -> pd.DataFrame:

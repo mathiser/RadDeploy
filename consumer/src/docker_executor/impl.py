@@ -1,3 +1,4 @@
+import datetime
 import enum
 import json
 import logging
@@ -14,11 +15,11 @@ import docker
 import yaml
 from docker import types, errors
 
-from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.data_structures.service_contexts.models import JobContext
-from DicomFlowLib.fs.client.interface import FileStorageClientInterface
-from DicomFlowLib.log import init_logger
-from DicomFlowLib.mq import PublishContext
+from RadDeployLib.data_structures.flow import Model
+from RadDeployLib.data_structures.service_contexts.models import JobContext
+from RadDeployLib.fs.client.interface import FileStorageClientInterface
+from RadDeployLib.log import init_logger
+from RadDeployLib.mq import PublishContext
 
 
 class DockerExecutor(threading.Thread):
@@ -132,7 +133,7 @@ class DockerExecutor(threading.Thread):
             container.start()
 
             # Grab the output and log to job specific logger
-            job_logger_name = f"{flow_uid}_{correlation_id}_{kwargs["image"].replace("/", "-")}"
+            job_logger_name = f"{datetime.datetime.now().isoformat()}_{flow_uid}_{correlation_id}_{kwargs["image"].replace("/", "-")}"
             threading.Thread(target=self.catch_logs_from_container, args=(job_logger_name, container)).start()
 
             # Wait for job to execute - with timeout. If not finished, it will be killed.

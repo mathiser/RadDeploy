@@ -3,17 +3,19 @@ import os
 import signal
 import time
 
-from DicomFlowLib.conf import load_configs
-from DicomFlowLib.log import init_logger
-from DicomFlowLib.log.mq_handler import MQHandler
-from DicomFlowLib.mq import PubModel, SubModel
-from DicomFlowLib.fs import FileStorageClient
-from DicomFlowLib.mq import MQSub
-from storescu import STORESCU
+from RadDeployLib.conf import load_configs
+from RadDeployLib.log import init_logger
+from RadDeployLib.log.mq_handler import MQHandler
+from RadDeployLib.mq import PubModel, SubModel
+from RadDeployLib.fs import FileStorageClient
+from RadDeployLib.mq import MQSub
+
+from RadDeployLib.fs.client.interface import FileStorageClientInterface
+from scu import SCU
 
 
 class Main:
-    def __init__(self, config):
+    def __init__(self, config, file_storage: FileStorageClientInterface | None = None):
         signal.signal(signal.SIGTERM, self.stop)
         self.running = False
         self.mq_handler = MQHandler(
@@ -24,20 +26,22 @@ class Main:
         init_logger(name=None,  # init root logger,
                     log_format=config["LOG_FORMAT"],
                     log_dir=config["LOG_DIR"],
-                    mq_handler=self.mq_handler)
+                    mq_handler=None)  #self.mq_handler)
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))
 
-        self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"],
-                                    log_level=int(config["LOG_LEVEL"]))
+        if file_storage:
+            self.fs = file_storage
+        else:
+            self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"],
+                                        log_level=int(config["LOG_LEVEL"]))
 
-        self.scu = STORESCU(file_storage=self.fs,
-                            ae_title=config["AE_TITLE"],
-                            ae_port=int(config["AE_PORT"]),
-                            ae_hostname=config["AE_HOSTNAME"],
-                            log_level=int(config["LOG_LEVEL"]),
-                            )
+        self.scu = SCU(file_storage=self.fs,
+                       ae_title=config["AE_TITLE"],
+                       ae_port=int(config["AE_PORT"]),
+                       ae_hostname=config["AE_HOSTNAME"],
+                       log_level=int(config["LOG_LEVEL"]))
 
         self.mq = MQSub(rabbit_hostname=config["RABBIT_HOSTNAME"], rabbit_port=int(config["RABBIT_PORT"]),
                         sub_models=[SubModel(**d) for d in config["SUB_MODELS"]],
@@ -49,11 +53,10 @@ class Main:
 
     def start(self, blocking=True):
         self.running = True
-        self.mq.start()
         self.mq_handler.start()
-        self.logger.debug("Started SCU")
+        self.mq.start()
 
-        while self.running and not blocking:
+        while self.running and blocking:
             time.sleep(1)
 
     def stop(self, signalnum=None, stack_frame=None):

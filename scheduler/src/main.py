@@ -3,11 +3,11 @@ import os
 import signal
 import time
 
-from DicomFlowLib.conf import load_configs
-from DicomFlowLib.log import init_logger
-from DicomFlowLib.log.mq_handler import MQHandler
-from DicomFlowLib.mq import MQSub
-from DicomFlowLib.mq import PubModel, SubModel
+from RadDeployLib.conf import load_configs
+from RadDeployLib.log import init_logger
+from RadDeployLib.log.mq_handler import MQHandler
+from RadDeployLib.mq import MQSub
+from RadDeployLib.mq import PubModel, SubModel
 
 from db import Database
 from orchestration import Scheduler

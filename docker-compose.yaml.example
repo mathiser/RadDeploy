@@ -25,7 +25,7 @@ services:
     restart: always
     image: mathiser/dicom_flow-fingerprinter
     volumes:
-      - ${FLOWS_DIR}:/opt/DicomFlow/flows
+      - ${FLOWS_DIR}:/opt/RadDeploy/fingerprinter/flows
 
   scheduler:
     hostname: "scheduler"
@@ -52,13 +52,13 @@ services:
     restart: always
     image: mathiser/dicom_flow-flow_tracker
     volumes:
-      - ${FLOWTRACKER_DIR}:/opt/DicomFlow/database:rw
+      - ${FLOWTRACKER_DIR}:/opt/RadDeploy/flow_tracker/database:rw
     networks:
-     - dicomflow_network
+     - raddeploy_network
 
   file_storage:
     hostname: "file-storage"
     restart: always
     image: mathiser/dicom_flow-file_storage
     volumes:
-      - ${STATIC_DIR}:/opt/DicomFlow/static:ro
+      - ${STATIC_DIR}:/opt/RadDeploy/file_storage/static:ro

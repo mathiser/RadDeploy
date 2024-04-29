@@ -1,0 +1,31 @@
+[project]
+    name = "RadDeployLib"
+    version = "0.1"
+    authors = [
+        { name = "Mathis Rasmussen", email = "mathis.rasmussen@rm.dk"},
+    ]
+    requires-python = ">=3.12"
+    dependencies = [
+        "fastapi[all]",
+        "pika",
+        "pydantic",
+        "pyyaml",
+        "requests",
+        "networkx",
+        "pandas",
+        "pydicom"
+
+    ]
+    classifiers = []
+    keywords = []
+
+[project.urls]
+    homepage = "https://github.com/mathiser/RadDeploy"
+    repository = "https://github.com/mathiser/RadDeploy"
+
+[build-system]
+    requires = [
+        "setuptools",
+
+    ]
+

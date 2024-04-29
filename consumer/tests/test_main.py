@@ -2,9 +2,9 @@
 import yaml
 from main import Main
 
-from DicomFlowLib.data_structures.flow import Model
-from DicomFlowLib.data_structures.service_contexts import JobContext
-from DicomFlowLib.test_utils.fixtures import *
+from RadDeployLib.data_structures.flow import Model
+from RadDeployLib.data_structures.service_contexts import JobContext
+from RadDeployLib.test_utils.fixtures import *
 
 @pytest.fixture
 def config(tmpdir, mq_container):
@@ -32,7 +32,7 @@ def main(config):
         static_storage=ss
     )
     m.start(blocking=False)
-    # Wait for setting up consumer
+    # Wait for setting up consuming
     time.sleep(5)
     yield m
 
@@ -43,10 +43,10 @@ def test_main(mq_container, mq_base, scp_tar, main):
 
     # Exchange should already have been setup, but best practice is to always to it.
     mq_base.setup_exchange("scheduler", "topic")
-    mq_base.setup_exchange("consumer", "topic")
+    mq_base.setup_exchange("consuming", "topic")
 
     # mq_base must also make a queue and catch what is published from mq_sub
-    q_out = mq_base.setup_queue_and_bind("consumer", routing_key="success")
+    q_out = mq_base.setup_queue_and_bind("consuming", routing_key="success")
 
     # Generate the scp_context, which the fingerprinter should retrieve and process.
 

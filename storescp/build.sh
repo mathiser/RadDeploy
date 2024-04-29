@@ -1,1 +1,0 @@
-docker build . -t mathiser/raddeploy-storescp:latest

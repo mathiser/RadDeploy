@@ -5,8 +5,8 @@ from typing import List
 from sqlalchemy import ForeignKey, PickleType, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, validates
 
-from DicomFlowLib.data_structures.flow import Model, Flow
-from DicomFlowLib.data_structures.service_contexts import FlowContext
+from RadDeployLib.data_structures.flow import Model, Flow
+from RadDeployLib.data_structures.service_contexts import FlowContext
 
 
 class Base(DeclarativeBase):

@@ -3,7 +3,7 @@ from io import BytesIO
 
 import pytest
 
-from ..src.file_manager import FileManager
+from file_manager import FileManager
 
 
 @pytest.fixture

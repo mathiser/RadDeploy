@@ -1,7 +1,7 @@
 import tarfile
 from io import BytesIO
 
-from DicomFlowLib.data_structures.flow import Destination
+from RadDeployLib.data_structures.flow import Destination
 from scp.models import SCPAssociationManager, SCPAssociation
 
 

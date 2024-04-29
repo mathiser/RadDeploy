@@ -4,14 +4,14 @@ import signal
 import time
 from typing import Type
 
-from DicomFlowLib.conf import load_configs
-from DicomFlowLib.fs.client.interface import FileStorageClientInterface
-from DicomFlowLib.log import init_logger
-from DicomFlowLib.log.mq_handler import MQHandler
-from DicomFlowLib.mq import PubModel, SubModel
-from DicomFlowLib.fs import FileStorageClient
+from RadDeployLib.conf import load_configs
+from RadDeployLib.fs.client.interface import FileStorageClientInterface
+from RadDeployLib.log import init_logger
+from RadDeployLib.log.mq_handler import MQHandler
+from RadDeployLib.mq import PubModel, SubModel
+from RadDeployLib.fs import FileStorageClient
 
-from DicomFlowLib.mq import MQSub
+from RadDeployLib.mq import MQSub
 from fingerprinting import Fingerprinter
 
 

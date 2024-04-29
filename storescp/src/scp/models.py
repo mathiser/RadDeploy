@@ -4,7 +4,7 @@ from typing import List, Dict
 
 from pydantic import BaseModel, ConfigDict
 
-from DicomFlowLib.data_structures.flow import Destination
+from RadDeployLib.data_structures.flow import Destination
 
 
 class SCPAssociation(BaseModel):

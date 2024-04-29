@@ -5,8 +5,8 @@ import uuid
 
 import yaml
 
-from DicomFlowLib.data_structures.service_contexts.models import JobContext
-from DicomFlowLib.test_utils.fixtures import *
+from RadDeployLib.data_structures.service_contexts.models import JobContext
+from RadDeployLib.test_utils.fixtures import *
 from main import Main
 
 from db import DBJob
@@ -19,7 +19,7 @@ def flow_exchange():
 
 @pytest.fixture
 def consumer_exchange():
-    return "consumer"
+    return "consuming"
 
 
 @pytest.fixture
@@ -71,7 +71,7 @@ class MockConsumer:
         method_frame, header_frame, body = self.mq_base._channel.basic_get(self.q, auto_ack=True)
         if method_frame:
             job_context = JobContext(**json.loads(body))
-            self.logger.info(f"consumer received a job: {job_context.model_dump_json()}")
+            self.logger.info(f"consuming received a job: {job_context.model_dump_json()}")
 
             # Mock output mounts
             for k in job_context.model.output_mount_keys:

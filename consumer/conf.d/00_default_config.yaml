@@ -3,18 +3,18 @@ RABBIT_HOSTNAME: "rabbit"
 RABBIT_PORT: 5672
 
 # Logging
-LOG_DIR: "/opt/RadDeploy/consumer/logs"
+LOG_DIR: "/opt/RadDeploy/consuming/logs"
 LOG_LEVEL: 20
 LOG_FORMAT: "%(name)s ; %(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
 LOG_PUB_MODELS:
   - exchange: logs
-JOB_LOG_DIR: "/opt/RadDeploy/consumer/logs/jobs"
+JOB_LOG_DIR: "/opt/RadDeploy/consuming/logs/jobs"
 # File Storage
 FILE_STORAGE_URL: "http://file-storage:80/files/"
 
 # Static Storage
 STATIC_STORAGE_URL: "http://file-storage:80/static/"
-STATIC_STORAGE_CACHE_DIR: "/opt/RadDeploy/consumer/static"
+STATIC_STORAGE_CACHE_DIR: "/opt/RadDeploy/consuming/static"
 
 # CONSUMER
 SUB_PREFETCH_COUNT: 1

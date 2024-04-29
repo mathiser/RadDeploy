@@ -6,8 +6,8 @@ import pytest
 import yaml
 from main import Main
 
-from DicomFlowLib.fs.client.interface import FileStorageClientInterface
-from DicomFlowLib.test_utils.fixtures import mq_container, mq_base, scan_dir, scp_tar_path
+from RadDeployLib.fs.client.interface import FileStorageClientInterface
+from RadDeployLib.test_utils.fixtures import mq_container, mq_base, scan_dir, scp_tar_path
 
 @pytest.fixture
 def config(tmpdir, mq_container):
@@ -23,8 +23,8 @@ def config(tmpdir, mq_container):
     return config
 
 @pytest.fixture
-def main(config):
-    m = Main(config, FileStorageClientInterface)
+def main(config, fs):
+    m = Main(config, file_storage=fs)
     m.start(blocking=False)
     yield m
     m.stop()

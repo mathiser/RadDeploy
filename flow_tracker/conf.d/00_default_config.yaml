@@ -30,7 +30,7 @@ SUB_MODELS:
   - exchange: "consumer"
     exchange_type: "topic"
     routing_keys: ["#"]
-  - exchange: "storescu"
+  - exchange: "scu"
     exchange_type: "topic"
     routing_keys: ["#"]
   - exchange: "logs"
@@ -44,10 +44,10 @@ DASHBOARD_RULES:
   - on_exchange: "scheduler"
     on_routing_keys: ["error", "fail"]
     status: 400
-  - on_exchange: "consumer"
+  - on_exchange: "consuming"
     on_routing_keys: [ "error", "fail" ]
     status: 400
-  - on_exchange: "storescu"
+  - on_exchange: "scu"
     on_routing_keys: ["error", "fail"]
     status: 400
 
@@ -63,9 +63,9 @@ DASHBOARD_RULES:
   - on_exchange: "scheduler"
     on_routing_keys: [ "success" ]
     status: 3
-  - on_exchange: "storescu"
+  - on_exchange: "scu"
     on_routing_keys: ["fetch"]
     status: 4
-  - on_exchange: "storescu"
+  - on_exchange: "scu"
     on_routing_keys: ["success"]
     status: 5

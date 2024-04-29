@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Iterable
 
-from DicomFlowLib.data_structures.flow import Flow, Model
-from DicomFlowLib.data_structures.service_contexts import FlowContext
-from DicomFlowLib.data_structures.service_contexts.models import JobContext
+from RadDeployLib.data_structures.flow import Flow, Model
+from RadDeployLib.data_structures.service_contexts import FlowContext
+from RadDeployLib.data_structures.service_contexts.models import JobContext
 from .db_models import DBMountMapping, DBFlow
 
 
