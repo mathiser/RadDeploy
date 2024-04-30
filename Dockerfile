@@ -21,7 +21,7 @@ RUN pip install -r /requirements
 
 # Install RadDeployLib
 ADD ./RadDeployLib $DEPENDENCIES_DIR/RadDeployLib
-RUN pip install $DEPENDENCIES_DIR/RadDeployLib
+RUN pip install -e $DEPENDENCIES_DIR/RadDeployLib
 
 # Copy code
 COPY $SERVICE_NAME $APP_DIR

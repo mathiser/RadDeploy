@@ -37,7 +37,7 @@ class DBJob(Base):
     pub_model_routing_key: Mapped[str]
     priority: Mapped[int]
     retries: Mapped[int] = mapped_column(default=0)
-
+    log: Mapped[str] = mapped_column(nullable=True)
     # 0: Pending,
     # 1: Dispatched
     # 2: Timeout
@@ -98,6 +98,15 @@ class DBFlow(Base):
     # 400 = fail
     status: Mapped[int] = mapped_column(default=0)
 
+    # Values for dashboard
+    UID: Mapped[str]
+    Name: Mapped[str]
+    Version: Mapped[str]
+    Priority: Mapped[int]
+    Sender: Mapped[str]
+    Destinations: Mapped[str]
+    Dispatched: Mapped[int] = mapped_column(nullable=True)
+    Finished: Mapped[int] = mapped_column(nullable=True)
 
     @property
     def mount_mapping(self):

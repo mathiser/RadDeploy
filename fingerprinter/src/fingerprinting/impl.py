@@ -44,7 +44,6 @@ class Fingerprinter:
             # Generate a dataframe of files which match the flow triggers
             self.logger.info("Slicing the dataframe to only dicom files which match the flow")
             sliced_dataframe = slice_dataframe_to_triggers(dataframe, flow.triggers)
-            self.logger.info(str(sliced_dataframe))
 
             if sliced_dataframe is not None:  # If there is a match
                 self.logger.info(f"MATCHING FLOW")
@@ -55,6 +54,7 @@ class Fingerprinter:
                                            src_uid=self.fs.post(flow_tar_file),
                                            dataframe=sliced_dataframe.copy(deep=True),
                                            sender=scp_context.sender)
+                self.logger.info(str(flow_context.dataframe))
                 flow_tar_file.close()
 
                 self.logger.info(str(flow_context))

@@ -70,7 +70,13 @@ class Scheduler:
 
     def initiate_flow_in_db(self, flow_context: FlowContext) -> DBFlow:
         # Instantiate the DBFlow
-        db_flow = self.db.add_db_flow(flow_context=flow_context)
+        db_flow = self.db.add_db_flow(flow_context=flow_context,
+                                      UID=flow_context.uid,
+                                      Name=flow_context.flow.name,
+                                      Version=flow_context.flow.version,
+                                      Priority=flow_context.flow.priority,
+                                      Destinations=", ".join([d.host for d in flow_context.flow.destinations]),
+                                      Sender=str(flow_context.sender.host))
 
         # Will only have one src to be set
         self.db.add_mount_mapping(db_flow_id=db_flow.id,

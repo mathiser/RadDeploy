@@ -1,0 +1,127 @@
+services:
+  rabbit:
+    hostname: "rabbit"
+    restart: always
+    image: rabbitmq:3-management
+    ports:
+      - 15672:15672
+    volumes:
+        - ./mounts/rabbit/timeout.conf:/etc/rabbitmq/conf.d/timeout.conf
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  storescp:
+    hostname: "storescp"
+    restart: always
+    healthcheck:
+      test: HEALTHCHECK --interval=30s --timeout=60s --retries=3 CMD /usr/local/bin/python3 healthcheck.py || exit 1
+    depends_on:
+      - rabbit
+    environment:
+      - LOG_LEVEL=10
+    ports:
+      - "10000:10000"
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+      args:
+        SERVICE_NAME: storescp
+
+  fingerprinter:
+    hostname: "fingerprinter"
+    restart: always
+    environment:
+      - LOG_LEVEL=10
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+      args:
+        SERVICE_NAME: fingerprinter
+    volumes:
+      - ${FLOWS_DIR}:/opt/RadDeploy/fingerprinter/flows
+
+  scheduler:
+    hostname: "scheduler"
+    restart: always
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+      args:
+        SERVICE_NAME: scheduler
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=10
+      -
+  consumer:
+    hostname: "consumer"
+    restart: always
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+      args:
+        SERVICE_NAME: consumer
+    environment:
+      - LOG_LEVEL=10
+      - GPUS=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  storescu:
+    hostname: "scu"
+    restart: always
+    environment:
+      - LOG_LEVEL=10
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+      args:
+        SERVICE_NAME: storescu
+
+
+#  flow_tracker:
+#    hostname: "flow-tracker"
+#    restart: always
+#    build:
+#      context: "."
+#      dockerfile: "Dockerfile"
+#      args:
+#        SERVICE_NAME: flow_tracker
+#    volumes:
+#      - ${FLOWTRACKER_DIR}:/opt/RadDeploy/flow_tracker/database:rw
+
+  file_storage:
+    hostname: "file-storage"
+    restart: always
+    environment:
+      - LOG_LEVEL=10
+    build:
+      context: "./"
+      dockerfile: "Dockerfile"
+      args:
+        SERVICE_NAME: file_storage
+    volumes:
+      - ${STATIC_DIR}:/opt/RadDeploy/file_storage/static:ro
+      - ${FILES_DIR}:/opt/RadDeploy/file_storage/files:rw
+
+  dashboard:
+    restart: always
+    image: grafana/grafana-enterprise
+    ports:
+      - "3001:3000"
+    environment:
+      - "GF_INSTALL_PLUGINS=frser-sqlite-datasource,cloudspout-button-panel"
+    volumes:
+      - dashboard_config:/etc/grafana:rw
+      - dashboard_home:/usr/share/grafana:rw
+      - dashboard_data:/var/lib/grafana:rw
+      - ${FLOWTRACKER_DIR}:/var/lib/grafana/database:ro
+      - ./mounts/scheduler/database:/var/lib/grafana/scheduler_db:ro
+
+volumes:
+  dashboard_config:
+  dashboard_home:
+  dashboard_data:
+

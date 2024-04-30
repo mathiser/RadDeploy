@@ -7,7 +7,7 @@ from RadDeployLib.log import init_logger
 from RadDeployLib.log.mq_handler import MQHandler
 from RadDeployLib.mq import SubModel, PubModel
 from RadDeployLib.mq import MQSub
-from flow_tracker import FlowTracker
+from tracker import FlowTracker
 import time
 
 
@@ -37,30 +37,27 @@ class Main:
                         pub_routing_key_error=config["PUB_ROUTING_KEY_ERROR"],
                         log_level=int(config["LOG_LEVEL"]))
 
-    def start(self):
+    def start(self, blocking=True):
         self.logger.debug("Starting FlowTracker")
         self.running = True
 
+        self.mq_handler.start()
         self.mq.start()
+
         self.logger.debug("Starting FlowTracker")
 
-        while self.running:
-            try:
-                self.mq.join(timeout=5)
-                if self.mq.is_alive():
-                    pass
-                else:
-                    self.stop()
-            except KeyboardInterrupt:
-                self.stop()
+        while self.running and blocking:
+            time.sleep(1)
 
     def stop(self, signalnum=None, stack_frame=None):
         self.logger.debug("Stopping FlowTracker")
         self.running = False
         self.mq.stop()
+        self.mq_handler.stop()
 
         self.mq.join()
-        self.logger.debug("Stopping FlowTracker")
+        self.mq_handler.join()
+
 
 
 if __name__ == "__main__":

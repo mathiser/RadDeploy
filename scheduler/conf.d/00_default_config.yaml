@@ -20,7 +20,7 @@ SUB_PREFETCH_COUNT: 1
 SCHEDULER_FLOW_INCOMING_EXCHANGES: ["fingerprinter"]
 SCHEDULER_JOB_INCOMING_EXCHANGES: ["consumer"]
 SCHEDULER_RESCHEDULE_PRIORITY: 5
-SCHEDULER_DATABASE_PATH: "/opt/RadDeploy/scheduler/database.db"
+SCHEDULER_DATABASE_PATH: "/opt/RadDeploy/scheduler/database/database.db"
 SUB_MODELS:
   - exchange: "fingerprinter"
     exchange_type: "topic"

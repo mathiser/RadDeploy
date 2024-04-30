@@ -26,7 +26,7 @@ class Main:
         init_logger(name=None,  # init root logger,
                     log_format=config["LOG_FORMAT"],
                     log_dir=config["LOG_DIR"],
-                    mq_handler=None)  #self.mq_handler)
+                    mq_handler=self.mq_handler)  #self.mq_handler)
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(int(config["LOG_LEVEL"]))

@@ -5,7 +5,7 @@ from typing import Iterable, Dict, List
 import pandas as pd
 
 from RadDeployLib.data_structures.contexts import FlowContext, PublishContext
-from .db import Database
+from flow_tracker.src.db import Database
 
 
 class FlowTracker:

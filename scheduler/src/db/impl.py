@@ -4,7 +4,6 @@ from typing import List, Type, Dict
 
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.exc import IntegrityError
 from RadDeployLib.data_structures.flow import Model
 from RadDeployLib.data_structures.service_contexts import FlowContext
 from .db_models import Base, DBFlow, DBJob, DBMountMapping
@@ -36,9 +35,22 @@ class Database:
             session.refresh(obj)
             return obj
 
-    def add_db_flow(self, flow_context: FlowContext) -> DBFlow:
+    def add_db_flow(self,
+                    flow_context: FlowContext,
+                    UID,
+                    Name,
+                    Version,
+                    Priority,
+                    Destinations,
+                    Sender) -> DBFlow:
         db_flow = DBFlow(
             flow_context_json=flow_context.model_dump_json(),
+            UID=UID,
+            Name=Name,
+            Version=Version,
+            Priority=Priority,
+            Destinations=Destinations,
+            Sender=Sender
         )
         return self.add(db_flow)
 
