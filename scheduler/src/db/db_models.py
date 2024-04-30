@@ -76,6 +76,7 @@ class DBJob(Base):
         return set(self.input_mount_keys).issubset(set(self.db_flow.mount_mapping.keys()))
 
     def is_finished(self) -> bool:
+        #return self.status in [200, 400]
         return set(self.output_mount_keys).issubset(set(self.db_flow.mount_mapping.keys()))
 
     def is_runnable(self):
@@ -91,12 +92,8 @@ class DBFlow(Base):
     _mount_mappings: Mapped[List[DBMountMapping]] = relationship("DBMountMapping",
                                                                  lazy="joined",
                                                                  join_depth=2)
-    # 0: Pending,
-    # 1: Dispatched
-    # 2: Timeout
-    # 200 success
-    # 400 = fail
-    status: Mapped[int] = mapped_column(default=0)
+
+    is_published: Mapped[bool] = mapped_column(default=False)
 
     # Values for dashboard
     UID: Mapped[str]
@@ -116,14 +113,18 @@ class DBFlow(Base):
     def flow_context(self):
         return FlowContext(**json.loads(self.flow_context_json))
 
-    def is_finished(self):
-        for db_job in self.db_jobs:
-            if not db_job.is_finished():
-                return False
+    @property
+    def status(self):
+        statuses = {db_job.status for db_job in self.db_jobs}
+        if statuses == {200}:
+            return "SUCCESS"
+        elif 400 in statuses:
+            return "FAIL"
         else:
-            return True
+            return "PENDING"
 
-    def update_status(self):
+
+    def is_finished(self):
         for db_job in self.db_jobs:
             if not db_job.is_finished():
                 return False

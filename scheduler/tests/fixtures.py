@@ -4,7 +4,7 @@ import pytest
 
 from db import Database
 
-from scheduler.src.orchestration import Scheduler
+from orchestration import Scheduler
 
 
 @pytest.fixture

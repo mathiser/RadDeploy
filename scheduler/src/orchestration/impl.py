@@ -70,13 +70,7 @@ class Scheduler:
 
     def initiate_flow_in_db(self, flow_context: FlowContext) -> DBFlow:
         # Instantiate the DBFlow
-        db_flow = self.db.add_db_flow(flow_context=flow_context,
-                                      UID=flow_context.uid,
-                                      Name=flow_context.flow.name,
-                                      Version=flow_context.flow.version,
-                                      Priority=flow_context.flow.priority,
-                                      Destinations=", ".join([d.host for d in flow_context.flow.destinations]),
-                                      Sender=str(flow_context.sender.host))
+        db_flow = self.db.add_db_flow(flow_context=flow_context)
 
         # Will only have one src to be set
         self.db.add_mount_mapping(db_flow_id=db_flow.id,
@@ -140,34 +134,29 @@ class Scheduler:
                                      pub_model_routing_key=job.pub_model_routing_key,
                                      priority=job.priority)
 
-    def get_and_update_unsent_flows_by_kwargs(self,
-                                              where_kwargs: Dict,
-                                              update_kwargs: Dict):
-        for db_flow in self.db.get_by_kwargs(DBFlow, where_kwargs=where_kwargs):
-            if db_flow.is_finished() and db_flow.status not in [200, 400]:
-                self.db.update_by_kwargs(DBFlow,
-                                         where_kwargs={"id": db_flow.id},
-                                         update_kwargs=update_kwargs)
-
+    def yield_finished_and_unpublished_flows(self):
+        for db_flow in self.db.get_by_kwargs(DBFlow, where_kwargs={"is_published": False}):
+            if db_flow.status != "PENDING":
                 finished_flow_context = FinishedFlowContext(**db_flow.flow_context.model_dump(),
                                                             mount_mapping=db_flow.mount_mapping)
 
                 yield PublishContext(body=finished_flow_context.model_dump_json().encode(),
-                                     pub_model_routing_key="SUCCESS",
+                                     pub_model_routing_key=db_flow.status,
                                      priority=finished_flow_context.flow.priority)
+
+                self.db.update_by_kwargs(DBFlow,
+                                         where_kwargs={"id": db_flow.id},
+                                         update_kwargs={"is_published": True})
 
     def main_loop(self):
         self.logger.info("Yield eligible jobs")
         yield from self.get_and_update_runnable_jobs_by_kwargs(
-            {"retries": 0},
-            {},
+            {"retries": 0},  # Those that have 0 retries
+            {"status": 1},  # Update status to 1 (dispatched)
             increment_retries=True,
         )
 
         self.logger.info("Yield finished flows")
-        yield from self.get_and_update_unsent_flows_by_kwargs(
-            {},
-            {"status": 200},
-        )
+        yield from self.yield_finished_and_unpublished_flows()
 
         # To do: Resubmit dbjobs which are timed_out

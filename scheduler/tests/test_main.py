@@ -1,15 +1,12 @@
 import json
 import logging
-import threading
 import uuid
 
 import yaml
-
-from RadDeployLib.data_structures.service_contexts.models import JobContext
-from RadDeployLib.test_utils.fixtures import *
+from db import DBJob
 from main import Main
 
-from db import DBJob
+from RadDeployLib.test_utils.fixtures import *
 
 
 @pytest.fixture
@@ -19,7 +16,7 @@ def flow_exchange():
 
 @pytest.fixture
 def consumer_exchange():
-    return "consuming"
+    return "consumer"
 
 
 @pytest.fixture

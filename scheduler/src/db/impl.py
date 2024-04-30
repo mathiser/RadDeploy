@@ -37,20 +37,15 @@ class Database:
 
     def add_db_flow(self,
                     flow_context: FlowContext,
-                    UID,
-                    Name,
-                    Version,
-                    Priority,
-                    Destinations,
-                    Sender) -> DBFlow:
+            ) -> DBFlow:
         db_flow = DBFlow(
             flow_context_json=flow_context.model_dump_json(),
-            UID=UID,
-            Name=Name,
-            Version=Version,
-            Priority=Priority,
-            Destinations=Destinations,
-            Sender=Sender
+            UID=flow_context.uid,
+            Name=flow_context.flow.name,
+            Version=flow_context.flow.version,
+            Priority=flow_context.flow.priority,
+            Destinations=", ".join([d.host for d in flow_context.flow.destinations]),
+            Sender=flow_context.sender.host
         )
         return self.add(db_flow)
 
