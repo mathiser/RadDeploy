@@ -62,7 +62,7 @@ class SCU:
             output_tar = self.fs.get(file_uid)
 
             with tarfile.TarFile.open(fileobj=output_tar, mode="r:*") as tf:
-                tf.extractall(tmp_dir)
+                tf.extractall(tmp_dir, filter="data")
 
             for dest in destinations:
                 self.logger.info(f"POSTING TO {dest.ae_title} ON: {dest.host}:{dest.port}")

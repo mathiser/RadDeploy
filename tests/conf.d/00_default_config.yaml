@@ -1,0 +1,13 @@
+# RabbitMQ
+RABBIT_HOSTNAME: "rabbit"
+RABBIT_PORT: 5672
+
+# Logging
+LOG_DIR: "/opt/RadDeploy/tests/logs"
+LOG_LEVEL: 20
+LOG_FORMAT: "%(name)s ; %(levelname)s ; %(asctime)s ; %(name)s ; %(filename)s ; %(funcName)s ; %(lineno)s ; %(message)s"
+LOG_PUB_MODELS:
+  - exchange: logs
+
+# File Storage
+FILE_STORAGE_URL: "http://file-storage:80/files/"

@@ -70,7 +70,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   storescu:
-    hostname: "scu"
+    hostname: "storescu"
     restart: always
     environment:
       - LOG_LEVEL=10

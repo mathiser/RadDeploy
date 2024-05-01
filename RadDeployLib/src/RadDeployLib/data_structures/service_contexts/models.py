@@ -74,6 +74,7 @@ class JobContext(BaseContext):
     model: Model
     input_mount_mapping: Dict[str, str] = {}
     output_mount_mapping: Dict[str, str] = {}
+    job_log: str = ""
 
 
 if __name__ == "__main__":

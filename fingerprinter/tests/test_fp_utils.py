@@ -1,5 +1,4 @@
-from RadDeployLib.data_structures.flow import Flow
-from fingerprinting.fp_utils import parse_fingerprints, generate_df_from_tar, generate_flow_specific_tar, slice_dataframe_to_triggers
+from RadDeployLib.fp import parse_fingerprints, generate_df_from_tar, generate_flow_specific_tar, slice_dataframe_to_triggers
 from RadDeployLib.test_utils.fixtures import *
 
 test_dir = os.path.dirname(__file__)

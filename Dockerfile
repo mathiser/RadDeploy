@@ -29,4 +29,5 @@ COPY $SERVICE_NAME $APP_DIR
 # Go to exec space
 WORKDIR $APP_DIR/src
 
-ENTRYPOINT ["/usr/local/bin/python3", "main.py"]
+ENTRYPOINT ["/usr/bin/bash", "-c"]
+CMD ["python3 main.py"]

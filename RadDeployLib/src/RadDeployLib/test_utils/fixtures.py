@@ -2,11 +2,12 @@ import os, inspect
 from io import BytesIO
 
 import docker
+import pandas as pd
 import pytest
 import time
 
-from RadDeployLib.data_structures.flow import Destination, Flow
-from RadDeployLib.data_structures.service_contexts import SCPContext, FlowContext
+from RadDeployLib.data_structures.flow import Destination, Flow, Model
+from RadDeployLib.data_structures.service_contexts import SCPContext, FlowContext, JobContext
 from RadDeployLib.mq import MQBase
 from RadDeployLib.test_utils.mock_classes import MockFileStorageClient
 
@@ -30,7 +31,6 @@ def mq_container():
         time.sleep(15)
         cli.close()
         return container
-
 
 
 @pytest.fixture
@@ -90,7 +90,24 @@ def scp_context(fs, scp_tar, destination):
     return SCPContext(src_uid=uid, sender=destination)
 
 
+
 @pytest.fixture
 def dag_flow_context(scp_context, dag_flow):
     return FlowContext(**scp_context.model_dump(),
-                       flow=dag_flow)
+                       flow=dag_flow,
+                       dataframe=pd.DataFrame())
+
+
+@pytest.fixture
+def model(scp_context, dag_flow):
+    return Model(
+        docker_kwargs={"image": "hello-world"},
+    )
+
+
+@pytest.fixture
+def job_context(model, fs, scp_tar):
+    return JobContext(model=model,
+                      correlation_id=123,
+                      input_mount_mapping={"src": fs.post(scp_tar)},
+                    )

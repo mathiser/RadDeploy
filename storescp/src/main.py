@@ -21,7 +21,7 @@ from scp_release_handler.impl import SCPReleaseHandler
 class Main:
     def __init__(self,
                  config: Dict,
-                 FileStorageClientImpl: Type[FileStorageClientInterface] = FileStorageClient):
+                 file_storage: FileStorageClientInterface | None = None):
         signal.signal(signal.SIGTERM, self.stop)
         self.running = False
 
@@ -50,7 +50,10 @@ class Main:
             pynetdicom_log_level=int(config["PYNETDICOM_LOG_LEVEL"]),
             log_level=int(config["LOG_LEVEL"]))
 
-        self.fs = FileStorageClientImpl(file_storage_url=config["FILE_STORAGE_URL"],
+        if file_storage:
+            self.fs = file_storage
+        else:
+            self.fs = FileStorageClient(file_storage_url=config["FILE_STORAGE_URL"],
                                         log_level=int(config["LOG_LEVEL"]))
 
         self.scp_release_handler_out_queue: queue.Queue[Tuple[PubModel, PublishContext]] = queue.Queue()

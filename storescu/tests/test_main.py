@@ -39,6 +39,7 @@ def test_scp():
     proc = subprocess.Popen(['python', "-m pynetdicom",  "storescp", "-aet RADDEPLOY", "--ignore", "-d", "11118"],
                             shell=True)
     yield proc
+    time.sleep(3)
     logging.info("Terminating scp...")
     proc.terminate()
 
@@ -47,6 +48,6 @@ def test_main(config, mq_container, main, test_scp, fs, scp_tar):
     logging.getLogger().setLevel(10)
     uid = fs.post(scp_tar)
     assert uid
-    for dest in main.scu.post(uid, [Destination(host="localhost", port=11118, ae_title="RADDEPLOY")]):
-        logging.info(dest)
+    for dest, status in main.scu.post_file_on_destinations(uid, [Destination(host="localhost", port=11118, ae_title="RADDEPLOY")]):
+        logging.info(f"{status}, {str(dest)}")
         assert dest

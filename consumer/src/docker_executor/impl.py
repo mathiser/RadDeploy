@@ -8,6 +8,7 @@ import tarfile
 import tempfile
 import threading
 import time
+import traceback
 from io import BytesIO
 from typing import Iterable, Dict
 
@@ -51,25 +52,27 @@ class DockerExecutor(threading.Thread):
         job_context = JobContext(**json.loads(body.decode()))
 
         self.logger.info(f"Spinning up flow")
-        output_mount_mapping = self.exec_model(model=job_context.model,
-                                               input_mount_mapping=job_context.input_mount_mapping,
-                                               flow_uid=job_context.uid,
-                                               correlation_id=job_context.correlation_id)
-        self.logger.info(f"Finished flow")
+        status = "SUCCESS"
+        try:
+            job_context = self.exec_model(job_context)
+        except Exception as e:
+            status = "FAIL"
 
-        # Overwrite with output mount mapping
-        job_context.output_mount_mapping = output_mount_mapping
+            self.logger.error(str(e))
+            self.logger.error(traceback.format_exc())
+        finally:
+            self.logger.info(f"Finished flow")
 
-        # Return new
-        return [PublishContext(body=job_context.model_dump_json().encode(),
-                               pub_model_routing_key="SUCCESS")]
+            # Return new
+            return [PublishContext(body=job_context.model_dump_json().encode(),
+                                   pub_model_routing_key=status)]
 
     def exec_model(self,
-                   model: Model,
-                   input_mount_mapping: Dict,
-                   correlation_id: int,
-                   flow_uid: str,
-                   ) -> Dict:
+                   job_context: JobContext
+                   ) -> JobContext:
+
+        model: Model = job_context.model
+        input_mount_mapping: Dict = job_context.input_mount_mapping
 
         if model.pull_before_exec:
             try:
@@ -133,37 +136,39 @@ class DockerExecutor(threading.Thread):
             container.start()
 
             # Grab the output and log to job specific logger
-            job_logger_name = f"{datetime.datetime.now().isoformat()}_{flow_uid}_{correlation_id}_{kwargs["image"].replace("/", "-")}"
-            threading.Thread(target=self.catch_logs_from_container, args=(job_logger_name, container)).start()
+            threading.Thread(target=self.catch_logs_from_container, args=(job_context, container)).start()
 
             # Wait for job to execute - with timeout. If not finished, it will be killed.
             result = container.wait(timeout=model.timeout)  # Blocks...
 
             # If status code != 0,
-            self.assert_container_status(uid=flow_uid, container=container, result=result)
+            self.assert_container_status(uid=job_context.uid, container=container, result=result)
 
-            output_mapping = {}
             for src, dst in model.output_mounts.items():
                 tar = self.get_archive(container=container, path=dst)
                 uid = self.fs.post(tar)
-                output_mapping[src] = uid
+                job_context.output_mount_mapping[src] = uid
 
-            return output_mapping
+            return job_context
 
         except Exception as e:
             self.logger.error(str(e))
+            self.logger.error(traceback.format_exc())
             raise e
         finally:
             self.clean_up(container, kwargs)
 
-    def catch_logs_from_container(self, logger_name, container):
-
-        container_logger = init_logger(name=logger_name,
+    def catch_logs_from_container(self, job_context: JobContext, container):
+        job_logger_name = (f"{datetime.datetime.now().isoformat()}_{job_context.uid}_"
+                           f"{job_context.correlation_id}_{job_context.model.docker_kwargs["image"].replace("/", "-")}")
+        container_logger = init_logger(name=job_logger_name,
                                        log_dir=self.job_log_dir)
         container_logger.setLevel(10)
 
         for line in container.logs(stream=True):
-            container_logger.info(line.decode().strip("\n"))
+            l = line.decode()
+            container_logger.debug(l.strip("\n"))
+            job_context.job_log += l
 
     def assert_container_status(self, uid, container, result):
         if result["StatusCode"] != 0:

@@ -19,6 +19,7 @@ class MQBase(threading.Thread):
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
+
         self._hostname = rabbit_hostname
         self._port = rabbit_port
         self._connection: pika.adapters.BlockingConnection | None = None

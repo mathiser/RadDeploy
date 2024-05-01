@@ -6,7 +6,7 @@ from typing import Iterable
 from RadDeployLib.data_structures.service_contexts import FlowContext, SCPContext
 from RadDeployLib.fs.client.interface import FileStorageClientInterface
 from RadDeployLib.mq import PublishContext
-from .fp_utils import parse_fingerprints, slice_dataframe_to_triggers, generate_flow_specific_tar, generate_df_from_tar
+from RadDeployLib.fp import parse_fingerprints, slice_dataframe_to_triggers, generate_flow_specific_tar, generate_df_from_tar
 
 
 class Fingerprinter:

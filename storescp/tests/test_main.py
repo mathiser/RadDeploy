@@ -1,13 +1,12 @@
 import os
-
 import time
 
 import pytest
 import yaml
 from main import Main
 
-from RadDeployLib.fs.client.interface import FileStorageClientInterface
-from RadDeployLib.test_utils.fixtures import mq_container, mq_base, scan_dir, scp_tar_path
+from RadDeployLib.test_utils.fixtures import mq_container, mq_base, scan_dir, scp_tar_path, fs
+
 
 @pytest.fixture
 def config(tmpdir, mq_container):

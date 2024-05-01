@@ -118,7 +118,10 @@ class MQSub(MQBase):
     def publish_on_all_pub_models(self,
                                   result: PublishContext):
         for pub_model in self.pub_models.values():
-            self.logger.debug(f"publishing on exchange: {pub_model.exchange} with routing key: {result.pub_model_routing_key}")
+            routing_key = pub_model.routing_key_values[result.pub_model_routing_key]
+            self.logger.debug(f"publishing on exchange: {pub_model.exchange} with "
+                              f"pub model routing key: {result.pub_model_routing_key} "
+                              f"and routing key {routing_key}")
 
             self.basic_publish_callback(exchange=pub_model.exchange,
                                         routing_key=pub_model.routing_key_values[result.pub_model_routing_key],
