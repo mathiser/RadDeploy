@@ -1,3 +1,6 @@
+# RADDEPLOY HAS MOVED TO [GITLAB](https://gitlab.com/aarhus-radonc-ai/repos/raddeploy)
+
+
 # Note !!
 This project has previously been developed under the name "RadDeploy", but to avoid confusion with other projects it has been renamed to RadDeploy. As the name "RadDeploy" has been used many, places thorough refactoring of the naming is in the pipeline.
 
